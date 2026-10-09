@@ -376,6 +376,107 @@ class Binder {
   }
 
   /**
+   * `LookUp` source that is not a table. Pinned corpus (`Lookup_V1Compat.txt`): an untyped Blank
+   * gives `ErrBadType` on the argument plus the invalid-arguments error; other types give only
+   * `ErrBadType`. (`Filter` differs, see `bindFilter`.)
+   */
+  private reportBadLookUpSource(node: CallNode, sourceArg: ExpressionNode, blank: boolean): void {
+    this.report(DiagnosticCodes.BadType, sourceArg.span);
+    if (blank) {
+      this.report(DiagnosticCodes.InvalidFunctionArguments, node.callee.span, ["LookUp"]);
+    }
+  }
+
+  /** Binds the single table argument of `First`/`CountRows`; `undefined` after reporting. */
+  private bindTableArgument(node: CallNode): BoundNode | undefined {
+    const [arg] = node.args;
+    if (node.args.length !== 1 || arg === undefined) {
+      node.args.forEach((a) => this.bindExpression(a));
+      this.report(DiagnosticCodes.BadArity, node.span, [String(node.args.length), "1"]);
+      return undefined;
+    }
+    const source = this.bindExpression(arg);
+    if (source.type.kind === "Unknown") {
+      this.report(DiagnosticCodes.InvalidFunctionArguments, node.callee.span, [node.callee.name]);
+      return undefined;
+    }
+    if (source.type.kind !== "Table" && source.type.kind !== "Blank") {
+      this.report(DiagnosticCodes.InvalidFunctionArguments, node.callee.span, [node.callee.name]);
+      this.report(DiagnosticCodes.BadTypeExpected, arg.span, ["Table", typeName(source.type)]);
+      return undefined;
+    }
+    return source;
+  }
+
+  /** `First(table)`, upstream `FirstLastFunction`: the result is a row of the table's type. */
+  private bindFirst(node: CallNode): BoundNode {
+    const source = this.bindTableArgument(node);
+    if (source === undefined) return this.invalid(node.span);
+    const type: FormulaType = source.type.kind === "Table" ? source.type.row : source.type;
+    return { kind: "First", source, span: node.span, type };
+  }
+
+  /** `CountRows(table)`: a Number (the decimal result type of `NumberIsFloat` off is not modelled). */
+  private bindCountRows(node: CallNode): BoundNode {
+    const source = this.bindTableArgument(node);
+    if (source === undefined) return this.invalid(node.span);
+    return { kind: "CountRows", source, span: node.span, type: NumberType };
+  }
+
+  /**
+   * `LookUp(source, predicate[, projection])`, upstream `LookUpFunction`: arity 2-3; the source
+   * must be a table; the predicate must be exactly Boolean (or untyped Blank), without the
+   * coercions `Filter` allows; the result is the projection's type, or the source row type.
+   */
+  private bindLookUp(node: CallNode): BoundNode {
+    const [sourceArg, predicateArg, projectionArg] = node.args;
+    if (node.args.length < 2 || sourceArg === undefined || predicateArg === undefined) {
+      node.args.forEach((a) => this.bindExpression(a));
+      this.report(DiagnosticCodes.BadArity, node.span, [String(node.args.length), "2-3"]);
+      return this.invalid(node.span);
+    }
+    const { source, alias } = this.bindScopeSource(sourceArg);
+    let fields: readonly RecordField[] | undefined;
+    const rowType = source.type.kind === "Table" ? source.type.row : undefined;
+    if (source.type.kind === "Table") fields = source.type.row.fields;
+    else if (source.type.kind !== "Unknown") {
+      this.reportBadLookUpSource(node, sourceArg, source.type.kind === "Blank");
+    }
+    const id = this.nextScopeId++;
+    const inScope = <T>(bind: () => T): T => this.withScope(id, fields, alias, bind);
+    let predicate = inScope(() => this.bindExpression(predicateArg));
+    const projection =
+      projectionArg === undefined ? undefined : inScope(() => this.bindExpression(projectionArg));
+    if (node.args.length > 3) {
+      // Upstream binds the extra arguments outside the row scope.
+      node.args.slice(3).forEach((a) => this.bindExpression(a));
+      this.report(DiagnosticCodes.BadArity, node.span, [String(node.args.length), "2-3"]);
+      return this.invalid(node.span);
+    }
+    if (rowType === undefined || fields === undefined || predicate.type.kind === "Unknown") {
+      return this.invalid(node.span);
+    }
+    if (predicate.type.kind !== "Boolean" && predicate.type.kind !== "Blank") {
+      this.report(DiagnosticCodes.BooleanExpected, predicateArg.span);
+      this.report(DiagnosticCodes.InvalidFunctionArguments, node.callee.span, ["LookUp"]);
+      return this.invalid(node.span);
+    }
+    if (predicate.type.kind === "Blank") predicate = this.coerce(predicate, "Boolean");
+    if (projection !== undefined && projection.type.kind === "Unknown") {
+      return this.invalid(node.span);
+    }
+    return {
+      kind: "LookUp",
+      scopeId: id,
+      source,
+      predicate,
+      projection,
+      span: node.span,
+      type: projection?.type ?? rowType,
+    };
+  }
+
+  /**
    * Unions record types the way this slice supports: identical field types are merged, disjoint
    * fields are added (and Blank-filled in rows). Upstream additionally coerces same-name fields of
    * different types (e.g. Boolean to Number); that returns `undefined` here and is reported as
@@ -506,7 +607,10 @@ class Binder {
       return this.invalid(node.span);
     }
     if (left.type.kind === "Table") {
-      return this.notSupported("Column projection on a table", node.span);
+      // Under PowerFxV1CompatibilityRules upstream rejects `Table.Field` outright (and the
+      // interpreter never implemented single-column table access).
+      this.report(DiagnosticCodes.DeprecatedDotUseShowColumns, span);
+      return this.invalid(node.span);
     }
     if (left.type.kind !== "Record") {
       this.report(DiagnosticCodes.InvalidDot, span, [typeName(left.type)]);
@@ -660,6 +764,9 @@ class Binder {
       if (name === "With") return this.bindWith(node);
       if (name === "Filter") return this.bindFilter(node);
       if (name === "Table") return this.bindTableCall(node);
+      if (name === "First") return this.bindFirst(node);
+      if (name === "CountRows") return this.bindCountRows(node);
+      if (name === "LookUp") return this.bindLookUp(node);
     }
     const signature = this.functions.get(name);
     const args = node.args.map((a) => this.bindExpression(a));
