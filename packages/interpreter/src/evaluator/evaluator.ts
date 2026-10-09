@@ -1,4 +1,4 @@
-import type { BoundNode } from "@powerfx-ts/core";
+import type { BoundNode, ConformPlan } from "@powerfx-ts/core";
 import { BUILTIN_IMPLEMENTATIONS } from "../functions/builtins.js";
 import type { NumericBackend, NumericResult, NumericValue } from "../numeric/backend.js";
 import {
@@ -64,6 +64,8 @@ class Evaluator implements EvaluationContext {
         if (node.preserveBlank && operand.kind === "Blank") return operand;
         return coerceValue(operand, node.to, numeric);
       }
+      case "Conform":
+        return this.conform(this.evaluate(node.operand), node.plan);
       case "Unary":
         return this.unary(node);
       case "Binary":
@@ -205,18 +207,11 @@ class Evaluator implements EvaluationContext {
    * is the result (upstream `Table.txt`).
    */
   private table(node: Extract<BoundNode, { kind: "Table" }>): FormulaValue {
-    const names = node.type.kind === "Table" ? node.type.row.fields.map((f) => f.name) : [];
-    const conform = (row: TableRow): TableRow => {
-      if (row.kind !== "Record" || row.fields.length === names.length) return row;
-      // Filling follows the table row type's (ordinal) field order, so unioned rows are uniform.
-      const byName = new Map(row.fields.map((f) => [f.name, f.value]));
-      return record(names.map((name) => ({ name, value: byName.get(name) ?? blank })));
-    };
     const rows: TableRow[] = [];
     for (const item of node.items) {
       const value = this.evaluate(item.value);
       if (item.shape === "row") {
-        if (value.kind === "Record") rows.push(conform(value));
+        if (value.kind === "Record") rows.push(value);
         else if (value.kind === "Blank" || value.kind === "Error") rows.push(value);
         else throw new Error("Table row is not a record.");
       } else {
@@ -225,11 +220,42 @@ class Evaluator implements EvaluationContext {
         if (value.kind !== "Table") throw new Error("Table argument is not a table.");
         for (const row of value.rows) {
           this.tick();
-          rows.push(conform(row));
+          rows.push(row);
         }
       }
     }
     return table(rows);
+  }
+
+  /** Applies a binder-produced union plan; errors and Blank pass through untouched. */
+  private conform(value: FormulaValue, plan: ConformPlan): FormulaValue {
+    if (value.kind === "Error" || value.kind === "Blank") return value;
+    switch (plan.kind) {
+      case "Scalar":
+        return coerceValue(value, plan.to, this.numeric);
+      case "Record": {
+        if (value.kind !== "Record") throw new Error("Conform expects a record.");
+        const byName = new Map(value.fields.map((f) => [f.name, f.value]));
+        return record(
+          plan.fields.map((f) => {
+            const current = f.missing === true ? blank : (byName.get(f.name) ?? blank);
+            return {
+              name: f.name,
+              value: f.plan === undefined ? current : this.conform(current, f.plan),
+            };
+          }),
+        );
+      }
+      case "Table": {
+        if (value.kind !== "Table") throw new Error("Conform expects a table.");
+        const rows: TableRow[] = [];
+        for (const row of value.rows) {
+          this.tick();
+          rows.push(row.kind === "Record" ? (this.conform(row, plan.row) as TableRow) : row);
+        }
+        return table(rows);
+      }
+    }
   }
 
   /** Evaluates a numeric operand: Blank counts as zero, errors propagate. */

@@ -4,8 +4,8 @@
 - Runner: engine
 - Setup: `PowerFxV1,NumberIsFloat,DecimalSupport` (number mode: float, culture en-US, time zone UTC)
 - Cases: 22047 total, 7088 not applicable to this profile
-- Pass 783, fail 1, skip 46, unsupported 14129
-- Unsupported by reason: feature 10966, setup 3163, profile 0
+- Pass 826, fail 1, skip 46, unsupported 14086
+- Unsupported by reason: feature 10923, setup 3163, profile 0
 - Passing compile-error cases whose error set differs from upstream's (strict diagnostic, not a verdict): 34
 
 | File | Total | Pass | Fail | Skip | Unsupported |
@@ -44,7 +44,7 @@
 | Count.txt | 26 | 0 | 0 | 0 | 26 |
 | CountA.txt | 35 | 0 | 0 | 0 | 35 |
 | CountIf.txt | 18 | 0 | 0 | 0 | 18 |
-| CountRows.txt | 35 | 18 | 0 | 0 | 17 |
+| CountRows.txt | 35 | 21 | 0 | 0 | 14 |
 | Date.txt | 152 | 0 | 0 | 0 | 152 |
 | DateAdd.txt | 115 | 0 | 0 | 0 | 115 |
 | DateAdd_StronglyTypedBuiltinEnums.txt | 7 | 0 | 0 | 0 | 7 |
@@ -92,11 +92,11 @@
 | Find.txt | 99 | 0 | 0 | 0 | 99 |
 | FindT.txt | 67 | 0 | 0 | 0 | 67 |
 | Find_StronglyTypedBuiltinEnums.txt | 10 | 0 | 0 | 0 | 10 |
-| FirstLast.txt | 28 | 8 | 0 | 0 | 20 |
+| FirstLast.txt | 28 | 12 | 0 | 0 | 16 |
 | FirstLastN.txt | 24 | 0 | 0 | 0 | 24 |
 | FirstLastN_RequiredSecondArgument.txt | 4 | 0 | 0 | 0 | 4 |
 | FirstLastN_V1Compat.txt | 2 | 0 | 0 | 0 | 2 |
-| FirstLast_V1Compat.txt | 6 | 0 | 0 | 0 | 6 |
+| FirstLast_V1Compat.txt | 6 | 3 | 0 | 0 | 3 |
 | Float.txt | 254 | 0 | 0 | 0 | 254 |
 | FloatLarge.txt | 35 | 3 | 0 | 0 | 32 |
 | ForAll.txt | 42 | 0 | 0 | 0 | 42 |
@@ -107,7 +107,7 @@
 | IfError.txt | 56 | 0 | 0 | 0 | 56 |
 | IfError_V1Compat.txt | 45 | 0 | 0 | 0 | 45 |
 | If_AllowsSideEffects.txt | 25 | 0 | 0 | 0 | 25 |
-| If_V1Compat.txt | 4 | 0 | 0 | 0 | 4 |
+| If_V1Compat.txt | 4 | 4 | 0 | 0 | 0 |
 | Index.txt | 22 | 0 | 0 | 0 | 22 |
 | Int.txt | 19 | 0 | 0 | 0 | 19 |
 | IntT.txt | 4 | 0 | 0 | 0 | 4 |
@@ -243,11 +243,11 @@
 | Substitute.txt | 67 | 0 | 0 | 0 | 67 |
 | SubstituteT.txt | 28 | 0 | 0 | 0 | 28 |
 | Summarize.txt | 46 | 0 | 0 | 0 | 46 |
-| Table.txt | 35 | 19 | 0 | 0 | 16 |
-| TableCoercion.txt | 27 | 0 | 0 | 0 | 27 |
+| Table.txt | 35 | 29 | 0 | 0 | 6 |
+| TableCoercion.txt | 27 | 17 | 0 | 0 | 10 |
 | TableCoercion_StronglyTypedEnum.txt | 3 | 0 | 0 | 0 | 3 |
 | TableMathfuncs.txt | 9 | 0 | 0 | 0 | 9 |
-| TableNodes.txt | 20 | 13 | 0 | 0 | 7 |
+| TableNodes.txt | 20 | 14 | 0 | 0 | 6 |
 | TableStringfuncs.txt | 27 | 0 | 0 | 0 | 27 |
 | Table_Mutation.txt | 4 | 0 | 0 | 0 | 4 |
 | Table_V1Compat.txt | 2 | 2 | 0 | 0 | 0 |
@@ -289,7 +289,7 @@
 | Weekday_StronglyTypedEnum.txt | 24 | 0 | 0 | 0 | 24 |
 | With.txt | 21 | 15 | 0 | 0 | 6 |
 | With_Float.txt | 3 | 2 | 0 | 0 | 1 |
-| With_V1Compat.txt | 1 | 0 | 0 | 0 | 1 |
+| With_V1Compat.txt | 1 | 1 | 0 | 0 | 0 |
 | arithmetic.txt | 56 | 56 | 0 | 0 | 0 |
 | inScalar.txt | 39 | 0 | 0 | 0 | 39 |
 | inTable.txt | 25 | 0 | 0 | 0 | 25 |
