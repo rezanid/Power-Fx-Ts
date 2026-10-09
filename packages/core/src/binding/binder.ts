@@ -7,7 +7,12 @@ import {
 import { KNOWN_UPSTREAM_ENUMS, KNOWN_UPSTREAM_FUNCTIONS } from "../functions/known-names.js";
 import { BUILTIN_FUNCTIONS, type FunctionRegistry } from "../functions/signature.js";
 import { conformPlan, unionRecords, unionTypes } from "../types/union.js";
-import type { BoundBinaryOperator, BoundNode, CoercionTarget } from "../ir/bound-tree.js";
+import type {
+  BoundBinaryOperator,
+  BoundNode,
+  CoercionTarget,
+  NumericKind,
+} from "../ir/bound-tree.js";
 import type { ParseResult } from "../parser/parser.js";
 import type {
   AsNode,
@@ -23,6 +28,7 @@ import type { Span } from "../text/span.js";
 import { findVariable, type Schema } from "../types/schema.js";
 import {
   BooleanType,
+  DecimalType,
   findField,
   NumberType,
   TextType,
@@ -38,6 +44,11 @@ export interface BindOptions {
   readonly functions?: FunctionRegistry;
   /** Names the formula may reference; without it every name is unrecognized. */
   readonly schema?: Schema;
+  /**
+   * Literal and operator typing: `float` (default) types numeric literals as Number (upstream
+   * `NumberIsFloat`); `decimal` types them as Decimal.
+   */
+  readonly numberMode?: "float" | "decimal";
 }
 
 /** A construct the parser accepts but this engine slice cannot bind yet (not a user error). */
@@ -74,8 +85,20 @@ const ORDERING: Readonly<Record<string, BoundBinaryOperator>> = {
   GtEq: "GtEq",
 };
 
+const TARGET_TYPES: Readonly<Record<CoercionTarget, FormulaType>> = {
+  Number: NumberType,
+  Decimal: DecimalType,
+  Text: TextType,
+  Boolean: BooleanType,
+};
+
 export function bind(parsed: ParseResult, options: BindOptions = {}): BindResult {
-  const binder = new Binder(parsed, options.functions ?? BUILTIN_FUNCTIONS, options.schema);
+  const binder = new Binder(
+    parsed,
+    options.functions ?? BUILTIN_FUNCTIONS,
+    options.schema,
+    options.numberMode ?? "float",
+  );
   const root = binder.bindExpression(parsed.root);
   return {
     root,
@@ -108,7 +131,31 @@ class Binder {
     private readonly parsed: ParseResult,
     private readonly functions: FunctionRegistry,
     private readonly schema: Schema | undefined,
+    private readonly numberMode: "float" | "decimal",
   ) {}
+
+  private get defaultNumeric(): NumericKind {
+    return this.numberMode === "decimal" ? "Decimal" : "Number";
+  }
+
+  /**
+   * Upstream `BinderUtils.CheckDecimalBinaryOp`: with `NumberIsFloat` the result is Decimal only
+   * when both operands are Decimal; without it the result is Number (float) when either operand is
+   * Number, else Decimal. Non-numeric operands coerce to the result kind.
+   */
+  private numericKind(left: FormulaType, right: FormulaType): NumericKind {
+    if (this.numberMode === "float") {
+      return left.kind === "Decimal" && right.kind === "Decimal" ? "Decimal" : "Number";
+    }
+    return left.kind === "Number" || right.kind === "Number" ? "Number" : "Decimal";
+  }
+
+  /** Unary `-` and `%`: the operand's own numeric kind, else the mode's default. */
+  private unaryKind(operand: FormulaType): NumericKind {
+    return operand.kind === "Number" || operand.kind === "Decimal"
+      ? operand.kind
+      : this.defaultNumeric;
+  }
 
   private report(code: DiagnosticCode, span: Span, args: string[] = []): void {
     this.diagnostics.push(createDiagnostic(code, span, args));
@@ -150,7 +197,7 @@ class Binder {
       this.report(DiagnosticCodes.BadTypeExpected, node.span, [to, node.type.kind]);
       return this.invalid(node.span);
     }
-    const type = to === "Number" ? NumberType : to === "Text" ? TextType : BooleanType;
+    const type = TARGET_TYPES[to];
     const coerced: BoundNode = { kind: "Coerce", to, operand: node, span: node.span, type };
     return preserveBlank ? { ...coerced, preserveBlank } : coerced;
   }
@@ -158,7 +205,12 @@ class Binder {
   bindExpression(node: ExpressionNode): BoundNode {
     switch (node.kind) {
       case "NumberLiteral":
-        return { kind: "NumberLiteral", text: node.text, span: node.span, type: NumberType };
+        return {
+          kind: "NumberLiteral",
+          text: node.text,
+          span: node.span,
+          type: this.numberMode === "decimal" ? DecimalType : NumberType,
+        };
       case "StringLiteral":
         return { kind: "TextLiteral", value: node.value, span: node.span, type: TextType };
       case "BooleanLiteral":
@@ -408,6 +460,29 @@ class Binder {
     return source;
   }
 
+  /**
+   * `Decimal(x)` / `Float(x)` (upstream `DecimalFunction` / `FloatFunction`) for one argument. The
+   * optional locale argument is not supported. Blank and empty text stay Blank.
+   */
+  private bindNumericConversion(node: CallNode, name: "Decimal" | "Float"): BoundNode {
+    const args = node.args.map((a) => this.bindExpression(a));
+    if (args.length === 2) {
+      return this.notSupported(`${name} with a locale argument`, node.span);
+    }
+    if (args.length !== 1) {
+      this.report(DiagnosticCodes.BadArity, node.span, [String(args.length), "1-2"]);
+      return this.invalid(node.span);
+    }
+    const operand = args[0]!;
+    if (operand.type.kind === "Unknown") return this.invalid(node.span);
+    if (operand.type.kind === "Record" || operand.type.kind === "Table") {
+      this.report(DiagnosticCodes.InvalidArgumentType, operand.span, []);
+      return this.invalid(node.span);
+    }
+    const to: NumericKind = name === "Decimal" ? "Decimal" : "Number";
+    return { kind: "ConvertNumber", to, operand, span: node.span, type: TARGET_TYPES[to] };
+  }
+
   /** `First(table)`, upstream `FirstLastFunction`: the result is a row of the table's type. */
   private bindFirst(node: CallNode): BoundNode {
     const source = this.bindTableArgument(node);
@@ -416,11 +491,16 @@ class Binder {
     return { kind: "First", source, span: node.span, type };
   }
 
-  /** `CountRows(table)`: a Number (the decimal result type of `NumberIsFloat` off is not modelled). */
+  /** `CountRows(table)`: Decimal without `NumberIsFloat` (verified against the reference), else Number. */
   private bindCountRows(node: CallNode): BoundNode {
     const source = this.bindTableArgument(node);
     if (source === undefined) return this.invalid(node.span);
-    return { kind: "CountRows", source, span: node.span, type: NumberType };
+    return {
+      kind: "CountRows",
+      source,
+      span: node.span,
+      type: this.defaultNumeric === "Decimal" ? DecimalType : NumberType,
+    };
   }
 
   /**
@@ -630,13 +710,13 @@ class Binder {
   private bindUnary(node: UnaryNode): BoundNode {
     const operand = this.bindExpression(node.operand);
     if (operand.type.kind === "Unknown") return this.invalid(node.span);
-    const target: CoercionTarget = node.op === "Not" ? "Boolean" : "Number";
+    const target: CoercionTarget = node.op === "Not" ? "Boolean" : this.unaryKind(operand.type);
     return {
       kind: "Unary",
       op: node.op,
       operand: this.coerce(operand, target),
       span: node.span,
-      type: target === "Boolean" ? BooleanType : NumberType,
+      type: TARGET_TYPES[target],
     };
   }
 
@@ -650,12 +730,15 @@ class Binder {
 
     const arithmetic = ARITHMETIC[op];
     if (arithmetic !== undefined) {
+      // Exponentiation is always floating point upstream; it has no Decimal overload.
+      const kind = arithmetic === "Power" ? "Number" : this.numericKind(left.type, right.type);
       return this.binary(
         arithmetic,
-        this.coerce(left, "Number"),
-        this.coerce(right, "Number"),
+        this.coerce(left, kind),
+        this.coerce(right, kind),
         node,
-        NumberType,
+        TARGET_TYPES[kind],
+        kind,
       );
     }
     const ordering = ORDERING[op];
@@ -673,12 +756,14 @@ class Binder {
         this.report(DiagnosticCodes.InvalidArgumentType, operand.span, []);
       }
       if (bad.length > 0) return this.invalid(node.span);
+      const kind = this.numericKind(left.type, right.type);
       return this.binary(
         ordering,
-        this.coerce(left, "Number"),
-        this.coerce(right, "Number"),
+        this.coerce(left, kind),
+        this.coerce(right, kind),
         node,
         BooleanType,
+        kind,
       );
     }
 
@@ -708,6 +793,18 @@ class Binder {
           // Upstream aggregate equality has its own rules, not yet traced or implemented.
           return this.notSupported("Record or table comparison", node.span);
         }
+        const numeric = (k: string): boolean => k === "Number" || k === "Decimal";
+        if (numeric(lk) && numeric(rk) && lk !== rk) {
+          // Number and Decimal operands meet in the common numeric kind (as for arithmetic).
+          const kind = this.numericKind(left.type, right.type);
+          return this.binary(
+            op,
+            this.coerce(left, kind),
+            this.coerce(right, kind),
+            node,
+            BooleanType,
+          );
+        }
         if (lk !== rk && lk !== "Blank" && rk !== "Blank") {
           this.report(DiagnosticCodes.IncompatibleTypesForComparison, this.operatorSpan(node), [
             typeName(left.type),
@@ -728,8 +825,10 @@ class Binder {
     right: BoundNode,
     node: BinaryNode,
     type: FormulaType,
+    numeric?: NumericKind,
   ): BoundNode {
-    return { kind: "Binary", op, left, right, span: node.span, type };
+    const bound = { kind: "Binary" as const, op, left, right, span: node.span, type };
+    return numeric === undefined ? bound : { ...bound, numeric };
   }
 
   /**
@@ -767,6 +866,7 @@ class Binder {
       if (name === "First") return this.bindFirst(node);
       if (name === "CountRows") return this.bindCountRows(node);
       if (name === "LookUp") return this.bindLookUp(node);
+      if (name === "Decimal" || name === "Float") return this.bindNumericConversion(node, name);
     }
     const signature = this.functions.get(name);
     const args = node.args.map((a) => this.bindExpression(a));

@@ -49,6 +49,8 @@ export function serializeValue(value: FormulaValue, engine: Engine): string {
       return `"${value.value.replaceAll('"', '""')}"`;
     case "Number":
       return engine.formatNumber(value.value);
+    case "Decimal":
+      return engine.formatDecimal(value.value);
     case "Record":
       return `{${[...value.fields]
         .sort(byName)
@@ -70,21 +72,27 @@ export function formatDiagnostic(d: Diagnostic): string {
  * Adapter that runs upstream cases through the real TypeScript engine. Anything the engine slice
  * does not implement (unknown functions, records, tables, ...) is `unsupported`, never a pass.
  */
-export function createEngineRunner(engine: Engine = new Engine()): ExpressionRunner {
+export function createEngineRunner(override?: Engine): ExpressionRunner {
+  const engines = new Map<string, Engine>();
+  const engineFor = (mode: "float" | "decimal"): Engine => {
+    if (override !== undefined && override.numberMode === mode) return override;
+    let engine = engines.get(mode);
+    if (engine === undefined) {
+      engine = new Engine({ numberMode: mode });
+      engines.set(mode, engine);
+    }
+    return engine;
+  };
   return {
     supportedHandlers: new Set(),
     async run(input: string, profile: CompatibilityProfile): Promise<RunResult> {
-      if (profile.numberMode !== engine.numberMode) {
-        return {
-          kind: "unsupported",
-          category: "profile",
-          reason: `Number mode '${profile.numberMode}' not implemented (engine: ${engine.numberMode})`,
-        };
-      }
+      const engine = engineFor(profile.numberMode);
       const result = await engine.evaluate(input);
       switch (result.kind) {
         case "value":
-          return { kind: "value", text: serializeValue(result.value, engine) };
+          return result.value.kind === "Decimal"
+            ? { kind: "value", text: serializeValue(result.value, engine), numeric: "decimal" }
+            : { kind: "value", text: serializeValue(result.value, engine) };
         case "invalid":
           return {
             kind: "errors",

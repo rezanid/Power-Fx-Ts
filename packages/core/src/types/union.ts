@@ -2,10 +2,10 @@ import type { FormulaType, RecordTypeOf } from "./formula-type.js";
 import { typesEqual } from "./formula-type.js";
 
 /** Scalar kinds that coerce to each other when a type union needs it. */
-type ScalarKind = "Number" | "Text" | "Boolean";
+type ScalarKind = "Number" | "Decimal" | "Text" | "Boolean";
 
 const isScalar = (t: FormulaType): t is Extract<FormulaType, { kind: ScalarKind }> =>
-  t.kind === "Number" || t.kind === "Text" || t.kind === "Boolean";
+  t.kind === "Number" || t.kind === "Decimal" || t.kind === "Text" || t.kind === "Boolean";
 
 /**
  * How a value of one type is rebuilt as another (the union result). Produced next to the union so
@@ -29,7 +29,7 @@ export type ConformPlan =
  * pinned `If` and table-construction rule under PowerFxV1CompatibilityRules). The left type wins:
  *
  * - identical types stay; a Blank type (ObjNull) takes the other side;
- * - Number, Text and Boolean coerce right-to-left when they differ;
+ * - Number (float), Decimal, Text and Boolean coerce right-to-left when they differ;
  * - records union field by field (missing fields are added, shared fields union recursively; the
  *   result is ordinal-sorted); tables union their row types;
  * - a record or table never unions with a scalar, and a record never with a table.

@@ -1,10 +1,11 @@
 import { snapshotSchema, type FormulaType, type Schema } from "@powerfx-ts/core";
-import { numericBackendId, type NumericBackend } from "../numeric/backend.js";
+import { numericsId, type Numerics } from "../numeric/backend.js";
 import {
   blank,
   boolean,
   deepFreeze,
   number,
+  decimal,
   record,
   table,
   text,
@@ -31,7 +32,7 @@ export interface ValidatedValues {
   readonly [validatedBrand]: true;
   readonly schema: Schema;
   /** Numbers are backend-specific, so values only work with the backend instance that made them. */
-  readonly numericId: number;
+  readonly numericId: string;
   readonly values: ReadonlyMap<string, FormulaValue>;
 }
 
@@ -84,12 +85,14 @@ const isPlainObject = (v: unknown): v is Record<string, unknown> => {
  * Converts plain JS input to runtime values, strictly and without coercion.
  * - `null`/`undefined` is Blank for any type (also a missing record field).
  * - A variable missing from the input is an error; so are unknown variables/fields.
+ * - Decimal needs a decimal string, a bigint or a safe-integer number (never an imprecise double);
+ *   text beyond 28 decimals or the 96-bit range is rejected instead of rounded.
  * - Number needs a finite JS number, Text a string, Boolean a boolean, Record a plain object.
  */
 export function validateValues(
   schema: Schema,
   input: unknown,
-  numeric: NumericBackend,
+  numerics: Numerics,
 ): ValidationResult {
   schema = snapshotSchema(schema);
   const issues: ValueIssue[] = [];
@@ -126,7 +129,7 @@ export function validateValues(
         ok: true,
         values: Object.freeze({
           schema,
-          numericId: numericBackendId(numeric),
+          numericId: numericsId(numerics),
           values: new ReadOnlyMap([...values].map(([k, val]) => [k, deepFreeze(val)] as const)),
         }) as unknown as ValidatedValues,
       };
@@ -144,8 +147,20 @@ export function validateValues(
     switch (type.kind) {
       case "Number": {
         if (typeof raw !== "number") return bad("a number");
-        const n = numeric.fromNumber(raw);
+        const n = numerics.float.fromNumber(raw);
         return n === undefined ? bad("a finite number") : number(n);
+      }
+      case "Decimal": {
+        // Never routed through a JS double: only exact representations are accepted.
+        const exact =
+          typeof raw === "string"
+            ? raw
+            : typeof raw === "bigint" || (typeof raw === "number" && Number.isSafeInteger(raw))
+              ? String(raw)
+              : undefined;
+        if (exact === undefined) return bad("a decimal string, a bigint or a safe integer");
+        const d = numerics.decimal.parseExact(exact);
+        return d === undefined ? bad("an exactly representable decimal") : decimal(d);
       }
       case "Text":
         return typeof raw === "string" ? text(raw) : bad("text");
@@ -186,6 +201,7 @@ export function validateValues(
 }
 
 function describe(v: unknown): string {
+  if (typeof v === "bigint") return `bigint ${String(v)}`;
   if (typeof v === "number") return `number ${String(v)}`;
   if (Array.isArray(v)) return "an array";
   return typeof v === "object" ? "an object" : `a ${typeof v}`;

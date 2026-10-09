@@ -1,10 +1,11 @@
 export * from "./text/span.js";
 export * from "./diagnostics/diagnostic.js";
 export * from "./lexer/tokens.js";
-export { lex, type LexResult } from "./lexer/lexer.js";
+export { lex, type LexOptions, type LexResult } from "./lexer/lexer.js";
 export * from "./syntax/nodes.js";
 export { parse, type ParseOptions, type ParseResult } from "./parser/parser.js";
 
+export * from "./numeric/decimal.js";
 export * from "./types/formula-type.js";
 export * from "./types/union.js";
 export * from "./types/schema.js";

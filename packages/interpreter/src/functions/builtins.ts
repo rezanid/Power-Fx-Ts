@@ -8,7 +8,7 @@ const ifFunction: FunctionImplementation = (args, context) => {
   const count = args.length;
   let i = 0;
   for (; i + 1 < count; i += 2) {
-    const condition = coerceValue(context.evaluate(args[i]!), "Boolean", context.numeric);
+    const condition = coerceValue(context.evaluate(args[i]!), "Boolean", context.numerics);
     if (condition.kind === "Error") return condition;
     if (condition.kind === "Boolean" && condition.value) return context.evaluate(args[i + 1]!);
   }

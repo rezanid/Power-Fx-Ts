@@ -105,8 +105,11 @@ describe("engine runner end to end", () => {
     expect(report.totals).toMatchObject({ pass: 1, fail: 2, unsupported: 1 });
   });
 
-  it("is unsupported for a profile with a different number mode", async () => {
-    const result = await createEngineRunner().run("1", PROFILES["v1-decimal"]!);
-    expect(result.kind).toBe("unsupported");
+  it("evaluates each profile in its own number mode", async () => {
+    const runner = createEngineRunner();
+    const decimal = await runner.run("0.1+0.2", PROFILES["v1-decimal"]!);
+    const float = await runner.run("0.1+0.2", PROFILES["v1-float"]!);
+    expect(decimal).toEqual({ kind: "value", text: "0.3", numeric: "decimal" });
+    expect(float).toEqual({ kind: "value", text: "0.30000000000000004" });
   });
 });

@@ -21,6 +21,8 @@ export interface ParseOptions {
   readonly allowChaining?: boolean;
   /** Maximum expression nesting. Default 200. */
   readonly maxDepth?: number;
+  /** Literal typing and range: `float` (default) or `decimal` (upstream NumberIsFloat off). */
+  readonly numberMode?: "float" | "decimal";
 }
 
 export interface ParseResult {
@@ -81,7 +83,10 @@ const BINARY: Partial<Record<TokenKind, [BinaryOperator, Prec]>> = {
 };
 
 export function parse(text: string, options: ParseOptions = {}): ParseResult {
-  const lexed = lex(text);
+  const lexed = lex(
+    text,
+    options.numberMode === undefined ? {} : { numberMode: options.numberMode },
+  );
   const parser = new Parser(lexed.tokens, options);
   const root = parser.parseRoot();
   const diagnostics = [...lexed.diagnostics, ...parser.diagnostics].sort(

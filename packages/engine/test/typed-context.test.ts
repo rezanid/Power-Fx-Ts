@@ -236,10 +236,10 @@ describe("reusing checked results", () => {
     if (!mine.ok || !theirs.ok) throw new Error("expected valid values");
     expect((await a.evaluateChecked(checked, { values: mine.values })).kind).toBe("value");
     await expect(b.evaluateChecked(checked, { values: theirs.values })).rejects.toThrow(
-      /different numeric backend/,
+      /different numeric configuration/,
     );
     await expect(a.evaluateChecked(checked, { values: theirs.values })).rejects.toThrow(
-      /different numeric backend/,
+      /different numeric configuration/,
     );
     // Engines sharing one backend instance remain interchangeable.
     const shared = { ...floatBackend };
@@ -256,15 +256,17 @@ describe("reusing checked results", () => {
     const other = new Engine({ numeric: { ...floatBackend, name: "decimal" } });
     const checked = engine.check("X + 1", { schema: defineSchema({ X: NumberType }) });
     const values = valid({ X: 1 }, defineSchema({ X: NumberType }));
-    await expect(other.evaluateChecked(checked, { values })).rejects.toThrow(/numeric backend/);
+    await expect(other.evaluateChecked(checked, { values })).rejects.toThrow(
+      /numeric configuration/,
+    );
     const otherChecked = other.check("X + 1", { schema: defineSchema({ X: NumberType }) });
     await expect(engine.evaluateChecked(otherChecked, { values })).rejects.toThrow(
-      /numeric backend/,
+      /numeric configuration/,
     );
     const otherValues = other.validateValues(defineSchema({ X: NumberType }), { X: 1 });
     if (!otherValues.ok) throw new Error("expected valid values");
     await expect(engine.evaluateChecked(checked, { values: otherValues.values })).rejects.toThrow(
-      /numeric backend/,
+      /numeric configuration/,
     );
   });
 });

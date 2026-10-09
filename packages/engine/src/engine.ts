@@ -13,24 +13,35 @@ import {
 } from "@powerfx-ts/core";
 import {
   evaluate,
+  decimalBackend,
   floatBackend,
   type CancellationSignal,
   type FormulaValue,
   type NumericBackend,
   type NumericValue,
-  numericBackendId,
+  type Numerics,
+  numericsId,
   type ValidatedValues,
   type ValidationResult,
   validateValues,
 } from "@powerfx-ts/interpreter";
 
 export interface EngineOptions {
-  /** Numeric semantics; defaults to the IEEE-754 float backend. */
+  /** Float (`Number`) semantics; defaults to the IEEE-754 backend. */
   readonly numeric?: NumericBackend;
+  /** Decimal semantics; defaults to the .NET-compatible exact decimal backend (ADR 0009). */
+  readonly decimal?: NumericBackend;
+  /**
+   * Type of numeric literals and of operations on non-numeric operands: `float` (default, upstream
+   * `NumberIsFloat`) or `decimal` (upstream default under `PowerFxV1`).
+   */
+  readonly numberMode?: NumberMode;
   /** Evaluation step budget applied to every evaluation. */
   readonly maxSteps?: number;
   readonly parse?: ParseOptions;
 }
+
+export type NumberMode = "float" | "decimal";
 
 export interface CheckOptions {
   /** Types of the names the formula may use. No runtime values are needed to check. */
@@ -41,8 +52,8 @@ export interface CheckResult {
   readonly text: string;
   /** Frozen snapshot of the schema the formula was checked against. */
   readonly schema: Schema | undefined;
-  /** Identity of the numeric backend instance used; reusable only with that same instance. */
-  readonly numericId: number;
+  /** Identity of the numeric backend instances and mode used; reusable only with the same ones. */
+  readonly numericId: string;
   /** Parse and binding diagnostics, parse diagnostics first. */
   readonly diagnostics: readonly Diagnostic[];
   /** Constructs outside the implemented slice; see `BindResult.unsupported`. */
@@ -76,31 +87,44 @@ export interface EvaluateCheckedOptions {
  * values. Checking and evaluation share one binder; there is no I/O.
  */
 export class Engine {
-  private readonly numeric: NumericBackend;
+  private readonly numerics: Numerics;
+  readonly numberMode: NumberMode;
 
   constructor(private readonly options: EngineOptions = {}) {
-    this.numeric = options.numeric ?? floatBackend;
+    this.numerics = {
+      float: options.numeric ?? floatBackend,
+      decimal: options.decimal ?? decimalBackend,
+    };
+    this.numberMode = options.numberMode ?? "float";
   }
 
-  get numberMode(): NumericBackend["name"] {
-    return this.numeric.name;
-  }
-
-  /** Invariant-culture text form of a number, as used for Text coercion. */
+  /** Invariant-culture text form of a `Number` (float) value, as used for Text coercion. */
   formatNumber(value: NumericValue): string {
-    return this.numeric.format(value);
+    return this.numerics.float.format(value);
+  }
+
+  /** Invariant-culture text form of a `Decimal` value (normalized: no trailing zeros). */
+  formatDecimal(value: NumericValue): string {
+    return this.numerics.decimal.format(value);
+  }
+
+  private identity(): string {
+    return `${numericsId(this.numerics)}:${this.numberMode}`;
   }
 
   /** Validates plain host input against `schema`; never coerces. See `validateValues`. */
   validateValues(schema: Schema, input: unknown): ValidationResult {
-    return validateValues(schema, input, this.numeric);
+    return validateValues(schema, input, this.numerics);
   }
 
   check(text: string, options: CheckOptions = {}): CheckResult {
     const schema = options.schema === undefined ? undefined : snapshotSchema(options.schema);
-    const parsed = parse(text, this.options.parse);
+    const parsed = parse(text, { ...this.options.parse, numberMode: this.numberMode });
     const skipped = parsed.unsupportedSyntax.map((u) => ({ category: "construct" as const, ...u }));
-    const bound = bind(parsed, schema === undefined ? {} : { schema });
+    const bound = bind(parsed, {
+      numberMode: this.numberMode,
+      ...(schema === undefined ? {} : { schema }),
+    });
     const unsupported = [...skipped, ...bound.unsupported];
     // Binding diagnostics on a partially bound tree are not trustworthy, so they are dropped
     // whenever unsupported constructs were skipped.
@@ -113,7 +137,7 @@ export class Engine {
     return {
       text,
       schema,
-      numericId: numericBackendId(this.numeric),
+      numericId: this.identity(),
       diagnostics,
       unsupported,
       type: bound.type,
@@ -145,12 +169,12 @@ export class Engine {
     signal: CancellationSignal | undefined = options.signal,
   ): Promise<EvaluationResult> {
     const values = options.values;
-    const id = numericBackendId(this.numeric);
+    const id = this.identity();
     if (checked.numericId !== id) {
-      throw new TypeError("The formula was checked with a different numeric backend instance.");
+      throw new TypeError("The formula was checked with a different numeric configuration.");
     }
-    if (values !== undefined && values.numericId !== id) {
-      throw new TypeError("The values were validated with a different numeric backend instance.");
+    if (values !== undefined && values.numericId !== numericsId(this.numerics)) {
+      throw new TypeError("The values were validated with a different numeric configuration.");
     }
     if (checked.schema !== undefined) {
       if (values === undefined) {
@@ -171,7 +195,7 @@ export class Engine {
     }
     if (checked.bound === undefined) return { kind: "invalid", diagnostics: checked.diagnostics };
     const value = evaluate(checked.bound, {
-      numeric: this.numeric,
+      numerics: this.numerics,
       ...(values === undefined ? {} : { variables: values.values }),
       ...(signal === undefined ? {} : { signal }),
       ...(this.options.maxSteps === undefined ? {} : { maxSteps: this.options.maxSteps }),

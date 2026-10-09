@@ -1,6 +1,6 @@
-import type { BoundNode, ConformPlan } from "@powerfx-ts/core";
+import type { BoundNode, CoercionTarget, ConformPlan } from "@powerfx-ts/core";
 import { BUILTIN_IMPLEMENTATIONS } from "../functions/builtins.js";
-import type { NumericBackend, NumericResult, NumericValue } from "../numeric/backend.js";
+import type { NumericBackend, NumericResult, NumericValue, Numerics } from "../numeric/backend.js";
 import {
   EvaluationBudgetExceeded,
   type EvaluationContext,
@@ -10,6 +10,7 @@ import {
 import {
   blank,
   boolean,
+  decimal,
   error,
   number,
   record,
@@ -21,7 +22,7 @@ import {
   type RecordValue,
   type TableRow,
 } from "../values/values.js";
-import { coerceValue } from "./coercion.js";
+import { coerceValue, convertNumber } from "./coercion.js";
 
 export function evaluate(root: BoundNode, options: EvaluationOptions): FormulaValue {
   return new Evaluator(options).evaluate(root);
@@ -34,8 +35,8 @@ class Evaluator implements EvaluationContext {
 
   constructor(private readonly options: EvaluationOptions) {}
 
-  get numeric(): NumericBackend {
-    return this.options.numeric;
+  get numerics(): Numerics {
+    return this.options.numerics;
   }
 
   /** Cancellation and budget check; one step per node and per table row visited. */
@@ -48,11 +49,15 @@ class Evaluator implements EvaluationContext {
 
   evaluate(node: BoundNode): FormulaValue {
     this.tick();
-    const numeric = this.numeric;
+    const numerics = this.numerics;
 
     switch (node.kind) {
       case "NumberLiteral": {
-        const parsed = numeric.parseLiteral(node.text);
+        if (node.type.kind === "Decimal") {
+          const parsed = numerics.decimal.parseLiteral(node.text);
+          return parsed === undefined ? error("Numeric") : decimal(parsed);
+        }
+        const parsed = numerics.float.parseLiteral(node.text);
         return parsed === undefined ? error("Numeric") : number(parsed);
       }
       case "TextLiteral":
@@ -62,7 +67,10 @@ class Evaluator implements EvaluationContext {
       case "Coerce": {
         const operand = this.evaluate(node.operand);
         if (node.preserveBlank && operand.kind === "Blank") return operand;
-        return coerceValue(operand, node.to, numeric);
+        return coerceValue(operand, node.to, numerics);
+      }
+      case "ConvertNumber": {
+        return convertNumber(this.evaluate(node.operand), node.to, numerics);
       }
       case "Conform":
         return this.conform(this.evaluate(node.operand), node.plan);
@@ -120,13 +128,13 @@ class Evaluator implements EvaluationContext {
       case "CountRows": {
         const source = this.evaluate(node.source);
         if (source.kind === "Error") return source;
-        if (source.kind === "Blank") return this.count(0);
+        if (source.kind === "Blank") return this.count(0, node.type.kind);
         if (source.kind !== "Table") throw new Error("CountRows source is not a table.");
         for (const row of source.rows) {
           this.tick();
           if (row.kind === "Error") return row;
         }
-        return this.count(source.rows.length);
+        return this.count(source.rows.length, node.type.kind);
       }
       case "LookUp":
         return this.lookUp(node);
@@ -171,9 +179,12 @@ class Evaluator implements EvaluationContext {
     return table(rows);
   }
 
-  private count(n: number): FormulaValue {
-    const value = this.numeric.fromNumber(n);
-    return value === undefined ? error("Numeric") : number(value);
+  private count(n: number, kind: string): FormulaValue {
+    const decimalResult = kind === "Decimal";
+    const backend = decimalResult ? this.numerics.decimal : this.numerics.float;
+    const value = backend.fromNumber(n);
+    if (value === undefined) return error("Numeric");
+    return decimalResult ? decimal(value) : number(value);
   }
 
   /**
@@ -232,7 +243,7 @@ class Evaluator implements EvaluationContext {
     if (value.kind === "Error" || value.kind === "Blank") return value;
     switch (plan.kind) {
       case "Scalar":
-        return coerceValue(value, plan.to, this.numeric);
+        return coerceValue(value, plan.to, this.numerics);
       case "Record": {
         if (value.kind !== "Record") throw new Error("Conform expects a record.");
         const byName = new Map(value.fields.map((f) => [f.name, f.value]));
@@ -259,25 +270,27 @@ class Evaluator implements EvaluationContext {
   }
 
   /** Evaluates a numeric operand: Blank counts as zero, errors propagate. */
-  private operand(node: BoundNode, to: "Number" | "Text" | "Boolean"): FormulaValue {
-    return coerceValue(this.evaluate(node), to, this.numeric);
+  private operand(node: BoundNode, to: CoercionTarget): FormulaValue {
+    return coerceValue(this.evaluate(node), to, this.numerics);
   }
 
   private unary(node: Extract<BoundNode, { kind: "Unary" }>): FormulaValue {
-    const numeric = this.numeric;
     if (node.op === "Not") {
       const value = this.operand(node.operand, "Boolean");
       return value.kind === "Boolean" ? boolean(!value.value) : value;
     }
-    const value = this.operand(node.operand, "Number");
-    if (value.kind !== "Number") return value;
-    if (node.op === "Negate") return number(numeric.negate(value.value));
+    const kind = node.type.kind === "Decimal" ? "Decimal" : "Number";
+    const numeric = kind === "Decimal" ? this.numerics.decimal : this.numerics.float;
+    const value = this.operand(node.operand, kind);
+    if (value.kind !== kind) return value;
+    if (node.op === "Negate") return wrapNumeric(kind, numeric.negate(value.value));
     const hundred = numeric.parseLiteral("100");
-    return hundred === undefined ? error("Numeric") : fromResult(numeric.div(value.value, hundred));
+    return hundred === undefined
+      ? error("Numeric")
+      : fromResult(kind, numeric.div(value.value, hundred));
   }
 
   private binary(node: Extract<BoundNode, { kind: "Binary" }>): FormulaValue {
-    const numeric = this.numeric;
     switch (node.op) {
       case "And":
       case "Or": {
@@ -298,41 +311,48 @@ class Evaluator implements EvaluationContext {
         if (left.kind === "Error") return left;
         const right = this.evaluate(node.right);
         if (right.kind === "Error") return right;
-        const equal = valuesEqual(left, right, numeric);
+        const equal = valuesEqual(left, right, this.numerics);
         return boolean(node.op === "Eq" ? equal : !equal);
       }
       default: {
-        const left = this.operand(node.left, "Number");
-        if (left.kind !== "Number") return left;
-        const right = this.operand(node.right, "Number");
-        if (right.kind !== "Number") return right;
-        return numberOperation(node.op, left.value, right.value, numeric);
+        const kind = node.numeric;
+        if (kind === undefined) throw new Error(`Binary ${node.op} has no numeric kind.`);
+        const left = this.operand(node.left, kind);
+        if (left.kind !== kind) return left;
+        const right = this.operand(node.right, kind);
+        if (right.kind !== kind) return right;
+        const backend = kind === "Decimal" ? this.numerics.decimal : this.numerics.float;
+        return numberOperation(node.op, kind, left.value, right.value, backend);
       }
     }
   }
 }
 
-function fromResult(result: NumericResult): FormulaValue {
-  return result.ok ? number(result.value) : error(result.kind);
+const wrapNumeric = (kind: "Number" | "Decimal", value: NumericValue): FormulaValue =>
+  kind === "Decimal" ? decimal(value) : number(value);
+
+function fromResult(kind: "Number" | "Decimal", result: NumericResult): FormulaValue {
+  return result.ok ? wrapNumeric(kind, result.value) : error(result.kind);
 }
 
 function numberOperation(
   op: string,
+  kind: "Number" | "Decimal",
   a: NumericValue,
   b: NumericValue,
   numeric: NumericBackend,
 ): FormulaValue {
   switch (op) {
     case "Add":
-      return fromResult(numeric.add(a, b));
+      return fromResult(kind, numeric.add(a, b));
     case "Sub":
-      return fromResult(numeric.sub(a, b));
+      return fromResult(kind, numeric.sub(a, b));
     case "Mul":
-      return fromResult(numeric.mul(a, b));
+      return fromResult(kind, numeric.mul(a, b));
     case "Div":
-      return fromResult(numeric.div(a, b));
+      return fromResult(kind, numeric.div(a, b));
     case "Power":
-      return fromResult(numeric.pow(a, b));
+      return fromResult(kind, numeric.pow(a, b));
     case "Lt":
       return boolean(numeric.compare(a, b) < 0);
     case "LtEq":
@@ -350,9 +370,14 @@ function numberOperation(
  * Power Fx 1.0 equality: Blank equals only Blank; text compares case-insensitively.
  * The binder guarantees both operands have the same kind or one is Blank.
  */
-function valuesEqual(a: FormulaValue, b: FormulaValue, numeric: NumericBackend): boolean {
+function valuesEqual(a: FormulaValue, b: FormulaValue, numerics: Numerics): boolean {
   if (a.kind === "Blank" || b.kind === "Blank") return a.kind === b.kind;
-  if (a.kind === "Number" && b.kind === "Number") return numeric.compare(a.value, b.value) === 0;
+  if (a.kind === "Number" && b.kind === "Number") {
+    return numerics.float.compare(a.value, b.value) === 0;
+  }
+  if (a.kind === "Decimal" && b.kind === "Decimal") {
+    return numerics.decimal.compare(a.value, b.value) === 0;
+  }
   if (a.kind === "Text" && b.kind === "Text") {
     return a.value.localeCompare(b.value, "en-US", { sensitivity: "accent" }) === 0;
   }

@@ -3,7 +3,10 @@ import type { FormulaType } from "../types/formula-type.js";
 import type { ConformPlan } from "../types/union.js";
 
 /** Scalar types an operand can be implicitly converted to. */
-export type CoercionTarget = "Number" | "Text" | "Boolean";
+export type CoercionTarget = "Number" | "Decimal" | "Text" | "Boolean";
+
+/** Numeric kind an arithmetic or comparison operator works in (`Number` is float). */
+export type NumericKind = "Number" | "Decimal";
 
 export type BoundUnaryOperator = "Negate" | "Not" | "Percent";
 export type BoundBinaryOperator =
@@ -43,6 +46,8 @@ export type BoundNode =
   | (BoundBase & {
       readonly kind: "Binary";
       readonly op: BoundBinaryOperator;
+      /** Numeric kind both operands are coerced to at evaluation; set for arithmetic and ordering. */
+      readonly numeric?: NumericKind;
       readonly left: BoundNode;
       readonly right: BoundNode;
     })
@@ -52,6 +57,12 @@ export type BoundNode =
       readonly operand: BoundNode;
       /** Blank operands stay Blank instead of becoming the target's zero value. */
       readonly preserveBlank?: boolean;
+    })
+  /** `Decimal(x)` / `Float(x)`: explicit conversion; Blank and empty text stay Blank. */
+  | (BoundBase & {
+      readonly kind: "ConvertNumber";
+      readonly to: NumericKind;
+      readonly operand: BoundNode;
     })
   /**
    * Rebuilds a record or table value as the union type of `If` results and table rows: fields

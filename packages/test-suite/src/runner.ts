@@ -4,7 +4,12 @@ import type { TxtTestCase, TxtTestFile } from "./txt-format.js";
 /** Outcome of running one expression in a candidate engine. */
 export type RunResult =
   /** `text` is the compact serialized expression form (e.g. `Table({Value:1})`, `Blank()`). */
-  | { readonly kind: "value"; readonly text: string }
+  | {
+      readonly kind: "value";
+      readonly text: string;
+      /** Set when the top-level result is a Decimal; upstream then compares exact numeric value. */
+      readonly numeric?: "decimal";
+    }
   /** Compile errors, formatted like upstream (`Error 0-3: Invalid argument type...`). */
   | { readonly kind: "errors"; readonly errors: readonly string[] }
   | {
@@ -125,6 +130,12 @@ export function compareResult(testCase: TxtTestCase, result: RunResult): CaseRes
     }
     return { ...base, outcome: "fail", message: `Unexpected errors: ${result.errors.join(" | ")}` };
   }
+  if (result.numeric === "decimal" && decimalTextsEqual(expected, result.text)) {
+    return { ...base, outcome: "pass" };
+  }
+  if (result.numeric === "decimal" && !numbersClose(expected, result.text)) {
+    return { ...base, outcome: "fail", message: `Expected ${expected} but got ${result.text}` };
+  }
   if (result.text === expected || numbersClose(expected, result.text)) {
     if (result.text !== expected && !isPreciseEnoughForFloat(expected)) {
       return {
@@ -136,6 +147,29 @@ export function compareResult(testCase: TxtTestCase, result: RunResult): CaseRes
     return { ...base, outcome: "pass" };
   }
   return { ...base, outcome: "fail", message: `Expected ${expected} but got ${result.text}` };
+}
+
+const DECIMAL_TEXT = /^([+-]?)(\d*)(?:\.(\d*))?(?:[eE]([+-]?\d+))?$/;
+
+/**
+ * Upstream `BaseRunner` compares a Decimal result with `decimal.Parse(expected) == value`: an exact,
+ * scale-insensitive numeric comparison (no tolerance).
+ */
+export function decimalTextsEqual(a: string, b: string): boolean {
+  const scale = (t: string): { m: bigint; s: number } | undefined => {
+    const m = DECIMAL_TEXT.exec(t.trim());
+    if (m === null || (m[2] === "" && (m[3] ?? "") === "")) return undefined;
+    const exponent = Number(m[4] ?? "0");
+    if (Math.abs(exponent) > 100) return undefined;
+    const fraction = m[3] ?? "";
+    const mantissa = BigInt(`${m[2]}${fraction}` || "0") * (m[1] === "-" ? -1n : 1n);
+    return { m: mantissa, s: fraction.length - exponent };
+  };
+  const x = scale(a);
+  const y = scale(b);
+  if (x === undefined || y === undefined) return false;
+  const common = Math.max(x.s, y.s);
+  return x.m * 10n ** BigInt(common - x.s) === y.m * 10n ** BigInt(common - y.s);
 }
 
 /** Upstream rejects fuzzy float matches when the expectation has more than 17 decimal digits. */
