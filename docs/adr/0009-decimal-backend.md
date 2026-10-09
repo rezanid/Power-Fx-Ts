@@ -118,10 +118,19 @@ through to the float tolerance (`|a-b| < 1e-5`), so expected `1` passed actual `
 upstream `BaseRunner.cs`: when the original result is a `DecimalValue`, the verdict is only
 `decimal.Parse(expected, NumberStyles.Float) == value` (scale-insensitive, no tolerance; `.Parse`
 rounds over-long expectations such as `79149013500763574019524425909.091`, which `decimalParseEquals`
-reproduces); Float or other results keep the 1e-5 / 1e-14 tolerance and the >17-digit expectation
+reproduces with **half-even** rounding, as System.Decimal parsing does); Float or other results keep the 1e-5 / 1e-14 tolerance and the >17-digit expectation
 rejection. `compareResult` now follows this, and reports a separate diagnostic (`valueMatch`, "passing
 numeric cases accepted only by upstream's float tolerance") that is not a verdict. The fix changed no
 verdict on the pinned corpus (2,121 / 262 before and after); it is covered by unit tests.
+
+The expectation rounding was first implemented as ties-away-from-zero, which was wrong: raw
+`decimal.Parse` is half-even (`0.00000000000000000000000000005` -> `0`, `...0025` -> `...0002`,
+`...0015` -> `...0002`, `...0035` -> `...0004`; trailing zeros after the 5 still count as a tie;
+sign-symmetric). `packages/test-suite/test/fixtures/decimal-parse.json` holds 120 raw `decimal.Parse`
+results (`tools/reference-harness parse`) covering signed ties, even/odd retained digits, just
+above/below ties, 96-bit mantissa boundaries and overflow; the runner tests require
+`decimalParseEquals` to accept each parsed value and reject its one-ulp neighbour. No corpus verdict
+changed (2,121 / 262 and 1,263 / 233).
 
 ### Case-level before/after evidence
 

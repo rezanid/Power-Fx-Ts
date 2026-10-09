@@ -200,7 +200,7 @@ const MAX_DECIMAL = 2n ** 96n - 1n;
  * `decimal.Parse(expected, NumberStyles.Float) == value`. `decimal.Parse` rounds an expectation
  * with more fractional digits than System.Decimal holds (scale > 28 or a mantissa above 96 bits)
  * instead of failing, and upstream's own expectations rely on that (DecimalDotnetRuntime.txt).
- * Ties round away from zero here; no pinned expectation is a tie.
+ * Rounding is half-even (the sign is irrelevant), verified against raw `decimal.Parse`.
  */
 export function decimalParseEquals(expected: string, actual: string): boolean {
   if (decimalTextsEqual(expected, actual)) return true;
@@ -214,8 +214,13 @@ export function decimalParseEquals(expected: string, actual: string): boolean {
   let drop = Math.max(0, scale - 28);
   const rounded = (n: number): bigint => {
     const kept = digits.slice(0, Math.max(0, digits.length - n)) || "0";
-    const next = n === 0 ? "0" : digits.padStart(n, "0").slice(-n)[0]!;
-    return BigInt(kept) + (Number(next) >= 5 ? 1n : 0n);
+    const dropped = n === 0 ? "" : digits.padStart(n, "0").slice(-n);
+    const quotient = BigInt(kept);
+    if (dropped === "") return quotient;
+    const head = Number(dropped[0]);
+    const tie = head === 5 && !/[1-9]/.test(dropped.slice(1));
+    const up = head > 5 || (head === 5 && !tie) || (tie && quotient % 2n === 1n);
+    return up ? quotient + 1n : quotient;
   };
   while (rounded(drop) > MAX_DECIMAL) drop++;
   if (drop > scale) return false;

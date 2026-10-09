@@ -1,9 +1,11 @@
+import { readFileSync } from "node:fs";
 import { Engine } from "@powerfx-ts/engine";
 import { describe, expect, it } from "vitest";
 import {
   PROFILES,
   compareResult,
   createEngineRunner,
+  decimalParseEquals,
   numbersClose,
   runCompat,
   type TxtTestFile,
@@ -68,6 +70,49 @@ describe("compareResult rules mirrored from upstream BaseRunner", () => {
     expect(compareResult(at("x", "0.00000000000000000000000000006"), dec("0")).outcome).toBe(
       "fail",
     );
+  });
+
+  it("rounds expectation ties half-even, matching System.Decimal parsing", () => {
+    const dec = (text: string) => ({ kind: "value", text, numeric: "decimal" }) as const;
+    const ok = (input: string, actual: string) =>
+      compareResult(at("x", input), dec(actual)).outcome === "pass";
+    // Positive/negative ties; even and odd retained digit.
+    expect(ok("0.00000000000000000000000000005", "0")).toBe(true);
+    expect(ok("0.00000000000000000000000000015", "0.0000000000000000000000000002")).toBe(true);
+    expect(ok("0.00000000000000000000000000025", "0.0000000000000000000000000002")).toBe(true);
+    expect(ok("0.00000000000000000000000000035", "0.0000000000000000000000000004")).toBe(true);
+    expect(ok("-0.00000000000000000000000000025", "-0.0000000000000000000000000002")).toBe(true);
+    expect(ok("-0.00000000000000000000000000015", "-0.0000000000000000000000000002")).toBe(true);
+    // Away-from-zero (the previous behaviour) is rejected for even retained digits.
+    expect(ok("0.00000000000000000000000000005", "0.0000000000000000000000000001")).toBe(false);
+    expect(ok("0.00000000000000000000000000025", "0.0000000000000000000000000003")).toBe(false);
+    // Immediately above/below a tie.
+    expect(ok("0.000000000000000000000000000050001", "0.0000000000000000000000000001")).toBe(true);
+    expect(ok("0.000000000000000000000000000049999", "0")).toBe(true);
+    expect(ok("0.000000000000000000000000000250001", "0.0000000000000000000000000003")).toBe(true);
+    expect(ok("0.000000000000000000000000000250001", "0.0000000000000000000000000002")).toBe(false);
+  });
+
+  it("agrees with raw System.Decimal parsing on every reference vector", () => {
+    const fixture = JSON.parse(
+      readFileSync(new URL("./fixtures/decimal-parse.json", import.meta.url), "utf8"),
+    ) as { entries: { input: string; parsed: string }[] };
+    expect(fixture.entries.length).toBeGreaterThan(100);
+    for (const { input, parsed } of fixture.entries) {
+      if (parsed === "Overflow") continue;
+      expect(decimalParseEquals(input, parsed), `${input} -> ${parsed}`).toBe(true);
+      // The neighbouring value (one unit in the last place) must be rejected.
+      const sign = parsed.startsWith("-") ? "-" : "";
+      const magnitude = parsed.replace("-", "");
+      const places = magnitude.includes(".") ? magnitude.split(".")[1]!.length : 0;
+      const neighbour = (BigInt(magnitude.replace(".", "")) + 1n)
+        .toString()
+        .padStart(places + 1, "0");
+      const text =
+        sign +
+        (places === 0 ? neighbour : `${neighbour.slice(0, -places)}.${neighbour.slice(-places)}`);
+      expect(decimalParseEquals(input, text), `${input} !-> ${text}`).toBe(false);
+    }
   });
 
   it("keeps upstream's tolerance for Float results and flags it as a diagnostic", () => {

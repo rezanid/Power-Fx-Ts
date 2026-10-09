@@ -194,7 +194,32 @@ static class P
             Console.Error.WriteLine($"{entries.Count} vectors; {compared} cross-checked against System.Decimal; {disagree} disagreements");
             return 0;
         }
-        Console.Error.WriteLine("usage: eval <float|decimal> <file> | generate <out.json>");
+        if (args.Length >= 2 && args[0] == "parse")
+        {
+            // Raw System.Decimal parsing, which the compat runner's expectation comparison mirrors.
+            var inputs = new List<string>();
+            foreach (var sign in new[] { "", "-" })
+            {
+                foreach (var kept in new[] { "0", "1", "2", "3", "4" })
+                    foreach (var tail in new[] { "4", "49999", "5", "50000", "50001", "5000000001", "6" })
+                        inputs.Add($"{sign}0.{new string('0', 27)}{kept}{tail}");
+                foreach (var kept in new[] { "7922816251426433759354395032", "7922816251426433759354395033", "7922816251426433759354395034" })
+                    foreach (var tail in new[] { "4", "49", "5", "50", "501", "6" })
+                        inputs.Add($"{sign}{kept}.{tail}");
+                inputs.Add($"{sign}79228162514264337593543950335.5");
+                inputs.Add($"{sign}79228162514264337593543950334.5");
+                inputs.Add($"{sign}79228162514264337593543950335.49");
+                inputs.Add($"{sign}0.00000000000000000000000000005");
+                inputs.Add($"{sign}0.00000000000000000000000000015");
+                inputs.Add($"{sign}0.00000000000000000000000000025");
+                inputs.Add($"{sign}0.00000000000000000000000000035");
+            }
+            var rows = inputs.Select(t => new { input = t, parsed = decimal.TryParse(t, NumberStyles.Float, Inv, out var d) ? d.ToString(Inv) : "Overflow" });
+            File.WriteAllText(args[1], "{\"generator\":\"tools/reference-harness parse\",\"entries\":[\n" + string.Join(",\n", rows.Select(r => JsonSerializer.Serialize(r))) + "\n]}\n");
+            Console.Error.WriteLine($"{inputs.Count} parse vectors");
+            return 0;
+        }
+        Console.Error.WriteLine("usage: eval <float|decimal> <file> | generate <out.json> | parse <out.json>");
         return 2;
     }
 }
