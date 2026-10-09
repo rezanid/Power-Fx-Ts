@@ -37,8 +37,14 @@ Status: provisional (milestone review pending). Upstream pin: `df4ceba5e08220db6
 - Wrong-type `LookUp` source: untyped Blank gives `BadType` + invalid-arguments, other types only
   `BadType` (per corpus `Lookup_V1Compat.txt`); untraced beyond those corpus cases. `First`/
   `CountRows` accept an untyped Blank, other non-tables use `BadTypeExpected`.
-- `LookUp` with a projection when the first kept row is an error row: upstream's behavior is
-  unverified (it reads a null row value); we return that row's error.
+- **LookUp projection on a selected error or Blank row** (verified by running the pinned C#
+  `RecalcEngine`, PowerFxV1, en-US): `LookUp(Filter([0], 1/Value > 0), true, 42)` is `42`, an outer
+  `With` variable works, and a Blank row with `42` or `IsBlank(ThisRecord)`-gated `7` works, so the
+  projection runs on such rows (`row.Value` is null and passed as the scope). Reading the row
+  (`Value`, `ThisRecord.Value`, `r.Value`, `a`, `ThisRecord`) throws a NullReferenceException in the
+  reference: an upstream defect, not a language result. Proposed behavior (deviation, to review):
+  the scope value is the error row itself (reads give that error, as for `Filter` predicates) or
+  Blank for a Blank row (reads give Blank). 2-argument `LookUp` returns the error row (verified).
 - `CountRows` is always a float Number; the decimal result under `disable:NumberIsFloat` is not
   modelled (no Decimal backend exists).
 - Record/table `If` unions and coercing row unions remain unsupported (the `FirstLast_V1Compat`

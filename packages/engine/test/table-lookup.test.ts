@@ -140,6 +140,12 @@ describe("LookUp", () => {
   it("evaluates the projection in the matched row's scope", async () => {
     expect(await run("LookUp([1,2,3,4], Value > 2, Value * 10)")).toBe("30");
     expect(await run("LookUp(Table({a:1},Blank()), IsBlank(ThisRecord), a)")).toBe("Blank()");
+    // Selected Blank row: constants run (reference: 42, 7); row reads are a reference NRE, Blank here.
+    expect(await run("LookUp(Table(Blank(),{a:1}), true, 42)")).toBe("42");
+    expect(await run("LookUp(Table(Blank(),{a:1}), IsBlank(ThisRecord), 7)")).toBe("7");
+    expect(await run("LookUp(Table(Blank(),{a:1}), true, a)")).toBe("Blank()");
+    expect(await run("LookUp(Table(Blank(),{a:1}) As r, true, r.a)")).toBe("Blank()");
+    expect(await run("LookUp(Table(Blank(),{a:1}), true, ThisRecord)")).toBe("Blank()");
     expect(await run("LookUp([1,2,3] As X, X.Value > 1, X.Value + X.Value)")).toBe("4");
   });
   it("propagates Blank and error sources", async () => {
@@ -151,7 +157,15 @@ describe("LookUp", () => {
     expect(await run("LookUp([0,3,4], 1/Value >= 0)")).toBe("Error:Div0");
     expect(await run("LookUp([1,0,3,4], 1/Value >= 0)")).toBe("{Value:1}");
     expect(await run("LookUp([0,3,4], Value = 0, 1/Value)")).toBe("Error:Div0");
-    expect(await run(`LookUp(${E}, true, 1)`)).toBe("Error:Div0");
+    // Reference-verified: the projection still runs for a selected error row.
+    expect(await run(`LookUp(${E}, true, 42)`)).toBe("42");
+    expect(await run("With({k: 5}, LookUp(" + E + ", true, k))")).toBe("5");
+    expect(await run(`LookUp(${E}, true, 1/0)`)).toBe("Error:Div0");
+    // Reference defect (NullReferenceException); ours: the scope value is the error itself.
+    expect(await run(`LookUp(${E}, true, Value)`)).toBe("Error:Div0");
+    expect(await run(`LookUp(${E} As r, true, r.Value)`)).toBe("Error:Div0");
+    expect(await run(`LookUp(${E}, true, ThisRecord.Value)`)).toBe("Error:Div0");
+    expect(await run(`LookUp(${E}, true)`)).toBe("Error:Div0");
   });
   it("shadows outer scopes and nests", async () => {
     expect(

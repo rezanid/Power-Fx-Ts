@@ -177,7 +177,9 @@ class Evaluator implements EvaluationContext {
   /**
    * Upstream `LookUp` shares `LazyFilterAsync`: the predicate runs for every row (no
    * short-circuit), then the first kept row is used, error rows included. The projection runs once,
-   * in that row's scope.
+   * in that row's scope, error and Blank rows included. Upstream passes the null `row.Value` of
+   * such rows as the scope and throws a NullReferenceException when the projection reads it; here
+   * the scope value is the error (or Blank) itself, as for `Filter` predicates (ADR 0007).
    */
   private lookUp(node: Extract<BoundNode, { kind: "LookUp" }>): FormulaValue {
     const source = this.evaluate(node.source);
@@ -192,7 +194,7 @@ class Evaluator implements EvaluationContext {
       else if (verdict.kind === "Boolean" && verdict.value) found = row;
     }
     if (found === undefined) return blank;
-    if (node.projection === undefined || found.kind === "Error") return found;
+    if (node.projection === undefined) return found;
     const projection = node.projection;
     return this.inScope(node.scopeId, found, () => this.evaluate(projection));
   }
