@@ -112,6 +112,8 @@ export interface MissingNode extends NodeBase {
 export interface ErrorNode extends NodeBase {
   readonly kind: "Error";
   readonly tokens: readonly Token[];
+  /** Operands parsed around a misplaced token, kept so tooling can still see them. */
+  readonly operands?: readonly ExpressionNode[];
 }
 
 export type ExpressionNode =

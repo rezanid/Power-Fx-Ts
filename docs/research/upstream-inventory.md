@@ -28,8 +28,15 @@ Format (implemented in `packages/test-suite/src/txt-format.ts`):
   `Error({Kind:ErrorKind.Div0})`, `Errors: Error 0-3: msg|Error ...` (compile errors), `#SKIP`, `#NoValue`.
 - Comparison is by exact string, with exceptions in upstream `BaseRunner.RunAsync2` (date/datetime
   tick tolerance, float tolerance via `NumberCompare`, Decimal→Number message rewriting, `Error*`
-  expectations re-run as `IsError(...)`). **Only exact match, `#SKIP` and compile-error matching are
-  implemented so far.**
+  expectations re-run as `IsError(...)`). **Implemented (verified against `BaseRunner.RunAsync2`):**
+  `#SKIP` first; exact ordinal match; compile-error matching where every expected message must appear
+  among the actual ones and **extra actual errors are accepted**; the expected-error split regex
+  `(".*"|[^|])+` (greedy) after replacing all `Errors: `; Decimal→Number rewriting; float tolerance
+  (`NumberCompare`: abs 1e-5 or rel 1e-14); and the rule that a fuzzy float match fails when the
+  expectation has more than 17 fractional digits. Not implemented: date tick tolerance, `Error*`→`IsError`
+  re-run (host-specific), `#OVERRIDE:` merging, `#NoValue`.
+  Our own stricter check (exact error-set equality) is reported separately as a diagnostic
+  (`strictErrorMismatches`) and never changes a verdict.
 
 Top expected-result shapes: numbers (~4k), strings (~2.7k), booleans (~4.3k), compile errors (~2.9k),
 `Error({Kind:...})` (~2.5k), tables (~1k), `Blank()`, dates/datetimes.
@@ -74,3 +81,53 @@ display names are interleaved; the slice needs only literals, identifiers, unary
   (not in scope; tools only).
 - No `THIRD_PARTY`/`NOTICE` file in the tree. **Still to audit:** NuGet dependencies, vendored data
   (localization strings under `src/strings`, `localize`), and any generated files before reusing them.
+
+## Vertical-slice compatibility results (`v1-float`, engine runner)
+
+Pinned commit `df4ceba…`; 22,047 cases, 7,088 not applicable to the profile.
+**Pass 617, fail 1, skip 46, unsupported 14,295** (feature 11,132, setup 3,163, profile 0).
+`v1-decimal`: 0 pass / 0 fail / 16,117 unsupported (decimal backend not implemented).
+Passing compile-error cases whose error set is not identical to upstream's: 33 (32 are the ordering
+matrices, where the corpus lists only some operand errors; upstream's lenient rule accepts them).
+
+"Unsupported" = the formula uses a known function, syntax, type or setup the slice lacks; it says
+nothing about semantics and is the parity metric to drive down. Invalid user input (syntax errors,
+names upstream does not know, bad operand types) is `invalid`, never `unsupported`. Passes require a
+real parse → bind → evaluate and the upstream comparison rules above.
+
+Remaining failure (kept visible, deliberately not suppressed): Text_ExcelCompat_PowerFxV1Compat.txt:13,
+`Text(1234567,89; "...")`. Investigated: the file's setup (`PowerFxV1CompatibilityRules,
+StronglyTypedBuiltinEnums`) is within our profile and the culture is en-US, so this is not a locale
+case; `,` and `;` are just a separator and a stray token. Upstream outside chaining mode treats `;` via
+the operator-expected path (`TexlParser.cs`, `case TokKind.Semicolon`), which we now mirror (the
+"Expected operator" error at 15-16 matches). The case still fails because upstream also expects the
+binder error "The function 'Text' has some invalid arguments.", and `Text` is not implemented. It is
+an in-profile failure that will resolve when `Text` lands (an unimplemented function plus a syntax
+error is reported as `invalid`, since the syntax error is real).
+
+Unsupported-syntax detection (`$"..."`, `As`, `Is`, `Type(`) is token-based. Parser errors ending
+before the first such construct are still reported (`invalid`); errors at or after it are dropped
+because they may be artifacts, so malformed text after unsupported syntax stays `unsupported`.
+
+Known function names are a **temporary classification aid, not an authoritative registry**. Source:
+`About<Name>` keys of `src/strings/PowerFxResources.en-US.resx` at the pinned commit `df4ceba…`,
+extracted by keeping keys without `_`, dropping table (`…T`), `…UO`, `Boolean…` and `Arg<N>` variants
+and some Patch variants (`packages/core/src/functions/known-names.ts`, 152 names). Limitations: it
+may omit functions without such a key and include names that need no host support; it does not
+separate core functions from host/configuration-dependent ones (e.g. `Collect`, `Patch`, `Refresh`,
+`Copilot`, `Set`, `Language`, `FileInfo`, `OptionSetInfo`, `Trace` need a host or feature flag
+upstream) because the resx carries no such evidence; that split needs the function registrations
+in `src/libraries` and is deferred. A name not in the list is an error, so a missing name would show
+as a visible failure rather than a hidden pass. Classification: a known name we lack is
+`unsupported`; any other name is the error "'X' is an unknown or unsupported function.". Syntax the
+parser lacks (`$"..."`, `As`, `Is`, `Type(...)`) is also `unsupported`.
+
+Parser recovery mirrors `TexlParser.cs` (operator-expected, single bad-token at leftovers,
+expected-found with TokKind names, trailing comma in table literals). Unverified: the lexer's own
+"unexpected character" wording, and whether upstream reports a bad-token after a lexer error token.
+
+Semantics learned from the corpus: `=`/`<>` between different types is a compile error; `Blank`
+equals only Blank; ordering operators check each operand on its own and reject Boolean and Text
+(upstream `BinderUtils.CheckComparisonArgTypesCore` traced; the Number/Decimal/Date/Time/DateTime/
+Dynamic list is reduced to Number here; option sets, Date/Time coercions and UntypedObject are
+not modelled); `If` result arguments keep Blank as Blank.

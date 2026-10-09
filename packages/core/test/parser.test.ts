@@ -56,13 +56,15 @@ describe("lexer", () => {
     const r = lex("😀");
     expect(r.diagnostics[0]?.span).toEqual({ start: 0, end: 2 });
   });
-  it("treats `1.` as number then dot, and rejects 1.2.3", () => {
+  it("treats `1.` as number then dot, and `1.2.3` as two numbers", () => {
     expect(
       lex("1.x")
         .tokens.map((t) => t.kind)
         .slice(0, 3),
     ).toEqual(["Number", "Dot", "Ident"]);
-    expect(lex("1.2.3").diagnostics[0]?.code).toBe("PFX1009");
+    const r = lex("1.2.3");
+    expect(r.diagnostics).toEqual([]);
+    expect(r.tokens.filter((t) => t.kind === "Number").map((t) => t.text)).toEqual(["1.2", ".3"]);
   });
   it("rejects too-large numbers", () => {
     expect(lex("1e999").diagnostics[0]?.code).toBe("PFX1008");
@@ -109,8 +111,8 @@ describe("parser", () => {
   });
   it("recovers after empty argument", () => {
     const r = parse("F(1,,2)");
-    expect(show(r.root)).toBe("F(1,<missing>,2)");
-    expect(r.diagnostics).toHaveLength(1);
+    expect(show(r.root)).toBe("F(1,<error>,2)");
+    expect(r.diagnostics.map((d) => [d.code, d.span])).toEqual([["PFX1012", { start: 4, end: 5 }]]);
   });
   it("handles empty input", () => {
     const r = parse("");
@@ -120,6 +122,23 @@ describe("parser", () => {
   it("reports stray tokens as operator expected without throwing", () => {
     const r = parse("1 2 3");
     expect(r.diagnostics[0]?.code).toBe("PFX1002");
+  });
+  it("reports a misplaced operand once and recovers like upstream", () => {
+    const msgs = (src: string) =>
+      parse(src).diagnostics.map((d) => `${d.span.start}-${d.span.end} ${d.code}`);
+    expect(msgs("1.2.3")).toEqual(["3-5 PFX1002", "5-5 PFX1001"]);
+    expect(msgs("1.2.3 + 1.2.3")).toEqual(["3-5 PFX1002", "6-7 PFX1012", "8-11 PFX1002"]);
+    expect(msgs("1 2 3")).toEqual(["2-3 PFX1002"]);
+  });
+  it("names tokens with upstream TokKind names", () => {
+    expect(parse("Blank(").diagnostics.map((d) => d.message)).toEqual([
+      expect.stringMatching(/^Expected an operand\./),
+      "Unexpected characters. The formula contains 'Eof' where 'ParenClose' is expected.",
+    ]);
+    expect(parse("{a:1").diagnostics[0]?.message).toContain("where 'CurlyClose' is expected");
+  });
+  it("reports a stray closer once as unexpected characters", () => {
+    expect(parse("1 )").diagnostics.map((d) => d.code)).toEqual(["PFX1012"]);
   });
   it("enforces the nesting limit without a stack overflow", () => {
     const src = "(".repeat(5000) + "1" + ")".repeat(5000);

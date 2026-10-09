@@ -20,3 +20,8 @@ Fx. Not affiliated with Microsoft. See `docs/PowerFx-TypeScript-Plan.md` for the
 ## Commands
 
 `pnpm install`, `pnpm build`, `pnpm test`, `pnpm lint`, `pnpm format:check`
+
+Compatibility run (needs the pinned upstream checkout in `upstream/Power-Fx`, see
+`docs/research/upstream-inventory.md`):
+`pnpm --filter @powerfx-ts/test-suite compat v1-float` writes `packages/test-suite/reports/`.
+Cases the engine cannot yet handle are reported as `unsupported`, never as passes.

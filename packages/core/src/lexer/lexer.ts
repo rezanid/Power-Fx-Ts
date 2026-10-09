@@ -148,11 +148,6 @@ export function lex(text: string): LexResult {
           pos = p;
         }
       }
-      if (text[pos] === "." && isDigit(text[pos + 1])) {
-        while (text[pos] === "." || isDigit(text[pos])) pos++;
-        fail(start, pos, DiagnosticCodes.InvalidNumber);
-        continue;
-      }
       if (Math.abs(Number(text.slice(start, pos))) > MAX_NUMBER) {
         fail(start, pos, DiagnosticCodes.NumberTooLarge);
         continue;

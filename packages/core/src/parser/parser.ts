@@ -5,7 +5,7 @@ import {
   type DiagnosticCode,
 } from "../diagnostics/diagnostic.js";
 import { lex } from "../lexer/lexer.js";
-import { isTrivia, type Token, type TokenKind } from "../lexer/tokens.js";
+import { isTrivia, upstreamKindName, type Token, type TokenKind } from "../lexer/tokens.js";
 import type {
   BinaryOperator,
   ErrorNode,
@@ -29,6 +29,12 @@ export interface ParseResult {
   readonly tokens: readonly Token[];
   /** Lexer and parser diagnostics, ordered by position. */
   readonly diagnostics: readonly Diagnostic[];
+  /**
+   * Valid upstream syntax this parser does not implement (string interpolation, `As`). When
+   * present, `diagnostics` keeps only errors that end before the first such construct; malformed
+   * syntax after it cannot be told apart from valid syntax we do not understand.
+   */
+  readonly unsupportedSyntax: readonly { readonly feature: string; readonly span: Span }[];
 }
 
 // Higher binds tighter. Mirrors upstream Power Fx precedence.
@@ -45,6 +51,14 @@ const enum Prec {
   Power = 10,
   Postfix = 11,
 }
+
+const STARTS_OPERAND_AFTER_OPERAND: ReadonlySet<TokenKind> = new Set([
+  "Ident",
+  "Number",
+  "String",
+  "True",
+  "False",
+]);
 
 const BINARY: Partial<Record<TokenKind, [BinaryOperator, Prec]>> = {
   PipePipe: ["Or", Prec.Or],
@@ -65,14 +79,6 @@ const BINARY: Partial<Record<TokenKind, [BinaryOperator, Prec]>> = {
   Caret: ["Power", Prec.Power],
 };
 
-const DESCRIPTIONS: Partial<Record<TokenKind, string>> = {
-  ParenClose: "')'",
-  BraceClose: "'}'",
-  BracketClose: "']'",
-  Colon: "':'",
-  Ident: "an identifier",
-};
-
 export function parse(text: string, options: ParseOptions = {}): ParseResult {
   const lexed = lex(text);
   const parser = new Parser(lexed.tokens, options);
@@ -80,7 +86,62 @@ export function parse(text: string, options: ParseOptions = {}): ParseResult {
   const diagnostics = [...lexed.diagnostics, ...parser.diagnostics].sort(
     (a, b) => a.span.start - b.span.start || a.span.end - b.span.end,
   );
-  return { root, tokens: lexed.tokens, diagnostics };
+  const unsupportedSyntax = findUnsupportedSyntax(text, lexed.tokens);
+  return {
+    root,
+    tokens: lexed.tokens,
+    diagnostics: trustedDiagnostics(diagnostics, unsupportedSyntax),
+    unsupportedSyntax,
+  };
+}
+
+/**
+ * The parser works left to right, so errors that end before the first unsupported construct are
+ * genuine. Anything at or after it may be an artifact of not understanding that syntax.
+ */
+function trustedDiagnostics(
+  diagnostics: readonly Diagnostic[],
+  unsupported: ParseResult["unsupportedSyntax"],
+): readonly Diagnostic[] {
+  if (unsupported.length === 0) return diagnostics;
+  const first = Math.min(...unsupported.map((u) => u.span.start));
+  return diagnostics.filter((d) => d.span.end <= first);
+}
+
+const ENDS_OPERAND: ReadonlySet<TokenKind> = new Set([
+  "Ident",
+  "Number",
+  "String",
+  "True",
+  "False",
+  "ParenClose",
+  "BracketClose",
+  "BraceClose",
+]);
+
+function findUnsupportedSyntax(
+  text: string,
+  tokens: readonly Token[],
+): ParseResult["unsupportedSyntax"] {
+  const sig = tokens.filter((t) => !isTrivia(t.kind));
+  const found: { feature: string; span: Span }[] = [];
+  sig.forEach((t, i) => {
+    const prev = sig[i - 1];
+    const next = sig[i + 1];
+    if (t.text === "$" && text[t.span.end] === '"') {
+      found.push({ feature: "String interpolation", span: t.span });
+    } else if (
+      t.kind === "Ident" &&
+      (t.text === "As" || t.text === "Is") &&
+      prev &&
+      ENDS_OPERAND.has(prev.kind)
+    ) {
+      found.push({ feature: `${t.text} operator`, span: t.span });
+    } else if (t.kind === "Ident" && t.text === "Type" && next?.kind === "ParenOpen") {
+      found.push({ feature: "Type literal", span: t.span });
+    }
+  });
+  return found;
 }
 
 class Parser {
@@ -131,13 +192,11 @@ class Parser {
   parseRoot(): ExpressionNode {
     let root = this.parseExpr(Prec.None);
     const leftovers: Token[] = [];
-    while (!this.at("Eof")) {
-      // Lexer errors are already reported; anything else here is a stray token.
-      if (!this.at("Error") && !this.aborted) {
-        this.report(DiagnosticCodes.OperatorExpected, this.cur.span);
-      }
-      leftovers.push(this.next());
+    // Like upstream, one diagnostic marks where parsing stopped; the rest is skipped silently.
+    if (!this.at("Eof") && !this.at("Error") && !this.aborted) {
+      this.report(DiagnosticCodes.BadToken, this.cur.span);
     }
+    while (!this.at("Eof")) leftovers.push(this.next());
     if (leftovers.length > 0) {
       const err: ErrorNode = {
         kind: "Error",
@@ -203,6 +262,24 @@ class Parser {
         }
 
         const op = this.binaryOp(t);
+        // Without chaining, upstream routes `;` through the same operator-expected path.
+        if (
+          !op &&
+          (STARTS_OPERAND_AFTER_OPERAND.has(t.kind) ||
+            (t.kind === "Semicolon" && !this.allowChaining))
+        ) {
+          // Upstream: report, consume the token, and parse what follows as the right operand.
+          this.report(DiagnosticCodes.OperatorExpected, t.span);
+          this.next();
+          const right = this.parseExpr(Prec.Or);
+          left = {
+            kind: "Error",
+            tokens: [t],
+            operands: [left, right],
+            span: { start: left.span.start, end: this.endAfter(right) },
+          };
+          continue;
+        }
         if (!op) return left;
         const [operator, prec] = op;
         if (prec < minPrec) return left;
@@ -257,7 +334,10 @@ class Parser {
         span: t.span,
       };
     }
-    this.report(DiagnosticCodes.ExpectedToken, t.span, [DESCRIPTIONS.Ident!]);
+    this.report(DiagnosticCodes.ExpectedToken, t.span, [
+      upstreamKindName(t.kind),
+      upstreamKindName("Ident"),
+    ]);
     return this.missing();
   }
 
@@ -315,9 +395,15 @@ class Parser {
         this.next();
         return { kind: "Error", tokens: [t], span: t.span };
       }
-      default:
+      case "Eof":
+      case "Semicolon":
         this.report(DiagnosticCodes.OperandExpected, t.span);
         return this.missing();
+      default:
+        // Upstream consumes an unexpected token in operand position as an error node.
+        this.next();
+        this.report(DiagnosticCodes.BadToken, t.span);
+        return { kind: "Error", tokens: [t], span: t.span };
     }
   }
 
@@ -345,6 +431,11 @@ class Parser {
     const args: ExpressionNode[] = [];
     if (!this.at("ParenClose")) {
       for (;;) {
+        while (this.at("Comma")) {
+          const comma = this.next();
+          this.report(DiagnosticCodes.BadToken, comma.span);
+          args.push({ kind: "Error", tokens: [comma], span: comma.span });
+        }
         args.push(this.parseExpr(Prec.None));
         if (this.at("Comma")) {
           this.next();
@@ -400,15 +491,11 @@ class Parser {
   private parseTable(): ExpressionNode {
     const open = this.next();
     const items: ExpressionNode[] = [];
-    if (!this.at("BracketClose")) {
-      for (;;) {
-        items.push(this.parseExpr(Prec.None));
-        if (this.at("Comma")) {
-          this.next();
-          continue;
-        }
-        break;
-      }
+    // Like upstream, a trailing comma before `]` is accepted.
+    while (!this.at("BracketClose")) {
+      items.push(this.parseExpr(Prec.None));
+      if (!this.at("Comma")) break;
+      this.next();
     }
     const closed = this.expect("BracketClose");
     return {
@@ -425,7 +512,10 @@ class Parser {
       this.next();
       return true;
     }
-    this.report(DiagnosticCodes.ExpectedToken, this.cur.span, [DESCRIPTIONS[kind] ?? kind]);
+    this.report(DiagnosticCodes.ExpectedToken, this.cur.span, [
+      upstreamKindName(this.cur.kind),
+      upstreamKindName(kind),
+    ]);
     return false;
   }
 }
