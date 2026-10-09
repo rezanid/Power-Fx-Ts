@@ -6,6 +6,7 @@ export * from "./syntax/nodes.js";
 export { parse, type ParseOptions, type ParseResult } from "./parser/parser.js";
 
 export * from "./types/formula-type.js";
+export * from "./types/schema.js";
 export * from "./ir/bound-tree.js";
 export * from "./functions/signature.js";
 export {

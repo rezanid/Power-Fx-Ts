@@ -51,6 +51,8 @@ export interface DottedNameNode extends NodeBase {
   readonly kind: "DottedName";
   readonly left: ExpressionNode;
   readonly right: NameNode | MissingNode;
+  /** The `.` token; upstream reports member-access errors from the dot to the end of the name. */
+  readonly dot: Span;
 }
 
 export interface CallNode extends NodeBase {

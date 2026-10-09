@@ -11,6 +11,8 @@ export interface CancellationSignal {
 /** Host-supplied limits and services for one evaluation. No ambient globals are read. */
 export interface EvaluationOptions {
   readonly numeric: NumericBackend;
+  /** Validated runtime values of schema variables, by name. */
+  readonly variables?: ReadonlyMap<string, FormulaValue>;
   /** Checked at every node; evaluation throws the signal's reason when aborted. */
   readonly signal?: CancellationSignal;
   /** Maximum number of nodes evaluated; exceeding it throws `EvaluationBudgetExceeded`. */

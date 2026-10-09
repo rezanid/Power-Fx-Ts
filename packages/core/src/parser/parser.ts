@@ -251,6 +251,7 @@ class Parser {
             kind: "DottedName",
             left,
             right,
+            dot: t.span,
             span: { start: left.span.start, end: right.span.end },
           };
           continue;

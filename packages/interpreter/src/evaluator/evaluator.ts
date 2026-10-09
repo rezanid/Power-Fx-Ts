@@ -7,7 +7,7 @@ import {
   type EvaluationOptions,
   type FunctionImplementation,
 } from "../runtime/context.js";
-import { boolean, error, number, text, type FormulaValue } from "../values/values.js";
+import { blank, boolean, error, number, text, type FormulaValue } from "../values/values.js";
 import { coerceValue } from "./coercion.js";
 
 export function evaluate(root: BoundNode, options: EvaluationOptions): FormulaValue {
@@ -56,6 +56,17 @@ class Evaluator implements EvaluationContext {
           throw new Error(`No implementation registered for function '${node.fn}'.`);
         }
         return implementation(node.args, this);
+      }
+      case "Variable": {
+        const value = this.options.variables?.get(node.name);
+        if (value === undefined) throw new Error(`No value supplied for variable '${node.name}'.`);
+        return value;
+      }
+      case "FieldAccess": {
+        const record = this.evaluate(node.record);
+        if (record.kind === "Blank" || record.kind === "Error") return record;
+        if (record.kind !== "Record") throw new Error("Field access on a non-record value.");
+        return record.fields.find((f) => f.name === node.field)?.value ?? blank;
       }
       case "Invalid":
         throw new Error("Cannot evaluate a formula that failed to bind.");

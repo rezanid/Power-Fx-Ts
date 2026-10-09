@@ -16,6 +16,8 @@ export function serializeValue(value: FormulaValue, engine: Engine): string {
       return `"${value.value.replaceAll('"', '""')}"`;
     case "Number":
       return engine.formatNumber(value.value);
+    case "Record":
+      throw new Error("Record serialization is not supported by the compatibility runner.");
     case "Error":
       return `Error({Kind:ErrorKind.${value.errors[0]?.kind ?? "Unknown"}})`;
   }

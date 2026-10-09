@@ -23,6 +23,8 @@ export const DiagnosticCodes = {
   BadArityMinimum: "PFX2005",
   InvalidArgumentType: "PFX2006",
   UnknownFunction: "PFX2007",
+  BadTypeExpected: "PFX2008",
+  InvalidDot: "PFX2009",
 } as const;
 
 export type DiagnosticCode = (typeof DiagnosticCodes)[keyof typeof DiagnosticCodes];
@@ -58,6 +60,8 @@ const TEMPLATES: Record<DiagnosticCode, string> = {
   PFX2004: "Invalid number of arguments: received {0}, expected {1}.",
   PFX2005: "Invalid number of arguments: received {0}, expected {1} or more.",
   PFX2007: "'{0}' is an unknown or unsupported function.",
+  PFX2008: "Invalid argument type ({1}). Expecting a {0} value instead.",
+  PFX2009: "The '.' operator cannot be used on {0} values.",
   PFX2006:
     "Invalid argument type. Expecting one of the following: Number, Decimal, Date, Time, DateTime, Dynamic.",
 };

@@ -57,5 +57,12 @@ export type BoundNode =
       readonly fn: string;
       readonly args: readonly BoundNode[];
     })
+  /** Reference to a schema variable; the evaluator reads it from the supplied runtime values. */
+  | (BoundBase & { readonly kind: "Variable"; readonly name: string })
+  | (BoundBase & {
+      readonly kind: "FieldAccess";
+      readonly record: BoundNode;
+      readonly field: string;
+    })
   /** Placeholder for an expression that failed to bind; never evaluated. */
   | (BoundBase & { readonly kind: "Invalid" });

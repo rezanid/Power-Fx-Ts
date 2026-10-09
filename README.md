@@ -25,3 +25,15 @@ Compatibility run (needs the pinned upstream checkout in `upstream/Power-Fx`, se
 `docs/research/upstream-inventory.md`):
 `pnpm --filter @powerfx-ts/test-suite compat v1-float` writes `packages/test-suite/reports/`.
 Cases the engine cannot yet handle are reported as `unsupported`, never as passes.
+
+## Typed context
+
+```ts
+const schema = defineSchema({ Customer: recordType({ RiskScore: NumberType }) });
+const engine = new Engine();
+const checked = engine.check('If(Customer.RiskScore > 80, "High", "Normal")', { schema }); // no values
+const v = engine.validateValues(schema, { Customer: { RiskScore: 90 } });
+if (v.ok) await engine.evaluateChecked(checked, { values: v.values }); // "High"
+```
+
+See `docs/adr/0004-typed-context.md` for rules and limitations.
