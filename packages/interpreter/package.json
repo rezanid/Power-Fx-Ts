@@ -1,0 +1,22 @@
+{
+  "name": "@powerfx-ts/interpreter",
+  "version": "0.0.0",
+  "description": "Formula values, evaluator, built-in function implementations and runtime budgets.",
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "dependencies": {
+    "@powerfx-ts/core": "workspace:*"
+  },
+  "scripts": {
+    "build": "tsc -b"
+  }
+}

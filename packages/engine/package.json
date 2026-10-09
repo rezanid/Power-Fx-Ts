@@ -1,0 +1,23 @@
+{
+  "name": "@powerfx-ts/engine",
+  "version": "0.0.0",
+  "description": "Convenient compile/check/evaluate API, dependency analysis and recalculation.",
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "dependencies": {
+    "@powerfx-ts/core": "workspace:*",
+    "@powerfx-ts/interpreter": "workspace:*"
+  },
+  "scripts": {
+    "build": "tsc -b"
+  }
+}

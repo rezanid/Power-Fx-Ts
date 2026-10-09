@@ -1,0 +1,12 @@
+{
+  "files": [],
+  "references": [
+    { "path": "packages/core" },
+    { "path": "packages/interpreter" },
+    { "path": "packages/engine" },
+    { "path": "packages/language-service" },
+    { "path": "packages/serialization" },
+    { "path": "packages/test-runner" },
+    { "path": "packages/test-suite" }
+  ]
+}

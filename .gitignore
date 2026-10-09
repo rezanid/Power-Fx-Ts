@@ -1,0 +1,9 @@
+node_modules/
+dist/
+*.tsbuildinfo
+coverage/
+.DS_Store
+packages/test-suite/reports/*.json
+upstream/*
+!upstream/.gitkeep
+!upstream/README.md

@@ -1,0 +1,22 @@
+{
+  "name": "@powerfx-ts/serialization",
+  "version": "0.0.0",
+  "description": "Versioned schema/type/value DTOs and JSON codecs (worker and host boundary).",
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "dependencies": {
+    "@powerfx-ts/core": "workspace:*"
+  },
+  "scripts": {
+    "build": "tsc -b"
+  }
+}

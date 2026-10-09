@@ -1,0 +1,59 @@
+import { execFileSync } from "node:child_process";
+import { mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { dirname, join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+import { PROFILES } from "./profile.js";
+import { runCompat, unsupportedRunner, type CompatReport } from "./runner.js";
+import { parseTxtTestFile } from "./txt-format.js";
+
+const here = dirname(fileURLToPath(import.meta.url));
+const packageRoot = resolve(here, "..");
+const upstreamRoot = resolve(packageRoot, "../../upstream/Power-Fx");
+const casesDir = join(
+  upstreamRoot,
+  "src/tests/Microsoft.PowerFx.Core.Tests.Shared/ExpressionTestCases",
+);
+
+function formatMarkdown(report: CompatReport): string {
+  const t = report.totals;
+  const lines = [
+    `# Compatibility report: ${report.profile}`,
+    "",
+    `- Upstream commit: \`${report.upstreamCommit}\``,
+    `- Setup: \`${report.setupString}\` (number mode: ${report.numberMode}, culture ${report.culture}, time zone ${report.timeZone})`,
+    `- Cases: ${t.cases} total, ${t.inapplicable} not applicable to this profile`,
+    `- Pass ${t.pass}, fail ${t.fail}, skip ${t.skip}, unsupported ${t.unsupported}`,
+    "",
+    "| File | Total | Pass | Fail | Skip | Unsupported |",
+    "| ---- | ----: | ---: | ---: | ---: | ----------: |",
+  ];
+  for (const f of report.files.filter((x) => x.applicable)) {
+    const c = f.counts;
+    const name = f.file.split("/").pop();
+    lines.push(`| ${name} | ${f.total} | ${c.pass} | ${c.fail} | ${c.skip} | ${c.unsupported} |`);
+  }
+  return lines.join("\n") + "\n";
+}
+
+async function main(): Promise<void> {
+  const profileName = process.argv[2] ?? "v1-decimal";
+  const profile = PROFILES[profileName];
+  if (!profile) throw new Error(`Unknown profile ${profileName}: ${Object.keys(PROFILES)}`);
+
+  const upstreamCommit = execFileSync("git", ["-C", upstreamRoot, "rev-parse", "HEAD"], {
+    encoding: "utf8",
+  }).trim();
+  const files = readdirSync(casesDir)
+    .filter((name) => name.endsWith(".txt"))
+    .sort()
+    .map((name) => parseTxtTestFile(name, readFileSync(join(casesDir, name), "utf8")));
+
+  const report = await runCompat({ files, profile, runner: unsupportedRunner, upstreamCommit });
+  const outDir = join(packageRoot, "reports");
+  mkdirSync(outDir, { recursive: true });
+  writeFileSync(join(outDir, `${profileName}.json`), JSON.stringify(report, null, 2));
+  writeFileSync(join(outDir, `${profileName}.md`), formatMarkdown(report));
+  console.log(formatMarkdown(report).split("\n").slice(0, 8).join("\n"));
+}
+
+void main();
