@@ -86,6 +86,8 @@ export interface RecordFieldNode extends NodeBase {
   readonly kind: "RecordField";
   readonly name: NameNode | MissingNode;
   readonly value: ExpressionNode;
+  /** Set when the colon was absent (upstream error recovery). */
+  readonly colonMissing?: true;
 }
 
 export interface RecordNode extends NodeBase {

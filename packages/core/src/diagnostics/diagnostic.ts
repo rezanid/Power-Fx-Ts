@@ -16,6 +16,7 @@ export const DiagnosticCodes = {
   NestedTooDeeply: "PFX1010",
   ReservedWord: "PFX1011",
   BadToken: "PFX1012",
+  ColonExpected: "PFX1013",
   NameNotRecognized: "PFX2001",
   IncompatibleTypesForComparison: "PFX2002",
   InvalidFunctionArguments: "PFX2003",
@@ -55,6 +56,7 @@ const TEMPLATES: Record<DiagnosticCode, string> = {
   PFX1010: "The expression is nested too deeply.",
   PFX1011: "Use of a reserved word that is currently not supported.",
   PFX1012: "Unexpected characters. Characters are used in the formula in an unexpected way.",
+  PFX1013: "Expected colon. We expect a colon (:) at this point in the formula.",
   // Binder messages reuse upstream's English wording so compile-error expectations can match.
   PFX2001: "Name isn't valid. '{0}' isn't recognized.",
   PFX2002: "Incompatible types for comparison. These types can't be compared: {0}, {1}.",

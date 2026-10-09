@@ -74,9 +74,9 @@ class Evaluator implements EvaluationContext {
         return value;
       }
       case "Record": {
-        // Fields evaluate in source order; the value is normalized by ordinal name like the type.
-        const fields = node.fields.map((f) => ({ name: f.name, value: this.evaluate(f.value) }));
-        return record(fields.sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0)));
+        // Upstream keeps source order in the value (an insertion-ordered dictionary); only the
+        // type (ordinal-sorted tree) and `ToExpression` serialization sort by name.
+        return record(node.fields.map((f) => ({ name: f.name, value: this.evaluate(f.value) })));
       }
       case "With": {
         const scope = this.evaluate(node.scope);

@@ -14,9 +14,13 @@ Status: provisional (milestone review pending). Upstream pin: `df4ceba5e08220db6
 
 ## Rules implemented
 
-- Record literals: typed and evaluated by the shared binder/interpreter. Fields are normalized by
-  ordinal name in both type and value (`{b:2,a:1}` is `{a:1,b:2}`, per `literals.txt`).
-  Evaluation still runs in source order. Results are deep-frozen (`record()`).
+- Record literals: typed and evaluated by the shared binder/interpreter. Three distinct orders,
+  each traced upstream: **type** fields are ordinal-sorted (`TypeTree`/`RedBlackNode.Compare` is
+  `string.CompareOrdinal`); **evaluation** is source order, every field is evaluated even if an
+  earlier one errors (`EvalVisitor.Visit(RecordNode)`), and the **value** keeps insertion order
+  (`InMemoryRecordValue` dictionary); **serialization** (`RecordValue.ToExpression`) sorts by
+  ordinal name, which is why `{b:2,a:1}` prints `{a:1,b:2}` in `literals.txt`. The compat runner
+  sorts when serializing; the engine does not reorder values. Results are deep-frozen.
 - `With(scope, body)`: the scope argument binds against the enclosing scopes, so
   `With({x:5}, With({x:x*2}, x))` is 10. Names are case-sensitive. The innermost With field wins
   over outer With fields and over schema variables (and over enum roots). Each `With` node has a
@@ -35,13 +39,23 @@ Status: provisional (milestone review pending). Upstream pin: `df4ceba5e08220db6
   may hide genuine body errors until the scope is fixed).
 - Unsupported (reported as `unsupported`, never as a pass): `ThisRecord`/row scopes, `As`, tables,
   record union in `If` (`If(false,{x:1},{z:2})`), record equality, string interpolation.
-- Reserved keywords: upstream lexes unquoted reserved words (`blank`, `null`, `empty`, `none`,
-  `nothing`, `undefined`, `Is`, `This`, `Child`, `Children`, `Siblings`) as error tokens with a
-  specific 5-error recovery; we do not replicate it, so formulas using them unquoted are
-  `unsupported` ("Reserved keyword"). The corpus serializer quotes reserved/keyword field names
-  (`{'As':1}`), which the runner replicates. `DisableReservedKeywords` is not modelled.
+- `DisableReservedKeywords` is not modelled (PowerFxV1, our profile, leaves it off).
+
+## Reserved words (PowerFxV1 profile)
+
+Upstream evidence: `TexlLexer._reservedKeywords` (`blank null empty none nothing undefined Is This
+Child Children Siblings`); `LexIdent` returns an `ErrorToken` for an unquoted reserved word unless
+`DisableReservedKeywords` is set, and quoted identifiers are never reserved. `TexlParser`
+reports the token's `ErrReservedKeyword` in operand position, and in a record field-name position
+runs the Ident/Colon/`ErrColonExpected` recovery (`ReservedKeyword*.txt`,
+`TexlTests.TestReservedWords_Disallowed`, which uses `PowerFxV1` with default parser options).
+So these are **invalid** formulas with diagnostics, not unsupported. `As` is a real keyword, so
+`{As:1}` is invalid; `1 As x` is genuinely unimplemented and remains `unsupported` ("As operator").
+`Is` has no operator semantics upstream; it is only reserved. The compat runner quotes
+keyword/reserved field names when serializing, like upstream. A missing colon in a record now
+follows upstream recovery (offending token consumed, field list ends).
 
 ## Compatibility
 
-`v1-float`: pass 666, fail 1 (known `Text_ExcelCompat_PowerFxV1Compat.txt:13`), unsupported 14246
+`v1-float`: pass 678, fail 1 (known `Text_ExcelCompat_PowerFxV1Compat.txt:13`), unsupported 14234
 (baseline 617 / 1 / 14295). `v1-decimal` has no engine support yet (all unsupported).

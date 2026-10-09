@@ -12,7 +12,26 @@ const KEYWORDS: Readonly<Record<string, TokenKind>> = {
   false: "False",
   in: "In",
   exactin: "Exactin",
+  As: "As",
 };
+
+/**
+ * Upstream `TexlLexer._reservedKeywords`: unquoted, these lex as error tokens unless
+ * `DisableReservedKeywords` is set (not modelled; PowerFxV1 leaves it off).
+ */
+export const RESERVED_WORDS: ReadonlySet<string> = new Set([
+  "blank",
+  "null",
+  "empty",
+  "none",
+  "nothing",
+  "undefined",
+  "Is",
+  "This",
+  "Child",
+  "Children",
+  "Siblings",
+]);
 
 const IDENT_START = /[\p{L}\p{Nl}_]/u;
 const IDENT_PART = /[\p{L}\p{Nl}\p{Nd}\p{Mn}\p{Mc}\p{Pc}_]/u;
@@ -164,7 +183,9 @@ export function lex(text: string): LexResult {
       }
       const word = text.slice(start, pos);
       const kw = Object.hasOwn(KEYWORDS, word) ? KEYWORDS[word] : undefined;
-      push(kw ?? "Ident", start, pos, word);
+      // The parser reports the error in context; the token keeps the word as its value.
+      if (RESERVED_WORDS.has(word)) push("Error", start, pos, word);
+      else push(kw ?? "Ident", start, pos, word);
       continue;
     }
 

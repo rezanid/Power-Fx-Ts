@@ -77,8 +77,23 @@ describe("record literals", () => {
     expect(await run("{a: 1, b: {c: 2 + 2}}.b.c")).toBe("4");
   });
 
-  it("normalizes field order by ordinal name", async () => {
-    expect(await run("{b: 2, a: 1}")).toBe("{a:1,b:2}");
+  it("sorts the type by ordinal name but keeps source order in the value", async () => {
+    const checked = engine.check("{b: 2, a: 1, B: 3}");
+    expect(checked.type.kind === "Record" && checked.type.fields.map((f) => f.name)).toEqual([
+      "B",
+      "a",
+      "b",
+    ]);
+    // Upstream's InMemoryRecordValue keeps insertion order; only ToExpression serialization sorts.
+    expect(await run("{b: 2, a: 1, B: 3}")).toBe("{b:2,a:1,B:3}");
+  });
+
+  it("evaluates every field in source order, even after an earlier field errors", async () => {
+    expect(await run("{b: 1/0, a: 2}")).toBe("{b:Error:Div0,a:2}");
+    // Nodes: record(1) + 1/0 (3) + 2 (1) = 5; the later field is still evaluated.
+    const ok = await new Engine({ maxSteps: 5 }).evaluate("{b: 1/0, a: 2}");
+    expect(ok.kind).toBe("value");
+    await expect(new Engine({ maxSteps: 4 }).evaluate("{b: 1/0, a: 2}")).rejects.toThrow();
   });
 
   it("reports duplicate fields on the later value", () => {
@@ -167,5 +182,56 @@ describe("If with record results", () => {
   });
   it("accepts identical record types", async () => {
     expect(await run("If(true, {x: 1}, {x: 2})")).toBe("{x:1}");
+  });
+});
+
+describe("reserved words (PowerFxV1: DisableReservedKeywords off)", () => {
+  const words = [
+    "blank",
+    "null",
+    "empty",
+    "none",
+    "nothing",
+    "undefined",
+    "Is",
+    "This",
+    "Child",
+    "Children",
+    "Siblings",
+  ];
+
+  it("reports invalid formulas for unquoted reserved words, not unsupported", async () => {
+    for (const w of words) {
+      const checked = engine.check(`${w} + 1`);
+      expect(checked.unsupported).toEqual([]);
+      expect(checked.diagnostics.map((d) => d.message)).toContain(
+        "Use of a reserved word that is currently not supported.",
+      );
+      expect((await engine.evaluate(`${w}`)).kind).toBe("invalid");
+    }
+  });
+
+  it("recovers a reserved word used as a field name like upstream", () => {
+    expect(diag("{This    :1}")).toEqual([
+      "1-5: Unexpected characters. The formula contains 'Error' where 'Ident' is expected.",
+      "1-5: Unexpected characters. The formula contains 'Error' where 'Colon' is expected.",
+      "1-5: Expected colon. We expect a colon (:) at this point in the formula.",
+      "9-10: Unexpected characters. The formula contains 'Colon' where 'CurlyClose' is expected.",
+      "9-10: Unexpected characters. Characters are used in the formula in an unexpected way.",
+    ]);
+  });
+
+  it("accepts quoted reserved words as identifiers", async () => {
+    for (const w of words) expect(await run(`{'${w}': 1}.'${w}'`)).toBe("1");
+    expect(await run("With({'blank': 7}, 'blank' + 1)")).toBe("8");
+  });
+
+  it("treats `As` as a keyword: an invalid field name, but an unsupported operator after an operand", () => {
+    expect(diag("{As :1}")[0]).toContain("'As' where 'Ident'");
+    expect(engine.check("1 As x").unsupported.map((u) => u.feature)).toContain("As operator");
+  });
+
+  it("does not treat similar names as reserved", async () => {
+    expect(await run("{Blank: 1, Nulls: 2}.Blank")).toBe("1");
   });
 });

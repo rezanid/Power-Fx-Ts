@@ -8,6 +8,7 @@ export type TokenKind =
   | "False"
   | "In"
   | "Exactin"
+  | "As"
   | "Whitespace"
   | "Comment"
   | "Plus"

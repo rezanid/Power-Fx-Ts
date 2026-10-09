@@ -35,6 +35,10 @@ const fieldName = (name: string): string =>
     ? name
     : `'${name.replaceAll("'", "''")}'`;
 
+/** Upstream `RecordValue.ToExpression` prints fields sorted by ordinal name. */
+const byName = (a: { name: string }, b: { name: string }): number =>
+  a.name < b.name ? -1 : a.name > b.name ? 1 : 0;
+
 export function serializeValue(value: FormulaValue, engine: Engine): string {
   switch (value.kind) {
     case "Blank":
@@ -46,7 +50,10 @@ export function serializeValue(value: FormulaValue, engine: Engine): string {
     case "Number":
       return engine.formatNumber(value.value);
     case "Record":
-      return `{${value.fields.map((f) => `${fieldName(f.name)}:${serializeValue(f.value, engine)}`).join(",")}}`;
+      return `{${[...value.fields]
+        .sort(byName)
+        .map((f) => `${fieldName(f.name)}:${serializeValue(f.value, engine)}`)
+        .join(",")}}`;
     case "Error":
       return `Error({Kind:ErrorKind.${value.errors[0]?.kind ?? "Unknown"}})`;
   }
