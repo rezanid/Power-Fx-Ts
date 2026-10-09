@@ -1,0 +1,29 @@
+{
+  "name": "powerfx-ts-workspace",
+  "private": true,
+  "type": "module",
+  "version": "0.0.0",
+  "description": "A TypeScript implementation compatible with Microsoft Power Fx.",
+  "packageManager": "pnpm@12.10.1",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "tsc -b",
+    "clean": "tsc -b --clean",
+    "typecheck": "tsc -b",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.0.0",
+    "eslint": "^9.0.0",
+    "prettier": "^3.0.0",
+    "typescript": "^5.6.0",
+    "typescript-eslint": "^8.0.0",
+    "vitest": "^2.0.0"
+  }
+}

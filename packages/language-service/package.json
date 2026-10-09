@@ -1,0 +1,23 @@
+{
+  "name": "@powerfx-ts/language-service",
+  "version": "0.0.0",
+  "description": "Editor-neutral authoring services: check, completion, signature help, hover, semantic info.",
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "dependencies": {
+    "@powerfx-ts/core": "workspace:*",
+    "@powerfx-ts/engine": "workspace:*"
+  },
+  "scripts": {
+    "build": "tsc -b"
+  }
+}

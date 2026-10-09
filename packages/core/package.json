@@ -1,0 +1,19 @@
+{
+  "name": "@powerfx-ts/core",
+  "version": "0.0.0",
+  "description": "Spans, diagnostics, lexer, parser, syntax, types, symbols, binder, IR and function signatures.",
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -b"
+  }
+}
