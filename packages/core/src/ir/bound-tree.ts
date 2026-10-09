@@ -64,5 +64,22 @@ export type BoundNode =
       readonly record: BoundNode;
       readonly field: string;
     })
+  /** Record literal; fields are evaluated in order and errors are stored in the field. */
+  | (BoundBase & {
+      readonly kind: "Record";
+      readonly fields: readonly { readonly name: string; readonly value: BoundNode }[];
+    })
+  /**
+   * `With(scope, body)`: evaluates `scope`, then `body` with that record's fields bound as
+   * `Local`s of `scopeId`. A Blank scope gives Blank without evaluating `body`.
+   */
+  | (BoundBase & {
+      readonly kind: "With";
+      readonly scopeId: number;
+      readonly scope: BoundNode;
+      readonly body: BoundNode;
+    })
+  /** Field of the enclosing `With` scope identified by `scopeId` (unique per `With` node). */
+  | (BoundBase & { readonly kind: "Local"; readonly scopeId: number; readonly name: string })
   /** Placeholder for an expression that failed to bind; never evaluated. */
   | (BoundBase & { readonly kind: "Invalid" });

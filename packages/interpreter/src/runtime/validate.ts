@@ -1,6 +1,6 @@
 import { snapshotSchema, type FormulaType, type Schema } from "@powerfx-ts/core";
 import { numericBackendId, type NumericBackend } from "../numeric/backend.js";
-import { blank, boolean, number, text, type FormulaValue } from "../values/values.js";
+import { blank, boolean, number, record, text, type FormulaValue } from "../values/values.js";
 
 export type ValueIssueCode =
   "MissingVariable" | "UnexpectedVariable" | "UnexpectedField" | "InvalidType";
@@ -164,13 +164,12 @@ export function validateValues(
             });
           }
         }
-        return {
-          kind: "Record",
-          fields: type.fields.map((f) => ({
+        return record(
+          type.fields.map((f) => ({
             name: f.name,
             value: own(raw, f.name) ? convert(f.type, raw[f.name], `${path}.${f.name}`) : blank,
           })),
-        };
+        );
       }
       case "Blank":
       case "Unknown":

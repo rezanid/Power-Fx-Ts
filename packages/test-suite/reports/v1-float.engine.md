@@ -4,9 +4,9 @@
 - Runner: engine
 - Setup: `PowerFxV1,NumberIsFloat,DecimalSupport` (number mode: float, culture en-US, time zone UTC)
 - Cases: 22047 total, 7088 not applicable to this profile
-- Pass 617, fail 1, skip 46, unsupported 14295
-- Unsupported by reason: feature 11132, setup 3163, profile 0
-- Passing compile-error cases whose error set differs from upstream's (strict diagnostic, not a verdict): 33
+- Pass 666, fail 1, skip 46, unsupported 14246
+- Unsupported by reason: feature 11083, setup 3163, profile 0
+- Passing compile-error cases whose error set differs from upstream's (strict diagnostic, not a verdict): 34
 
 | File | Total | Pass | Fail | Skip | Unsupported |
 | ---- | ----: | ---: | ---: | ---: | ----------: |
@@ -81,9 +81,9 @@
 | EndsWith.txt | 51 | 0 | 0 | 0 | 51 |
 | Equality.txt | 28 | 20 | 0 | 0 | 8 |
 | Error.txt | 87 | 5 | 0 | 0 | 82 |
-| ErrorKinds.txt | 206 | 4 | 0 | 0 | 202 |
+| ErrorKinds.txt | 206 | 6 | 0 | 0 | 200 |
 | ErrorKinds_ColumnNamesAsIdentifiers.txt | 1 | 0 | 0 | 0 | 1 |
-| Escaping.txt | 4 | 0 | 0 | 0 | 4 |
+| Escaping.txt | 4 | 3 | 0 | 0 | 1 |
 | Exp.txt | 26 | 0 | 0 | 0 | 26 |
 | ExpT.txt | 6 | 0 | 0 | 0 | 6 |
 | FilterFunctions.txt | 20 | 0 | 0 | 0 | 20 |
@@ -103,7 +103,7 @@
 | ForAll_V1Compat.txt | 1 | 0 | 0 | 0 | 1 |
 | GUID.txt | 13 | 0 | 0 | 0 | 13 |
 | Hex2Dec.txt | 32 | 0 | 0 | 0 | 32 |
-| If.txt | 61 | 47 | 0 | 0 | 14 |
+| If.txt | 61 | 49 | 0 | 0 | 12 |
 | IfError.txt | 56 | 0 | 0 | 0 | 56 |
 | IfError_V1Compat.txt | 45 | 0 | 0 | 0 | 45 |
 | If_AllowsSideEffects.txt | 25 | 0 | 0 | 0 | 25 |
@@ -125,7 +125,7 @@
 | JSON_V1Compat.txt | 2 | 0 | 0 | 0 | 2 |
 | Join.txt | 24 | 0 | 0 | 0 | 24 |
 | Language.txt | 1 | 0 | 0 | 0 | 1 |
-| LazyEvaluation_ShortCircuit.txt | 77 | 36 | 0 | 0 | 41 |
+| LazyEvaluation_ShortCircuit.txt | 77 | 38 | 0 | 0 | 39 |
 | Left.txt | 34 | 0 | 0 | 0 | 34 |
 | LeftRightT.txt | 30 | 0 | 0 | 0 | 30 |
 | Len.txt | 20 | 0 | 0 | 0 | 20 |
@@ -201,12 +201,12 @@
 | Rand.txt | 23 | 0 | 0 | 0 | 23 |
 | Rand_DecimalSupport.txt | 1 | 0 | 0 | 0 | 1 |
 | Rand_Float.txt | 11 | 0 | 0 | 0 | 11 |
-| Record.txt | 10 | 0 | 0 | 0 | 10 |
+| Record.txt | 10 | 5 | 0 | 0 | 5 |
 | Remove.txt | 33 | 0 | 0 | 0 | 33 |
 | Remove_V1Compact.txt | 4 | 0 | 0 | 0 | 4 |
 | RenameColumns_SupportColumnNamesAsIdentifiers.txt | 29 | 0 | 0 | 0 | 29 |
 | Replace.txt | 66 | 0 | 0 | 0 | 66 |
-| ReservedKeyword.txt | 24 | 0 | 0 | 0 | 24 |
+| ReservedKeyword.txt | 24 | 23 | 0 | 0 | 1 |
 | ReservedKeyword_Disabled.txt | 12 | 0 | 0 | 0 | 12 |
 | ReservedKeyword_Enabled.txt | 12 | 0 | 0 | 0 | 12 |
 | Right.txt | 35 | 0 | 0 | 0 | 35 |
@@ -287,14 +287,14 @@
 | WeekNum_StronglyTypedEnumEnabled.txt | 5 | 0 | 0 | 0 | 5 |
 | Weekday.txt | 38 | 0 | 0 | 0 | 38 |
 | Weekday_StronglyTypedEnum.txt | 24 | 0 | 0 | 0 | 24 |
-| With.txt | 21 | 0 | 0 | 0 | 21 |
-| With_Float.txt | 3 | 0 | 0 | 0 | 3 |
+| With.txt | 21 | 9 | 0 | 0 | 12 |
+| With_Float.txt | 3 | 2 | 0 | 0 | 1 |
 | With_V1Compat.txt | 1 | 0 | 0 | 0 | 1 |
 | arithmetic.txt | 56 | 56 | 0 | 0 | 0 |
 | inScalar.txt | 39 | 0 | 0 | 0 | 39 |
 | inTable.txt | 25 | 0 | 0 | 0 | 25 |
 | inTable_V1Compat.txt | 2 | 0 | 0 | 0 | 2 |
-| literals.txt | 5 | 2 | 0 | 0 | 3 |
+| literals.txt | 5 | 3 | 0 | 0 | 2 |
 | mathfuncs.txt | 70 | 2 | 0 | 0 | 68 |
 | string.txt | 109 | 3 | 0 | 0 | 106 |
 | switch.txt | 81 | 0 | 0 | 0 | 81 |

@@ -42,6 +42,12 @@ export interface RecordValue {
 export type FormulaValue =
   NumberValue | TextValue | BooleanValue | BlankValue | ErrorValue | RecordValue;
 
+/** Records are frozen on creation so no evaluation result exposes mutable state. */
+export const record = (fields: readonly RecordFieldValue[]): RecordValue => {
+  for (const f of fields) Object.freeze(f);
+  return Object.freeze({ kind: "Record", fields: Object.freeze([...fields]) });
+};
+
 export const blank: BlankValue = Object.freeze({ kind: "Blank" });
 export const number = (value: NumericValue): NumberValue => ({ kind: "Number", value });
 export const text = (value: string): TextValue => ({ kind: "Text", value });

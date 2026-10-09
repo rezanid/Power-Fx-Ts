@@ -36,4 +36,7 @@ const v = engine.validateValues(schema, { Customer: { RiskScore: 90 } });
 if (v.ok) await engine.evaluateChecked(checked, { values: v.values }); // "High"
 ```
 
-See `docs/adr/0004-typed-context.md` for rules and limitations.
+Record literals and `With` work too, e.g.
+`With({Score: Customer.RiskScore}, If(Score > 80, "High", "Normal"))`.
+
+See `docs/adr/0004-typed-context.md` and `docs/adr/0005-record-literals-and-with.md` for rules and limitations.

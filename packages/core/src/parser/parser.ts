@@ -119,6 +119,21 @@ const ENDS_OPERAND: ReadonlySet<TokenKind> = new Set([
   "BraceClose",
 ]);
 
+const RESERVED_WORDS: ReadonlySet<string> = new Set([
+  "As",
+  "blank",
+  "null",
+  "empty",
+  "none",
+  "nothing",
+  "undefined",
+  "Is",
+  "This",
+  "Child",
+  "Children",
+  "Siblings",
+]);
+
 function findUnsupportedSyntax(
   text: string,
   tokens: readonly Token[],
@@ -137,6 +152,9 @@ function findUnsupportedSyntax(
       ENDS_OPERAND.has(prev.kind)
     ) {
       found.push({ feature: `${t.text} operator`, span: t.span });
+    } else if (t.kind === "Ident" && RESERVED_WORDS.has(t.text)) {
+      // Unquoted reserved words are lexed as errors upstream; recovery is not replicated.
+      found.push({ feature: "Reserved keyword", span: t.span });
     } else if (t.kind === "Ident" && t.text === "Type" && next?.kind === "ParenOpen") {
       found.push({ feature: "Type literal", span: t.span });
     }

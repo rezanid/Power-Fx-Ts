@@ -7,7 +7,16 @@ import {
   type EvaluationOptions,
   type FunctionImplementation,
 } from "../runtime/context.js";
-import { blank, boolean, error, number, text, type FormulaValue } from "../values/values.js";
+import {
+  blank,
+  boolean,
+  error,
+  number,
+  record,
+  text,
+  type FormulaValue,
+  type RecordValue,
+} from "../values/values.js";
 import { coerceValue } from "./coercion.js";
 
 export function evaluate(root: BoundNode, options: EvaluationOptions): FormulaValue {
@@ -16,6 +25,8 @@ export function evaluate(root: BoundNode, options: EvaluationOptions): FormulaVa
 
 class Evaluator implements EvaluationContext {
   private steps = 0;
+  /** Active `With` scope records by scope id; ids are unique per `With` node. */
+  private readonly scopes = new Map<number, RecordValue>();
 
   constructor(private readonly options: EvaluationOptions) {}
 
@@ -61,6 +72,29 @@ class Evaluator implements EvaluationContext {
         const value = this.options.variables?.get(node.name);
         if (value === undefined) throw new Error(`No value supplied for variable '${node.name}'.`);
         return value;
+      }
+      case "Record": {
+        // Fields evaluate in source order; the value is normalized by ordinal name like the type.
+        const fields = node.fields.map((f) => ({ name: f.name, value: this.evaluate(f.value) }));
+        return record(fields.sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0)));
+      }
+      case "With": {
+        const scope = this.evaluate(node.scope);
+        if (scope.kind === "Error" || scope.kind === "Blank") return scope;
+        if (scope.kind !== "Record") throw new Error("With scope is not a record.");
+        const previous = this.scopes.get(node.scopeId);
+        this.scopes.set(node.scopeId, scope);
+        try {
+          return this.evaluate(node.body);
+        } finally {
+          if (previous === undefined) this.scopes.delete(node.scopeId);
+          else this.scopes.set(node.scopeId, previous);
+        }
+      }
+      case "Local": {
+        const scope = this.scopes.get(node.scopeId);
+        if (scope === undefined) throw new Error(`No active scope for '${node.name}'.`);
+        return scope.fields.find((f) => f.name === node.name)?.value ?? blank;
       }
       case "FieldAccess": {
         const record = this.evaluate(node.record);
