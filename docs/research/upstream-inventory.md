@@ -95,13 +95,30 @@ nothing about semantics and is the parity metric to drive down. Invalid user inp
 names upstream does not know, bad operand types) is `invalid`, never `unsupported`. Passes require a
 real parse → bind → evaluate and the upstream comparison rules above.
 
-Remaining failure (kept visible): Text_ExcelCompat_PowerFxV1Compat.txt:13, a locale-specific argument
-separator (`Text(1234567,89; "...")`) we parse differently. Not yet verified: culture/time-zone
-dependent behavior, `-0` formatting, text comparison versus .NET culture comparison (we use
-`Intl.Collator` en-US).
+Remaining failure (kept visible, deliberately not suppressed): Text_ExcelCompat_PowerFxV1Compat.txt:13,
+`Text(1234567,89; "...")`. Investigated: the file's setup (`PowerFxV1CompatibilityRules,
+StronglyTypedBuiltinEnums`) is within our profile and the culture is en-US, so this is not a locale
+case; `,` and `;` are just a separator and a stray token. Upstream outside chaining mode treats `;` via
+the operator-expected path (`TexlParser.cs`, `case TokKind.Semicolon`), which we now mirror (the
+"Expected operator" error at 15-16 matches). The case still fails because upstream also expects the
+binder error "The function 'Text' has some invalid arguments.", and `Text` is not implemented. It is
+an in-profile failure that will resolve when `Text` lands (an unimplemented function plus a syntax
+error is reported as `invalid`, since the syntax error is real).
 
-Known function names come from `About<Name>` keys in the upstream resx
-(`packages/core/src/functions/known-names.ts`, names only, approximate): a known name we lack is
+Unsupported-syntax detection (`$"..."`, `As`, `Is`, `Type(`) is token-based. Parser errors ending
+before the first such construct are still reported (`invalid`); errors at or after it are dropped
+because they may be artifacts, so malformed text after unsupported syntax stays `unsupported`.
+
+Known function names are a **temporary classification aid, not an authoritative registry**. Source:
+`About<Name>` keys of `src/strings/PowerFxResources.en-US.resx` at the pinned commit `df4ceba…`,
+extracted by keeping keys without `_`, dropping table (`…T`), `…UO`, `Boolean…` and `Arg<N>` variants
+and some Patch variants (`packages/core/src/functions/known-names.ts`, 152 names). Limitations: it
+may omit functions without such a key and include names that need no host support; it does not
+separate core functions from host/configuration-dependent ones (e.g. `Collect`, `Patch`, `Refresh`,
+`Copilot`, `Set`, `Language`, `FileInfo`, `OptionSetInfo`, `Trace` need a host or feature flag
+upstream) because the resx carries no such evidence; that split needs the function registrations
+in `src/libraries` and is deferred. A name not in the list is an error, so a missing name would show
+as a visible failure rather than a hidden pass. Classification: a known name we lack is
 `unsupported`; any other name is the error "'X' is an unknown or unsupported function.". Syntax the
 parser lacks (`$"..."`, `As`, `Is`, `Type(...)`) is also `unsupported`.
 

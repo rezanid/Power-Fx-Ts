@@ -158,6 +158,22 @@ describe("unsupported versus invalid", () => {
     expect(await kind("Sum(T As x)")).toBe("unsupported");
   });
 
+  it.each(['Sum(1,, 2) + $"x"', "1 + ) As", "Sum(1,", "Sum(1; 2)"])(
+    "does not let unsupported-syntax detection hide a syntax error before it in %s",
+    async (text) => {
+      expect((await engine.evaluate(text)).kind).toBe("invalid");
+    },
+  );
+
+  it("cannot judge malformed text after unsupported syntax, so it stays unsupported", async () => {
+    expect((await engine.evaluate("1 As")).kind).toBe("unsupported");
+  });
+
+  it("reports `;` without chaining as operator-expected, like upstream", () => {
+    const codes = engine.check("Text(1,89; 2)").diagnostics.map((d) => d.code);
+    expect(codes).toContain("PFX1002");
+  });
+
   it("accepts a trailing comma in table literals like upstream", () => {
     expect(engine.check("[1, 2,]").diagnostics).toEqual([]);
   });

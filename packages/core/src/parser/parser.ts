@@ -31,7 +31,8 @@ export interface ParseResult {
   readonly diagnostics: readonly Diagnostic[];
   /**
    * Valid upstream syntax this parser does not implement (string interpolation, `As`). When
-   * present the tree and diagnostics are not trustworthy, so `diagnostics` is left empty.
+   * present, `diagnostics` keeps only errors that end before the first such construct; malformed
+   * syntax after it cannot be told apart from valid syntax we do not understand.
    */
   readonly unsupportedSyntax: readonly { readonly feature: string; readonly span: Span }[];
 }
@@ -89,9 +90,22 @@ export function parse(text: string, options: ParseOptions = {}): ParseResult {
   return {
     root,
     tokens: lexed.tokens,
-    diagnostics: unsupportedSyntax.length > 0 ? [] : diagnostics,
+    diagnostics: trustedDiagnostics(diagnostics, unsupportedSyntax),
     unsupportedSyntax,
   };
+}
+
+/**
+ * The parser works left to right, so errors that end before the first unsupported construct are
+ * genuine. Anything at or after it may be an artifact of not understanding that syntax.
+ */
+function trustedDiagnostics(
+  diagnostics: readonly Diagnostic[],
+  unsupported: ParseResult["unsupportedSyntax"],
+): readonly Diagnostic[] {
+  if (unsupported.length === 0) return diagnostics;
+  const first = Math.min(...unsupported.map((u) => u.span.start));
+  return diagnostics.filter((d) => d.span.end <= first);
 }
 
 const ENDS_OPERAND: ReadonlySet<TokenKind> = new Set([
@@ -248,7 +262,12 @@ class Parser {
         }
 
         const op = this.binaryOp(t);
-        if (!op && STARTS_OPERAND_AFTER_OPERAND.has(t.kind)) {
+        // Without chaining, upstream routes `;` through the same operator-expected path.
+        if (
+          !op &&
+          (STARTS_OPERAND_AFTER_OPERAND.has(t.kind) ||
+            (t.kind === "Semicolon" && !this.allowChaining))
+        ) {
           // Upstream: report, consume the token, and parse what follows as the right operand.
           this.report(DiagnosticCodes.OperatorExpected, t.span);
           this.next();
