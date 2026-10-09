@@ -20,7 +20,10 @@ Status: provisional (milestone review pending). Upstream pin: `df4ceba5e08220db6
   earlier one errors (`EvalVisitor.Visit(RecordNode)`), and the **value** keeps insertion order
   (`InMemoryRecordValue` dictionary); **serialization** (`RecordValue.ToExpression`) sorts by
   ordinal name, which is why `{b:2,a:1}` prints `{a:1,b:2}` in `literals.txt`. The compat runner
-  sorts when serializing; the engine does not reorder values. Results are deep-frozen.
+  sorts when serializing; the engine does not reorder values. Every value constructor (`number`, `text`, `boolean`, `error`, `record`) freezes its result, and
+  `record`/`error` deep-freeze nested fields, error arrays and `FormulaError` objects, so any
+  evaluation result (including ones returned through `With`) is recursively immutable. A custom
+  numeric representation inside a Number value is opaque and not frozen (see ADR 0004).
 - `With(scope, body)`: the scope argument binds against the enclosing scopes, so
   `With({x:5}, With({x:x*2}, x))` is 10. Names are case-sensitive. The innermost With field wins
   over outer With fields and over schema variables (and over enum roots). Each `With` node has a

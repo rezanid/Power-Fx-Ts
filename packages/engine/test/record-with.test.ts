@@ -235,3 +235,51 @@ describe("reserved words (PowerFxV1: DisableReservedKeywords off)", () => {
     expect(await run("{Blank: 1, Nulls: 2}.Blank")).toBe("1");
   });
 });
+
+describe("recursive immutability of results", () => {
+  const deepFrozen = (v: unknown): boolean => {
+    if (typeof v !== "object" || v === null) return true;
+    return Object.isFrozen(v) && Object.values(v).every(deepFrozen);
+  };
+  const value = async (text: string): Promise<FormulaValue> => {
+    const r = await engine.evaluate(text);
+    if (r.kind !== "value") throw new Error(r.kind);
+    return r.value;
+  };
+
+  it("rejects mutation of scalar fields in a literal result", async () => {
+    const v = await value('{x: 1, t: "a", b: true, n: Blank(), r: {y: 2}}');
+    if (v.kind !== "Record") throw new Error("record");
+    const x = v.fields.find((f) => f.name === "x")!.value as unknown as { value: unknown };
+    expect(() => (x.value = "oops")).toThrow(TypeError);
+    for (const f of v.fields) expect(Object.isFrozen(f.value)).toBe(true);
+    expect(deepFrozen(v)).toBe(true);
+  });
+
+  it("freezes error fields, error arrays and error objects", async () => {
+    const v = await value("{e: 1/0}");
+    if (v.kind !== "Record") throw new Error("record");
+    const e = v.fields[0]!.value;
+    if (e.kind !== "Error") throw new Error("error");
+    expect(() => ((e.errors[0] as { kind: string }).kind = "x")).toThrow(TypeError);
+    expect(() => (e.errors as unknown[]).push(1)).toThrow(TypeError);
+    expect(() => ((e as { kind: string }).kind = "x")).toThrow(TypeError);
+    expect(deepFrozen(v)).toBe(true);
+  });
+
+  it("freezes results returned through With, including top-level scalars and errors", async () => {
+    const v = await value("With({x: 1, e: 1/0}, {a: x, b: e, c: {d: x}})");
+    expect(deepFrozen(v)).toBe(true);
+    expect(deepFrozen(await value("With({x: 1}, x)"))).toBe(true);
+    expect(deepFrozen(await value("With({e: 1/0}, e)"))).toBe(true);
+    expect(deepFrozen(await value('With({t: "a"}, t)'))).toBe(true);
+  });
+
+  it("freezes validated values returned back as results", async () => {
+    const input = engine.validateValues(schema, { Customer: { RiskScore: 5, Name: "n" } });
+    if (!input.ok) throw new Error("invalid");
+    const r = await engine.evaluate("With({c: Customer}, c)", { schema, values: input.values });
+    if (r.kind !== "value") throw new Error(r.kind);
+    expect(deepFrozen(r.value)).toBe(true);
+  });
+});
