@@ -5,7 +5,7 @@
  *
  * Derived from the `About<Name>` keys of upstream `src/strings/PowerFxResources.en-US.resx`
  * (MIT, Copyright Microsoft Corporation): keys without `_`, minus table (`...T`) and typed
- * overload variants. Approximate: it may miss functions that have no such key.
+ * overload variants. Temporary classification aid, not an authoritative registry: may miss functions without such a key and does not separate core from host-dependent functions.
  */
 export const KNOWN_UPSTREAM_FUNCTIONS: ReadonlySet<string> = new Set([
   "Abs",
