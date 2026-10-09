@@ -9,11 +9,13 @@ import { BUILTIN_FUNCTIONS, type FunctionRegistry } from "../functions/signature
 import type { BoundBinaryOperator, BoundNode, CoercionTarget } from "../ir/bound-tree.js";
 import type { ParseResult } from "../parser/parser.js";
 import type {
+  AsNode,
   BinaryNode,
   CallNode,
   DottedNameNode,
   ExpressionNode,
   RecordNode,
+  TableNode,
   UnaryNode,
 } from "../syntax/nodes.js";
 import type { Span } from "../text/span.js";
@@ -27,6 +29,9 @@ import {
   UnknownType,
   type FormulaType,
   type RecordField,
+  type RecordTypeOf,
+  tableType,
+  typesEqual,
 } from "../types/formula-type.js";
 
 export interface BindOptions {
@@ -80,11 +85,23 @@ export function bind(parsed: ParseResult, options: BindOptions = {}): BindResult
   };
 }
 
+/**
+ * A row scope, as upstream `Binder.Scope`. `fields` is undefined when the scope's source failed to
+ * bind. Without `As` the whole row is `ThisRecord` and its fields are also in scope by name; with
+ * `As alias` only the alias names the row (upstream `RequireScopeIdentifier`).
+ */
+interface Scope {
+  readonly id: number;
+  readonly fields: readonly RecordField[] | undefined;
+  readonly identifier: string;
+  readonly requireIdentifier: boolean;
+}
+
 class Binder {
   readonly diagnostics: Diagnostic[] = [];
   readonly unsupported: UnsupportedFeature[] = [];
-  /** Enclosing `With` scopes, innermost last. `fields` is undefined when the scope failed to bind. */
-  private readonly scopes: { id: number; fields: readonly RecordField[] | undefined }[] = [];
+  /** Enclosing row scopes (`With`, `Filter`), innermost last. */
+  private readonly scopes: Scope[] = [];
   private nextScopeId = 1;
 
   constructor(
@@ -110,6 +127,11 @@ class Binder {
     return this.invalid(span);
   }
 
+  /** Upstream `GetTextSpan`: binary expressions are reported at their operator token. */
+  private textSpan(node: ExpressionNode): Span {
+    return node.kind === "Binary" ? this.operatorSpan(node) : node.span;
+  }
+
   /** The operator token between the operands, for diagnostics that point at the operator. */
   private operatorSpan(node: BinaryNode): Span {
     const token = this.parsed.tokens.find(
@@ -124,8 +146,8 @@ class Binder {
     preserveBlank = false,
   ): BoundNode {
     if (to === undefined || node.type.kind === to || node.type.kind === "Unknown") return node;
-    if (node.type.kind === "Record") {
-      this.report(DiagnosticCodes.BadTypeExpected, node.span, [to, "Record"]);
+    if (node.type.kind === "Record" || node.type.kind === "Table") {
+      this.report(DiagnosticCodes.BadTypeExpected, node.span, [to, node.type.kind]);
       return this.invalid(node.span);
     }
     const type = to === "Number" ? NumberType : to === "Text" ? TextType : BooleanType;
@@ -164,7 +186,13 @@ class Binder {
       case "Record":
         return this.bindRecord(node);
       case "Table":
-        return this.notSupported("Table literal", node.span);
+        return this.bindTableLiteral(node);
+      case "As":
+        // Upstream only allows `As` as a direct argument of a function that creates a row scope
+        // (or as a control's top-level formula, which has no equivalent here).
+        this.bindExpression(node.left);
+        this.report(DiagnosticCodes.AsNotInContext, node.span);
+        return this.invalid(node.span);
       case "Chain":
         return this.notSupported("Expression chaining", node.span);
       case "Missing":
@@ -175,23 +203,39 @@ class Binder {
   }
 
   /**
-   * Innermost `With` scope field of that exact (case-sensitive) name wins over outer scopes and
-   * schema variables. `undefined` means "not a scope name"; an invalid node means the name is
-   * hidden by a scope that failed to bind (its diagnostics are already reported).
+   * Mirrors upstream `IsRowScopeField`: innermost row scope first; a field is found by name unless
+   * the scope requires its `As` identifier, and the scope identifier names the whole row. An invalid
+   * node means the name is hidden by a scope that failed to bind (already reported).
    */
   private resolveLocal(name: string, span: Span): BoundNode | undefined {
     for (let i = this.scopes.length - 1; i >= 0; i--) {
       const scope = this.scopes[i]!;
       if (scope.fields === undefined) return this.invalid(span);
-      const field = scope.fields.find((f) => f.name === name);
-      if (field !== undefined) {
-        return { kind: "Local", scopeId: scope.id, name, span, type: field.type };
+      if (!scope.requireIdentifier) {
+        const field = scope.fields.find((f) => f.name === name);
+        if (field !== undefined) {
+          return { kind: "Local", scopeId: scope.id, name, span, type: field.type };
+        }
+      }
+      if (scope.identifier === name) {
+        return {
+          kind: "ScopeRecord",
+          scopeId: scope.id,
+          span,
+          type: { kind: "Record", fields: scope.fields },
+        };
       }
     }
-    if (name === "ThisRecord" && this.scopes.length > 0 && !this.isSchemaName(name)) {
-      return this.notSupported("ThisRecord (row scope)", span);
-    }
     return undefined;
+  }
+
+  private isScopeName(name: string): boolean {
+    return this.scopes.some(
+      (s) =>
+        s.fields === undefined ||
+        s.identifier === name ||
+        (!s.requireIdentifier && s.fields.some((f) => f.name === name)),
+    );
   }
 
   private isSchemaName(name: string): boolean {
@@ -236,6 +280,14 @@ class Binder {
     };
   }
 
+  /** A row-scope source argument, optionally renamed with `As` (upstream `GetScopeIdent`). */
+  private bindScopeSource(arg: ExpressionNode): { source: BoundNode; alias: string | undefined } {
+    if (arg.kind !== "As") return { source: this.bindExpression(arg), alias: undefined };
+    const asNode: AsNode = arg;
+    const source = this.bindExpression(asNode.left);
+    return { source, alias: asNode.name.kind === "Name" ? asNode.name.name : undefined };
+  }
+
   private bindWith(node: CallNode): BoundNode {
     const [scopeArg, bodyArg] = node.args;
     if (node.args.length !== 2 || scopeArg === undefined || bodyArg === undefined) {
@@ -244,7 +296,7 @@ class Binder {
       return this.invalid(node.span);
     }
     // The first argument resolves against the enclosing scopes, not the one it creates.
-    const scope = this.bindExpression(scopeArg);
+    const { source: scope, alias } = this.bindScopeSource(scopeArg);
     let fields: readonly RecordField[] | undefined;
     if (scope.type.kind === "Record") fields = scope.type.fields;
     else if (scope.type.kind === "Blank") fields = [];
@@ -253,11 +305,181 @@ class Binder {
       this.report(DiagnosticCodes.BadTypeExpected, scopeArg.span, ["Record", typeName(scope.type)]);
     }
     const id = this.nextScopeId++;
-    this.scopes.push({ id, fields });
-    const body = this.bindExpression(bodyArg);
-    this.scopes.pop();
+    const body = this.withScope(id, fields, alias, () => this.bindExpression(bodyArg));
     if (fields === undefined || body.type.kind === "Unknown") return this.invalid(node.span);
     return { kind: "With", scopeId: id, scope, body, span: node.span, type: body.type };
+  }
+
+  private withScope<T>(
+    id: number,
+    fields: readonly RecordField[] | undefined,
+    alias: string | undefined,
+    bind: () => T,
+  ): T {
+    this.scopes.push({
+      id,
+      fields,
+      identifier: alias ?? "ThisRecord",
+      requireIdentifier: alias !== undefined,
+    });
+    try {
+      return bind();
+    } finally {
+      this.scopes.pop();
+    }
+  }
+
+  /**
+   * `Filter(source, predicate)`, upstream `FilterFunction`: the source must be a table (an untyped
+   * Blank or a record is rejected under V1 rules), the result has the source's row type, and the
+   * predicate is bound in the row scope and must be Boolean or coercible to it. V1 allows exactly
+   * two arguments.
+   */
+  private bindFilter(node: CallNode): BoundNode {
+    const [sourceArg, predicateArg] = node.args;
+    if (node.args.length < 2 || sourceArg === undefined || predicateArg === undefined) {
+      node.args.forEach((a) => this.bindExpression(a));
+      this.report(DiagnosticCodes.BadArity, node.span, [String(node.args.length), "2"]);
+      return this.invalid(node.span);
+    }
+    const { source, alias } = this.bindScopeSource(sourceArg);
+    let fields: readonly RecordField[] | undefined;
+    if (source.type.kind === "Table") fields = source.type.row.fields;
+    else if (source.type.kind !== "Unknown") {
+      if (source.type.kind === "Blank") {
+        this.report(DiagnosticCodes.BadType, sourceArg.span);
+      } else {
+        this.report(DiagnosticCodes.NeedTable, node.span, ["Filter"]);
+      }
+      this.report(DiagnosticCodes.InvalidFunctionArguments, node.callee.span, ["Filter"]);
+    }
+    const id = this.nextScopeId++;
+    if (node.args.length > 2) {
+      // V1 rules reject the multi-predicate form; extra arguments are still bound in the row scope.
+      this.withScope(id, fields, alias, () => {
+        for (const extra of node.args.slice(1)) this.bindExpression(extra);
+      });
+      if (fields !== undefined) {
+        this.report(DiagnosticCodes.FilterOnlyTwoArgs, this.textSpan(node.args[2]!));
+        this.report(DiagnosticCodes.InvalidFunctionArguments, node.callee.span, ["Filter"]);
+      }
+      return this.invalid(node.span);
+    }
+    let predicate = this.withScope(id, fields, alias, () => this.bindExpression(predicateArg));
+    if (fields === undefined || predicate.type.kind === "Unknown") return this.invalid(node.span);
+    if (predicate.type.kind === "Record" || predicate.type.kind === "Table") {
+      this.report(DiagnosticCodes.BooleanExpected, predicateArg.span);
+      return this.invalid(node.span);
+    }
+    predicate = this.coerce(predicate, "Boolean");
+    return { kind: "Filter", scopeId: id, source, predicate, span: node.span, type: source.type };
+  }
+
+  /**
+   * Unions record types the way this slice supports: identical field types are merged, disjoint
+   * fields are added (and Blank-filled in rows). Upstream additionally coerces same-name fields of
+   * different types (e.g. Boolean to Number); that returns `undefined` here and is reported as
+   * unsupported by the caller rather than approximated.
+   */
+  private unionRows(a: RecordTypeOf, b: RecordTypeOf): RecordTypeOf | undefined {
+    const byName = new Map(a.fields.map((f) => [f.name, f]));
+    for (const f of b.fields) {
+      const existing = byName.get(f.name);
+      if (existing === undefined) byName.set(f.name, f);
+      else if (!typesEqual(existing.type, f.type)) return undefined;
+    }
+    const fields = [...byName.values()].sort((x, y) =>
+      x.name < y.name ? -1 : x.name > y.name ? 1 : 0,
+    );
+    return { kind: "Record", fields };
+  }
+
+  /**
+   * Table literal `[a, b, ...]` under PowerFxV1 (`TableSyntaxDoesntWrapRecords`): record items are
+   * rows; otherwise scalar items are wrapped as `{Value: item}`. Upstream `PostVisit(TableNode)`.
+   */
+  private bindTableLiteral(node: TableNode): BoundNode {
+    const items = node.items.map((i) => this.bindExpression(i));
+    if (items.some((i) => i.type.kind === "Unknown")) return this.invalid(node.span);
+    if (items.length === 0) {
+      return { kind: "Table", items: [], span: node.span, type: tableType([]) };
+    }
+    if (items.some((i) => i.type.kind === "Table")) {
+      return this.notSupported("Table nested in a table literal", node.span);
+    }
+    const hasRecord = items.some((i) => i.type.kind === "Record");
+    let rowType: RecordTypeOf = { kind: "Record", fields: [] };
+    const rows: { shape: "row"; value: BoundNode }[] = [];
+
+    if (hasRecord) {
+      for (const [i, item] of items.entries()) {
+        if (item.type.kind === "Record") {
+          const union = this.unionRows(rowType, item.type);
+          if (union === undefined) {
+            return this.notSupported("Table row field type coercion", node.items[i]!.span);
+          }
+          rowType = union;
+        } else if (item.type.kind !== "Blank") {
+          this.report(DiagnosticCodes.TableDoesNotAcceptThisType, node.items[i]!.span);
+          return this.invalid(node.span);
+        }
+        rows.push({ shape: "row", value: item });
+      }
+    } else {
+      const scalar = items.find((i) => i.type.kind !== "Blank")?.type;
+      if (scalar === undefined) return this.notSupported("Table of only Blank values", node.span);
+      if (items.some((i) => i.type.kind !== "Blank" && i.type.kind !== scalar.kind)) {
+        return this.notSupported("Table element type coercion", node.span);
+      }
+      rowType = { kind: "Record", fields: [{ name: "Value", type: scalar }] };
+      for (const item of items) {
+        rows.push({
+          shape: "row",
+          value: {
+            kind: "Record",
+            fields: [{ name: "Value", value: item }],
+            span: item.span,
+            type: { kind: "Record", fields: [{ name: "Value", type: item.type }] },
+          },
+        });
+      }
+    }
+    return { kind: "Table", items: rows, span: node.span, type: { kind: "Table", row: rowType } };
+  }
+
+  /**
+   * `Table(arg, ...)`, upstream `TableFunction`: each argument is a record (one row), an untyped
+   * Blank (a Blank row) or a table (its rows are spliced in). The row type is the union of the
+   * arguments' record types.
+   */
+  private bindTableCall(node: CallNode): BoundNode {
+    const args = node.args.map((a) => this.bindExpression(a));
+    if (args.some((a) => a.type.kind === "Unknown")) {
+      this.report(DiagnosticCodes.InvalidFunctionArguments, node.callee.span, ["Table"]);
+      return this.invalid(node.span);
+    }
+    let rowType: RecordTypeOf = { kind: "Record", fields: [] };
+    const items: { shape: "row" | "rows"; value: BoundNode }[] = [];
+    for (const [i, arg] of args.entries()) {
+      const argSpan = node.args[i]!.span;
+      if (arg.type.kind === "Blank") {
+        items.push({ shape: "row", value: arg });
+        continue;
+      }
+      if (arg.type.kind !== "Record" && arg.type.kind !== "Table") {
+        this.report(DiagnosticCodes.InvalidFunctionArguments, node.callee.span, ["Table"]);
+        this.report(DiagnosticCodes.NeedRecordOrTable, this.textSpan(node.args[i]!));
+        return this.invalid(node.span);
+      }
+      const argRow = arg.type.kind === "Record" ? arg.type : arg.type.row;
+      const union = this.unionRows(rowType, argRow);
+      if (union === undefined) {
+        return this.notSupported("Table argument field type coercion", argSpan);
+      }
+      rowType = union;
+      items.push({ shape: arg.type.kind === "Record" ? "row" : "rows", value: arg });
+    }
+    return { kind: "Table", items, span: node.span, type: { kind: "Table", row: rowType } };
   }
 
   /**
@@ -271,11 +493,7 @@ class Binder {
     if (
       node.left.kind === "Name" &&
       !this.isSchemaName(node.left.name) &&
-      !this.scopes.some(
-        (s) =>
-          s.fields === undefined ||
-          s.fields.some((f) => f.name === (node.left as { name: string }).name),
-      ) &&
+      !this.isScopeName(node.left.name) &&
       KNOWN_UPSTREAM_ENUMS.has(node.left.name)
     ) {
       return this.notSupported(`Member access on '${node.left.name}'`, node.span);
@@ -286,6 +504,9 @@ class Binder {
     if (left.type.kind === "Unknown") {
       this.report(DiagnosticCodes.InvalidDot, span, ["Error"]);
       return this.invalid(node.span);
+    }
+    if (left.type.kind === "Table") {
+      return this.notSupported("Column projection on a table", node.span);
     }
     if (left.type.kind !== "Record") {
       this.report(DiagnosticCodes.InvalidDot, span, [typeName(left.type)]);
@@ -341,7 +562,11 @@ class Binder {
       // Mirrors upstream BinderUtils.CheckComparisonArgTypesCore: each operand is checked on its
       // own against Number/Decimal/Date/Time/DateTime/Dynamic, so Text and Boolean are rejected.
       const bad = [left, right].filter(
-        (o) => o.type.kind === "Boolean" || o.type.kind === "Text" || o.type.kind === "Record",
+        (o) =>
+          o.type.kind === "Boolean" ||
+          o.type.kind === "Text" ||
+          o.type.kind === "Record" ||
+          o.type.kind === "Table",
       );
       for (const operand of bad) {
         this.report(DiagnosticCodes.InvalidArgumentType, operand.span, []);
@@ -378,9 +603,9 @@ class Binder {
       case "Neq": {
         const lk = left.type.kind;
         const rk = right.type.kind;
-        if (lk === "Record" || rk === "Record") {
-          // Upstream record equality has its own rules, not yet traced or implemented.
-          return this.notSupported("Record comparison", node.span);
+        if (lk === "Record" || rk === "Record" || lk === "Table" || rk === "Table") {
+          // Upstream aggregate equality has its own rules, not yet traced or implemented.
+          return this.notSupported("Record or table comparison", node.span);
         }
         if (lk !== rk && lk !== "Blank" && rk !== "Blank") {
           this.report(DiagnosticCodes.IncompatibleTypesForComparison, this.operatorSpan(node), [
@@ -416,22 +641,26 @@ class Binder {
       .filter((_, i) => i % 2 === 1 || (args.length % 2 === 1 && i === args.length - 1))
       .map((a) => a.type)
       .filter((t) => t.kind !== "Blank" && t.kind !== "Unknown");
-    const records = results.filter((t) => t.kind === "Record");
+    const records = results.filter((t) => t.kind === "Record" || t.kind === "Table");
     if (records.length === 0) return undefined;
-    if (records.length !== results.length) {
+    if (records.length !== results.length || records.some((t) => t.kind !== records[0]!.kind)) {
       this.report(DiagnosticCodes.ResultTypeMismatch, node.span);
       return this.invalid(node.span);
     }
     const first = JSON.stringify(records[0]);
     if (records.some((t) => JSON.stringify(t) !== first)) {
-      return this.notSupported("Record type union in If", node.span);
+      return this.notSupported("Record or table type union in If", node.span);
     }
     return undefined;
   }
 
   private bindCall(node: CallNode): BoundNode {
     const name = node.callee.name;
-    if (name === "With" && !this.functions.get(name)) return this.bindWith(node);
+    if (!this.functions.get(name)) {
+      if (name === "With") return this.bindWith(node);
+      if (name === "Filter") return this.bindFilter(node);
+      if (name === "Table") return this.bindTableCall(node);
+    }
     const signature = this.functions.get(name);
     const args = node.args.map((a) => this.bindExpression(a));
     if (signature === undefined) {

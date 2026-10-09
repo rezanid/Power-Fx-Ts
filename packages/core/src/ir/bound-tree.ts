@@ -81,5 +81,26 @@ export type BoundNode =
     })
   /** Field of the enclosing `With` scope identified by `scopeId` (unique per `With` node). */
   | (BoundBase & { readonly kind: "Local"; readonly scopeId: number; readonly name: string })
+  /** The whole row-scope value (`ThisRecord` or an `As` alias) of the scope `scopeId`. */
+  | (BoundBase & { readonly kind: "ScopeRecord"; readonly scopeId: number })
+  /**
+   * Table construction (literal or `Table(...)`). `row` items contribute one row (a record, or an
+   * untyped Blank that becomes a Blank row); `rows` items are tables whose rows are spliced in.
+   * Rows are conformed to the table's row type, filling missing fields with Blank.
+   */
+  | (BoundBase & {
+      readonly kind: "Table";
+      readonly items: readonly { readonly shape: "row" | "rows"; readonly value: BoundNode }[];
+    })
+  /**
+   * `Filter(source, predicate)`: evaluates `predicate` once per row with that row bound as the
+   * scope `scopeId`. A Blank source gives Blank; an Error predicate yields an error row.
+   */
+  | (BoundBase & {
+      readonly kind: "Filter";
+      readonly scopeId: number;
+      readonly source: BoundNode;
+      readonly predicate: BoundNode;
+    })
   /** Placeholder for an expression that failed to bind; never evaluated. */
   | (BoundBase & { readonly kind: "Invalid" });

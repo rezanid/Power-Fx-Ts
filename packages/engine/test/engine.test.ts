@@ -160,7 +160,7 @@ describe("unsupported versus invalid", () => {
     expect(await kind("Sum(T As x)")).toBe("unsupported");
   });
 
-  it.each(['Sum(1,, 2) + $"x"', "1 + ) As", "Sum(1,", "Sum(1; 2)"])(
+  it.each(['Sum(1,, 2) + $"x"', "1 + ) As x", "Sum(1,", "Sum(1; 2)"])(
     "does not let unsupported-syntax detection hide a syntax error before it in %s",
     async (text) => {
       expect((await engine.evaluate(text)).kind).toBe("invalid");
@@ -168,7 +168,7 @@ describe("unsupported versus invalid", () => {
   );
 
   it("cannot judge malformed text after unsupported syntax, so it stays unsupported", async () => {
-    expect((await engine.evaluate("1 As")).kind).toBe("unsupported");
+    expect((await engine.evaluate('$"x" + (')).kind).toBe("unsupported");
   });
 
   it("reports `;` without chaining as operator-expected, like upstream", () => {

@@ -39,8 +39,15 @@ export interface RecordValue {
   readonly fields: readonly RecordFieldValue[];
 }
 
+/** A table row is a record, a Blank row, or an error row (e.g. from a failed `Filter` predicate). */
+export type TableRow = RecordValue | BlankValue | ErrorValue;
+export interface TableValue {
+  readonly kind: "Table";
+  readonly rows: readonly TableRow[];
+}
+
 export type FormulaValue =
-  NumberValue | TextValue | BooleanValue | BlankValue | ErrorValue | RecordValue;
+  NumberValue | TextValue | BooleanValue | BlankValue | ErrorValue | RecordValue | TableValue;
 
 /**
  * Every value (and nested record, field, error array and error object) is frozen on creation so no
@@ -55,6 +62,9 @@ export function deepFreeze<T extends FormulaValue>(value: T): T {
       Object.freeze(f);
     }
     Object.freeze(value.fields);
+  } else if (value.kind === "Table") {
+    for (const r of value.rows) deepFreeze(r);
+    Object.freeze(value.rows);
   } else if (value.kind === "Error") {
     for (const e of value.errors) Object.freeze(e);
     Object.freeze(value.errors);
@@ -64,6 +74,9 @@ export function deepFreeze<T extends FormulaValue>(value: T): T {
 
 export const record = (fields: readonly RecordFieldValue[]): RecordValue =>
   deepFreeze({ kind: "Record", fields: fields.map((f) => ({ name: f.name, value: f.value })) });
+
+export const table = (rows: readonly TableRow[]): TableValue =>
+  deepFreeze({ kind: "Table", rows: [...rows] });
 
 export const blank: BlankValue = Object.freeze({ kind: "Blank" });
 export const number = (value: NumericValue): NumberValue =>

@@ -30,7 +30,7 @@ export interface ParseResult {
   /** Lexer and parser diagnostics, ordered by position. */
   readonly diagnostics: readonly Diagnostic[];
   /**
-   * Valid upstream syntax this parser does not implement (string interpolation, `As`). When
+   * Valid upstream syntax this parser does not implement (string interpolation, `Type(...)`). When
    * present, `diagnostics` keeps only errors that end before the first such construct; malformed
    * syntax after it cannot be told apart from valid syntax we do not understand.
    */
@@ -47,6 +47,7 @@ const enum Prec {
   Concat = 5,
   Add = 6,
   Mul = 7,
+  As = 8,
   PrefixUnary = 9,
   Power = 10,
   Postfix = 11,
@@ -108,17 +109,6 @@ function trustedDiagnostics(
   return diagnostics.filter((d) => d.span.end <= first);
 }
 
-const ENDS_OPERAND: ReadonlySet<TokenKind> = new Set([
-  "Ident",
-  "Number",
-  "String",
-  "True",
-  "False",
-  "ParenClose",
-  "BracketClose",
-  "BraceClose",
-]);
-
 function findUnsupportedSyntax(
   text: string,
   tokens: readonly Token[],
@@ -126,12 +116,9 @@ function findUnsupportedSyntax(
   const sig = tokens.filter((t) => !isTrivia(t.kind));
   const found: { feature: string; span: Span }[] = [];
   sig.forEach((t, i) => {
-    const prev = sig[i - 1];
     const next = sig[i + 1];
     if (t.text === "$" && text[t.span.end] === '"') {
       found.push({ feature: "String interpolation", span: t.span });
-    } else if (t.kind === "As" && prev && ENDS_OPERAND.has(prev.kind)) {
-      found.push({ feature: "As operator", span: t.span });
     } else if (t.kind === "Ident" && t.text === "Type" && next?.kind === "ParenOpen") {
       found.push({ feature: "Type literal", span: t.span });
     }
@@ -248,6 +235,18 @@ class Parser {
             right,
             dot: t.span,
             span: { start: left.span.start, end: right.span.end },
+          };
+          continue;
+        }
+
+        if (t.kind === "As" && minPrec <= Prec.As) {
+          this.next();
+          const name = this.parseMemberName();
+          left = {
+            kind: "As",
+            left,
+            name,
+            span: { start: left.span.start, end: Math.max(name.span.end, this.prevEnd) },
           };
           continue;
         }

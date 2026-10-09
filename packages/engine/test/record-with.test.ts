@@ -19,6 +19,8 @@ function show(v: FormulaValue): string {
       return engine.formatNumber(v.value);
     case "Record":
       return `{${v.fields.map((f) => `${f.name}:${show(f.value)}`).join(",")}}`;
+    case "Table":
+      return `Table(${v.rows.map(show).join(",")})`;
     case "Error":
       return `Error:${v.errors[0]?.kind}`;
   }
@@ -154,9 +156,9 @@ describe("With", () => {
     expect(await run("With({x: 1}, With({x: 2}, x) + x)")).toBe("3");
   });
 
-  it("reports unknown names in the body and unsupported row scopes", async () => {
+  it("reports unknown names in the body; ThisRecord is the whole With record", async () => {
     expect(diag("With({x: 1}, y)")).toHaveLength(1);
-    expect(await run("With({x: 1}, ThisRecord.x)")).toMatch(/^unsupported/);
+    expect(await run("With({x: 1}, ThisRecord.x)")).toBe("1");
   });
 
   it("rejects a non-record scope argument and wrong arity", () => {
@@ -226,9 +228,9 @@ describe("reserved words (PowerFxV1: DisableReservedKeywords off)", () => {
     expect(await run("With({'blank': 7}, 'blank' + 1)")).toBe("8");
   });
 
-  it("treats `As` as a keyword: an invalid field name, but an unsupported operator after an operand", () => {
+  it("treats `As` as a keyword: an invalid field name, and an invalid use of As outside a row-scope argument", () => {
     expect(diag("{As :1}")[0]).toContain("'As' where 'Ident'");
-    expect(engine.check("1 As x").unsupported.map((u) => u.feature)).toContain("As operator");
+    expect(diag("1 As x")).toEqual(["0-6: As is not permitted in this context"]);
   });
 
   it("does not treat similar names as reserved", async () => {
