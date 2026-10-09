@@ -16,4 +16,10 @@ Status: accepted (slice milestone)
   (no DOM types) and a `maxSteps` budget are checked per node. Core and interpreter use no DOM or
   Node APIs and no ambient I/O.
 - **Known deviations:** text comparison uses `Intl.Collator`; binary operators return the first
-  error instead of merging; ordering-operator diagnostics follow an empirically derived matrix.
+  error instead of merging; ordering-operator diagnostics follow upstream's per-operand check (traced from
+  `CheckComparisonArgTypesCore`), though only Number/Boolean/Text/Blank operand types exist yet;
+  `Text(1234567,89; ...)`-style locale separators are unsupported; Mod/other known functions are
+  `unsupported`, not failures.
+- **Verdicts follow the upstream runner.** Extra actual compile errors are accepted; exact-set
+  equality is a separate non-binding diagnostic. `unsupported` carries a category
+  (`feature`/`setup`/`profile`).

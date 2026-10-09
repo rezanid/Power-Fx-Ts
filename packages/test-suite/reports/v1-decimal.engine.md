@@ -5,6 +5,8 @@
 - Setup: `PowerFxV1,disable:NumberIsFloat,DecimalSupport` (number mode: decimal, culture en-US, time zone UTC)
 - Cases: 22047 total, 5874 not applicable to this profile
 - Pass 0, fail 0, skip 56, unsupported 16117
+- Unsupported by reason: feature 0, setup 3212, profile 12905
+- Passing compile-error cases whose error set differs from upstream's (strict diagnostic, not a verdict): 0
 
 | File | Total | Pass | Fail | Skip | Unsupported |
 | ---- | ----: | ---: | ---: | ---: | ----------: |

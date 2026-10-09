@@ -4,6 +4,7 @@ import {
   type Diagnostic,
   type DiagnosticCode,
 } from "../diagnostics/diagnostic.js";
+import { KNOWN_UPSTREAM_FUNCTIONS } from "../functions/known-names.js";
 import { BUILTIN_FUNCTIONS, type FunctionRegistry } from "../functions/signature.js";
 import type { BoundBinaryOperator, BoundNode, CoercionTarget } from "../ir/bound-tree.js";
 import type { ParseResult } from "../parser/parser.js";
@@ -24,6 +25,8 @@ export interface BindOptions {
 
 /** A construct the parser accepts but this engine slice cannot bind yet (not a user error). */
 export interface UnsupportedFeature {
+  /** `function`: a known upstream function without an implementation; `construct`: syntax or operator. */
+  readonly category: "function" | "construct";
   readonly feature: string;
   readonly span: Span;
 }
@@ -82,8 +85,12 @@ class Binder {
     return { kind: "Invalid", span, type: UnknownType };
   }
 
-  private notSupported(feature: string, span: Span): BoundNode {
-    this.unsupported.push({ feature, span });
+  private notSupported(
+    feature: string,
+    span: Span,
+    category: UnsupportedFeature["category"] = "construct",
+  ): BoundNode {
+    this.unsupported.push({ category, feature, span });
     return this.invalid(span);
   }
 
@@ -173,16 +180,9 @@ class Binder {
     }
     const ordering = ORDERING[op];
     if (ordering !== undefined) {
-      // Mirrors upstream's observed matrix: Text only coerces next to a Number operand, and a
-      // Boolean left operand short-circuits the check of the right operand.
-      const lk = left.type.kind;
-      const rk = right.type.kind;
-      const bad: BoundNode[] = [];
-      if (lk === "Boolean") bad.push(left);
-      else if (lk === "Text") {
-        bad.push(left);
-        if (rk === "Text" || rk === "Boolean") bad.push(right);
-      } else if (rk === "Boolean" || (rk === "Text" && lk === "Blank")) bad.push(right);
+      // Mirrors upstream BinderUtils.CheckComparisonArgTypesCore: each operand is checked on its
+      // own against Number/Decimal/Date/Time/DateTime/Dynamic, so Text and Boolean are rejected.
+      const bad = [left, right].filter((o) => o.type.kind === "Boolean" || o.type.kind === "Text");
       for (const operand of bad) {
         this.report(DiagnosticCodes.InvalidArgumentType, operand.span, []);
       }
@@ -247,7 +247,11 @@ class Binder {
     const signature = this.functions.get(name);
     const args = node.args.map((a) => this.bindExpression(a));
     if (signature === undefined) {
-      return this.notSupported(`Function ${name}`, node.callee.span);
+      if (KNOWN_UPSTREAM_FUNCTIONS.has(name)) {
+        return this.notSupported(`Function ${name}`, node.callee.span, "function");
+      }
+      this.report(DiagnosticCodes.UnknownFunction, node.span, [name]);
+      return this.invalid(node.span);
     }
 
     const count = args.length;

@@ -133,6 +133,50 @@ describe("evaluation boundary", () => {
   });
 });
 
+describe("unsupported versus invalid", () => {
+  const kind = async (text: string) => (await engine.evaluate(text)).kind;
+
+  it("treats a known upstream function without an implementation as unsupported", async () => {
+    expect(await kind("Sum(1, 2)")).toBe("unsupported");
+  });
+
+  it("reports a name upstream does not know as an invalid-expression error", async () => {
+    const r = await engine.evaluate('Wyz("foo")');
+    expect(r.kind).toBe("invalid");
+    if (r.kind === "invalid") {
+      expect(r.diagnostics[0]?.message).toBe("'Wyz' is an unknown or unsupported function.");
+      expect(r.diagnostics[0]?.span).toEqual({ start: 0, end: 10 });
+    }
+  });
+
+  it("reports syntax errors even when unimplemented constructs are also present", async () => {
+    expect(await kind("Sum(1, 2) +")).toBe("invalid");
+  });
+
+  it("marks valid upstream syntax the parser lacks as unsupported", async () => {
+    expect(await kind('$"x {1}"')).toBe("unsupported");
+    expect(await kind("Sum(T As x)")).toBe("unsupported");
+  });
+
+  it("accepts a trailing comma in table literals like upstream", () => {
+    expect(engine.check("[1, 2,]").diagnostics).toEqual([]);
+  });
+});
+
+describe("ordering operators check each operand independently", () => {
+  it.each([
+    ["1 < 2", 0],
+    ["Blank() < 1", 0],
+    ['1 < "2"', 1],
+    ['"1" < 2', 1],
+    ['"a" < "b"', 2],
+    ["true < 1", 1],
+    ["1 >= false", 1],
+  ])("%s -> %i diagnostics", (text, count) => {
+    expect(engine.check(text).diagnostics.length).toBe(count);
+  });
+});
+
 describe("formatDouble", () => {
   it.each([
     [0, "0"],

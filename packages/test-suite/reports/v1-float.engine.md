@@ -4,7 +4,9 @@
 - Runner: engine
 - Setup: `PowerFxV1,NumberIsFloat,DecimalSupport` (number mode: float, culture en-US, time zone UTC)
 - Cases: 22047 total, 7088 not applicable to this profile
-- Pass 613, fail 3, skip 46, unsupported 14297
+- Pass 617, fail 1, skip 46, unsupported 14295
+- Unsupported by reason: feature 11132, setup 3163, profile 0
+- Passing compile-error cases whose error set differs from upstream's (strict diagnostic, not a verdict): 34
 
 | File | Total | Pass | Fail | Skip | Unsupported |
 | ---- | ----: | ---: | ---: | ---: | ----------: |
@@ -19,7 +21,7 @@
 | AsType_UO.txt | 46 | 0 | 0 | 0 | 46 |
 | AsType_UO_TimeZone_Seattle.txt | 7 | 0 | 0 | 0 | 7 |
 | BasicCoercion.txt | 45 | 19 | 0 | 0 | 26 |
-| Blank.txt | 43 | 36 | 1 | 0 | 6 |
+| Blank.txt | 43 | 37 | 0 | 0 | 6 |
 | Blob.txt | 19 | 0 | 0 | 0 | 19 |
 | Boolean.txt | 21 | 0 | 0 | 0 | 21 |
 | BooleanT.txt | 13 | 0 | 0 | 0 | 13 |
@@ -78,7 +80,7 @@
 | EncodeURL.txt | 20 | 0 | 0 | 0 | 20 |
 | EndsWith.txt | 51 | 0 | 0 | 0 | 51 |
 | Equality.txt | 28 | 20 | 0 | 0 | 8 |
-| Error.txt | 87 | 2 | 2 | 0 | 83 |
+| Error.txt | 87 | 5 | 0 | 0 | 82 |
 | ErrorKinds.txt | 206 | 4 | 0 | 0 | 202 |
 | ErrorKinds_ColumnNamesAsIdentifiers.txt | 1 | 0 | 0 | 0 | 1 |
 | Escaping.txt | 4 | 0 | 0 | 0 | 4 |
@@ -256,7 +258,7 @@
 | Text_DefaultNumber_Float.txt | 41 | 0 | 0 | 0 | 41 |
 | Text_ExcelCompat.txt | 1061 | 0 | 0 | 46 | 1015 |
 | Text_ExcelCompat_Decimal.txt | 36 | 0 | 0 | 0 | 36 |
-| Text_ExcelCompat_PowerFxV1Compat.txt | 360 | 0 | 0 | 0 | 360 |
+| Text_ExcelCompat_PowerFxV1Compat.txt | 360 | 0 | 1 | 0 | 359 |
 | Text_Format.txt | 150 | 0 | 0 | 0 | 150 |
 | Text_Format_PowerFxV1Compat.txt | 7 | 0 | 0 | 0 | 7 |
 | Time.txt | 142 | 0 | 0 | 0 | 142 |

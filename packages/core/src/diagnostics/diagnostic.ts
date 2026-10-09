@@ -15,12 +15,14 @@ export const DiagnosticCodes = {
   InvalidNumber: "PFX1009",
   NestedTooDeeply: "PFX1010",
   ReservedWord: "PFX1011",
+  BadToken: "PFX1012",
   NameNotRecognized: "PFX2001",
   IncompatibleTypesForComparison: "PFX2002",
   InvalidFunctionArguments: "PFX2003",
   BadArity: "PFX2004",
   BadArityMinimum: "PFX2005",
   InvalidArgumentType: "PFX2006",
+  UnknownFunction: "PFX2007",
 } as const;
 
 export type DiagnosticCode = (typeof DiagnosticCodes)[keyof typeof DiagnosticCodes];
@@ -34,10 +36,12 @@ export interface Diagnostic {
 }
 
 const TEMPLATES: Record<DiagnosticCode, string> = {
-  PFX1001: "Expected an operand. We expect an expression at this point in the formula.",
+  // Parser messages reuse upstream's English wording; {0}/{1} are upstream TokKind names.
+  PFX1001:
+    "Expected an operand. The formula or expression expects a valid operand. For example, you can add the operand '2' to the expression ' 1 +_' so that the result is '3'. Or, you can add the operand \"there\" to the expression '\"Hi \"& _ ' so that the result is 'Hi there'.",
   PFX1002:
-    "Expected an operator. We expect an operator such as +, *, or & at this point in the formula.",
-  PFX1003: "Expected {0}. We expect {0} at this point in the formula.",
+    "Expected operator. We expect an operator such as +, *, or & at this point in the formula.",
+  PFX1003: "Unexpected characters. The formula contains '{0}' where '{1}' is expected.",
   PFX1004: "Unexpected characters. The formula contains '{0}' where it isn't expected.",
   PFX1005: "Unterminated text literal.",
   PFX1006: "Unterminated quoted identifier.",
@@ -46,12 +50,14 @@ const TEMPLATES: Record<DiagnosticCode, string> = {
   PFX1009: "Invalid number.",
   PFX1010: "The expression is nested too deeply.",
   PFX1011: "Use of a reserved word that is currently not supported.",
+  PFX1012: "Unexpected characters. Characters are used in the formula in an unexpected way.",
   // Binder messages reuse upstream's English wording so compile-error expectations can match.
   PFX2001: "Name isn't valid. '{0}' isn't recognized.",
   PFX2002: "Incompatible types for comparison. These types can't be compared: {0}, {1}.",
   PFX2003: "The function '{0}' has some invalid arguments.",
   PFX2004: "Invalid number of arguments: received {0}, expected {1}.",
   PFX2005: "Invalid number of arguments: received {0}, expected {1} or more.",
+  PFX2007: "'{0}' is an unknown or unsupported function.",
   PFX2006:
     "Invalid argument type. Expecting one of the following: Number, Decimal, Date, Time, DateTime, Dynamic.",
 };

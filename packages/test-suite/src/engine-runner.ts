@@ -37,6 +37,7 @@ export function createEngineRunner(engine: Engine = new Engine()): ExpressionRun
       if (profile.numberMode !== engine.numberMode) {
         return {
           kind: "unsupported",
+          category: "profile",
           reason: `Number mode '${profile.numberMode}' not implemented (engine: ${engine.numberMode})`,
         };
       }
@@ -54,6 +55,7 @@ export function createEngineRunner(engine: Engine = new Engine()): ExpressionRun
         case "unsupported":
           return {
             kind: "unsupported",
+            category: "feature",
             reason: result.features.map((f) => f.feature).join(", "),
           };
       }

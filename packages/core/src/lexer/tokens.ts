@@ -48,6 +48,32 @@ export interface Token {
   readonly value?: string;
 }
 
+const UPSTREAM_KIND_NAMES: Partial<Record<TokenKind, string>> = {
+  Number: "NumLit",
+  String: "StrLit",
+  Plus: "Add",
+  Minus: "Sub",
+  Star: "Mul",
+  Slash: "Div",
+  Amp: "Ampersand",
+  Percent: "PercentSign",
+  AmpAmp: "And",
+  PipePipe: "Or",
+  Eq: "Equ",
+  Lt: "Lss",
+  LtEq: "LssEqu",
+  Gt: "Grt",
+  GtEq: "GrtEqu",
+  LtGt: "LssGrt",
+  BraceOpen: "CurlyOpen",
+  BraceClose: "CurlyClose",
+};
+
+/** The upstream `TokKind` name, which appears verbatim in upstream diagnostics. */
+export function upstreamKindName(kind: TokenKind): string {
+  return UPSTREAM_KIND_NAMES[kind] ?? kind;
+}
+
 export function isTrivia(kind: TokenKind): boolean {
   return kind === "Whitespace" || kind === "Comment";
 }

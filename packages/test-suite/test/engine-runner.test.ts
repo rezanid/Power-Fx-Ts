@@ -32,23 +32,44 @@ describe("compareResult rules mirrored from upstream BaseRunner", () => {
     );
   });
 
-  it("fails on extra or missing errors", () => {
-    const expected = "Errors: Error 0-1: A.";
+  it("accepts extra actual errors like upstream but flags them strictly", () => {
+    const r = compareResult(at("x", "Errors: Error 0-1: A."), {
+      kind: "errors",
+      errors: ["Error 0-1: A.", "Error 2-3: B."],
+    });
+    expect(r.outcome).toBe("pass");
+    expect(r.strictErrors).toBe("differs");
+  });
+
+  it("fails when an expected error is missing", () => {
     expect(
-      compareResult(at("x", expected), {
-        kind: "errors",
-        errors: ["Error 0-1: A.", "Error 2-3: B."],
-      }).outcome,
-    ).toBe("fail");
-    expect(
-      compareResult(at("x", expected), { kind: "errors", errors: ["Error 0-1: C."] }).outcome,
+      compareResult(at("x", "Errors: Error 0-1: A."), { kind: "errors", errors: ["Error 0-1: C."] })
+        .outcome,
     ).toBe("fail");
   });
 
+  it("keeps | inside quoted text with the greedy upstream split", () => {
+    const e = 'Errors: Error 0-1: say "a|b" now.|Error 2-3: B.';
+    const r = compareResult(at("x", e), {
+      kind: "errors",
+      errors: ['Error 0-1: say "a|b" now.', "Error 2-3: B."],
+    });
+    expect(r.outcome).toBe("pass");
+  });
+
+  it("rejects a fuzzy float match against a >17 digit decimal expectation", () => {
+    const r = compareResult(at("x", "0.12345678901234567891"), {
+      kind: "value",
+      text: "0.12345678901234568",
+    });
+    expect(r.outcome).toBe("fail");
+  });
+
   it("never passes an unsupported result", () => {
-    expect(compareResult(at("x", "1"), { kind: "unsupported", reason: "r" }).outcome).toBe(
-      "unsupported",
-    );
+    expect(
+      compareResult(at("x", "1"), { kind: "unsupported", category: "feature", reason: "r" })
+        .outcome,
+    ).toBe("unsupported");
   });
 });
 

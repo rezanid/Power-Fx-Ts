@@ -28,10 +28,15 @@ Format (implemented in `packages/test-suite/src/txt-format.ts`):
   `Error({Kind:ErrorKind.Div0})`, `Errors: Error 0-3: msg|Error ...` (compile errors), `#SKIP`, `#NoValue`.
 - Comparison is by exact string, with exceptions in upstream `BaseRunner.RunAsync2` (date/datetime
   tick tolerance, float tolerance via `NumberCompare`, Decimal→Number message rewriting, `Error*`
-  expectations re-run as `IsError(...)`). **Implemented so far:** exact match, `#SKIP`, compile-error matching
-  (every expected message must appear and none extra; Decimal→Number rewriting) and float tolerance
-  (`NumberCompare`: abs 1e-5 or rel 1e-14). Not implemented: date tick tolerance, `Error*`→`IsError`
-  re-run, `#OVERRIDE:` merging, `#NoValue`. Note upstream accepts _extra_ actual errors; we are stricter.
+  expectations re-run as `IsError(...)`). **Implemented (verified against `BaseRunner.RunAsync2`):**
+  `#SKIP` first; exact ordinal match; compile-error matching where every expected message must appear
+  among the actual ones and **extra actual errors are accepted**; the expected-error split regex
+  `(".*"|[^|])+` (greedy) after replacing all `Errors: `; Decimal→Number rewriting; float tolerance
+  (`NumberCompare`: abs 1e-5 or rel 1e-14); and the rule that a fuzzy float match fails when the
+  expectation has more than 17 fractional digits. Not implemented: date tick tolerance, `Error*`→`IsError`
+  re-run (host-specific), `#OVERRIDE:` merging, `#NoValue`.
+  Our own stricter check (exact error-set equality) is reported separately as a diagnostic
+  (`strictErrorMismatches`) and never changes a verdict.
 
 Top expected-result shapes: numbers (~4k), strings (~2.7k), booleans (~4.3k), compile errors (~2.9k),
 `Error({Kind:...})` (~2.5k), tables (~1k), `Blank()`, dates/datetimes.
@@ -80,16 +85,32 @@ display names are interleaved; the slice needs only literals, identifiers, unary
 ## Vertical-slice compatibility results (`v1-float`, engine runner)
 
 Pinned commit `df4ceba…`; 22,047 cases, 7,088 not applicable to the profile.
-**Pass 613, fail 3, skip 46, unsupported 14,297.** `v1-decimal`: 0 pass / 0 fail / 16,117
-unsupported (decimal backend not implemented, so everything reports `unsupported`).
+**Pass 617, fail 1, skip 46, unsupported 14,295** (feature 11,132, setup 3,163, profile 0).
+`v1-decimal`: 0 pass / 0 fail / 16,117 unsupported (decimal backend not implemented).
+Passing compile-error cases whose error set is not identical to upstream's: 34 (32 are the ordering
+matrices, where the corpus lists only some operand errors; upstream's lenient rule accepts them).
 
-"Unsupported" = the formula uses a function, type or setup the slice lacks; it says nothing about
-semantics. Passes require a real parse → bind → evaluate and an upstream-style comparison.
+"Unsupported" = the formula uses a known function, syntax, type or setup the slice lacks; it says
+nothing about semantics and is the parity metric to drive down. Invalid user input (syntax errors,
+names upstream does not know, bad operand types) is `invalid`, never `unsupported`. Passes require a
+real parse → bind → evaluate and the upstream comparison rules above.
 
-Remaining failures (kept visible): parser message wording for `Blank(` (Blank.txt 136) and `1.2.3`
-(Error.txt 122, 125). Not yet verified: culture/time-zone dependent behavior, `-0` formatting,
-text comparison versus .NET culture comparison (we use `Intl.Collator` en-US).
+Remaining failure (kept visible): Text_ExcelCompat_PowerFxV1Compat.txt:13, a locale-specific argument
+separator (`Text(1234567,89; "...")`) we parse differently. Not yet verified: culture/time-zone
+dependent behavior, `-0` formatting, text comparison versus .NET culture comparison (we use
+`Intl.Collator` en-US).
+
+Known function names come from `About<Name>` keys in the upstream resx
+(`packages/core/src/functions/known-names.ts`, names only, approximate): a known name we lack is
+`unsupported`; any other name is the error "'X' is an unknown or unsupported function.". Syntax the
+parser lacks (`$"..."`, `As`, `Is`, `Type(...)`) is also `unsupported`.
+
+Parser recovery mirrors `TexlParser.cs` (operator-expected, single bad-token at leftovers,
+expected-found with TokKind names, trailing comma in table literals). Unverified: the lexer's own
+"unexpected character" wording, and whether upstream reports a bad-token after a lexer error token.
 
 Semantics learned from the corpus: `=`/`<>` between different types is a compile error; `Blank`
-equals only Blank; ordering operators reject Boolean operands, and Text only next to Number
-(error spans follow an observed matrix); `If` result arguments keep Blank as Blank.
+equals only Blank; ordering operators check each operand on its own and reject Boolean and Text
+(upstream `BinderUtils.CheckComparisonArgTypesCore` traced; the Number/Decimal/Date/Time/DateTime/
+Dynamic list is reduced to Number here; option sets, Date/Time coercions and UntypedObject are
+not modelled); `If` result arguments keep Blank as Blank.

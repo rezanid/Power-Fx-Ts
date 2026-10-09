@@ -25,6 +25,8 @@ function formatMarkdown(report: CompatReport): string {
     `- Setup: \`${report.setupString}\` (number mode: ${report.numberMode}, culture ${report.culture}, time zone ${report.timeZone})`,
     `- Cases: ${t.cases} total, ${t.inapplicable} not applicable to this profile`,
     `- Pass ${t.pass}, fail ${t.fail}, skip ${t.skip}, unsupported ${t.unsupported}`,
+    `- Unsupported by reason: feature ${report.unsupportedByCategory.feature}, setup ${report.unsupportedByCategory.setup}, profile ${report.unsupportedByCategory.profile}`,
+    `- Passing compile-error cases whose error set differs from upstream's (strict diagnostic, not a verdict): ${report.strictErrorMismatches}`,
     "",
     "| File | Total | Pass | Fail | Skip | Unsupported |",
     "| ---- | ----: | ---: | ---: | ---: | ----------: |",

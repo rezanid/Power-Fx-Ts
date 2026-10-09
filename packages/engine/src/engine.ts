@@ -1,5 +1,6 @@
 import {
   bind,
+  DiagnosticCodes,
   parse,
   type BoundNode,
   type Diagnostic,
@@ -65,14 +66,21 @@ export class Engine {
 
   check(text: string): CheckResult {
     const parsed = parse(text, this.options.parse);
+    const skipped = parsed.unsupportedSyntax.map((u) => ({ category: "construct" as const, ...u }));
     const bound = bind(parsed);
-    const diagnostics = [...parsed.diagnostics, ...bound.diagnostics];
+    const unsupported = [...skipped, ...bound.unsupported];
+    // Binding diagnostics on a partially bound tree are not trustworthy, so they are dropped
+    // whenever unsupported constructs were skipped.
+    const diagnostics = [
+      ...parsed.diagnostics,
+      ...(unsupported.length > 0 ? [] : bound.diagnostics),
+    ];
     const hasErrors = diagnostics.some((d) => d.severity === "error");
-    const ok = !hasErrors && bound.unsupported.length === 0;
+    const ok = !hasErrors && unsupported.length === 0;
     return {
       text,
       diagnostics,
-      unsupported: bound.unsupported,
+      unsupported,
       type: bound.type,
       bound: ok ? bound.root : undefined,
       ok,
@@ -85,8 +93,13 @@ export class Engine {
    */
   async evaluate(text: string, options: EvaluateOptions = {}): Promise<EvaluationResult> {
     const checked = this.check(text);
-    if (checked.unsupported.length > 0) {
-      // Diagnostics from a partially bound formula are not trustworthy, so none are reported.
+    // A too-large literal is a semantic error upstream (alongside the enclosing call's errors),
+    // so it does not make unsupported syntax a user error.
+    const syntaxErrors = checked.diagnostics.some(
+      (d) => d.severity === "error" && d.code !== DiagnosticCodes.NumberTooLarge,
+    );
+    // Invalid syntax is a user error even when the formula also uses unimplemented constructs.
+    if (checked.unsupported.length > 0 && !syntaxErrors) {
       return { kind: "unsupported", features: checked.unsupported };
     }
     if (checked.bound === undefined) return { kind: "invalid", diagnostics: checked.diagnostics };
