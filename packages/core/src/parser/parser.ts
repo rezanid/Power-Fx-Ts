@@ -130,13 +130,8 @@ function findUnsupportedSyntax(
     const next = sig[i + 1];
     if (t.text === "$" && text[t.span.end] === '"') {
       found.push({ feature: "String interpolation", span: t.span });
-    } else if (
-      t.kind === "Ident" &&
-      (t.text === "As" || t.text === "Is") &&
-      prev &&
-      ENDS_OPERAND.has(prev.kind)
-    ) {
-      found.push({ feature: `${t.text} operator`, span: t.span });
+    } else if (t.kind === "As" && prev && ENDS_OPERAND.has(prev.kind)) {
+      found.push({ feature: "As operator", span: t.span });
     } else if (t.kind === "Ident" && t.text === "Type" && next?.kind === "ParenOpen") {
       found.push({ feature: "Type literal", span: t.span });
     }
@@ -394,6 +389,7 @@ class Parser {
         return this.parseTable();
       case "Error": {
         this.next();
+        if (t.value !== undefined) this.report(DiagnosticCodes.ReservedWord, t.span);
         return { kind: "Error", tokens: [t], span: t.span };
       }
       case "Eof":
@@ -460,7 +456,10 @@ class Parser {
     const fields: RecordFieldNode[] = [];
     if (!this.at("BraceClose")) {
       for (;;) {
-        fields.push(this.parseField());
+        const field = this.parseField();
+        fields.push(field);
+        // Upstream stops the field list after a missing colon.
+        if (field.value.kind === "Error" && field.colonMissing) break;
         if (this.at("Comma")) {
           this.next();
           continue;
@@ -479,7 +478,20 @@ class Parser {
 
   private parseField(): RecordFieldNode {
     const name = this.parseMemberName();
-    this.expect("Colon");
+    if (!this.expect("Colon")) {
+      // Upstream consumes the offending token as the field's value and reports a colon error.
+      const bad = this.cur;
+      if (bad.kind !== "Eof") this.next();
+      this.report(DiagnosticCodes.ColonExpected, bad.span);
+      const value: ExpressionNode = { kind: "Error", tokens: [bad], span: bad.span };
+      return {
+        kind: "RecordField",
+        name,
+        value,
+        colonMissing: true,
+        span: { start: name.span.start, end: bad.span.end },
+      };
+    }
     const value = this.parseExpr(Prec.None);
     return {
       kind: "RecordField",

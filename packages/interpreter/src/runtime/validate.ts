@@ -1,6 +1,14 @@
 import { snapshotSchema, type FormulaType, type Schema } from "@powerfx-ts/core";
 import { numericBackendId, type NumericBackend } from "../numeric/backend.js";
-import { blank, boolean, number, text, type FormulaValue } from "../values/values.js";
+import {
+  blank,
+  boolean,
+  deepFreeze,
+  number,
+  record,
+  text,
+  type FormulaValue,
+} from "../values/values.js";
 
 export type ValueIssueCode =
   "MissingVariable" | "UnexpectedVariable" | "UnexpectedField" | "InvalidType";
@@ -63,17 +71,6 @@ class ReadOnlyMap<K, V> implements ReadonlyMap<K, V> {
   }
 }
 
-function freezeValue(value: FormulaValue): FormulaValue {
-  if (value.kind === "Record") {
-    for (const f of value.fields) {
-      freezeValue(f.value);
-      Object.freeze(f);
-    }
-    Object.freeze(value.fields);
-  }
-  return Object.freeze(value);
-}
-
 const own = (o: object, key: string): boolean => Object.prototype.hasOwnProperty.call(o, key);
 
 const isPlainObject = (v: unknown): v is Record<string, unknown> => {
@@ -129,7 +126,7 @@ export function validateValues(
         values: Object.freeze({
           schema,
           numericId: numericBackendId(numeric),
-          values: new ReadOnlyMap([...values].map(([k, val]) => [k, freezeValue(val)] as const)),
+          values: new ReadOnlyMap([...values].map(([k, val]) => [k, deepFreeze(val)] as const)),
         }) as unknown as ValidatedValues,
       };
 
@@ -164,13 +161,12 @@ export function validateValues(
             });
           }
         }
-        return {
-          kind: "Record",
-          fields: type.fields.map((f) => ({
+        return record(
+          type.fields.map((f) => ({
             name: f.name,
             value: own(raw, f.name) ? convert(f.type, raw[f.name], `${path}.${f.name}`) : blank,
           })),
-        };
+        );
       }
       case "Blank":
       case "Unknown":

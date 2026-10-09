@@ -16,6 +16,7 @@ export const DiagnosticCodes = {
   NestedTooDeeply: "PFX1010",
   ReservedWord: "PFX1011",
   BadToken: "PFX1012",
+  ColonExpected: "PFX1013",
   NameNotRecognized: "PFX2001",
   IncompatibleTypesForComparison: "PFX2002",
   InvalidFunctionArguments: "PFX2003",
@@ -25,6 +26,8 @@ export const DiagnosticCodes = {
   UnknownFunction: "PFX2007",
   BadTypeExpected: "PFX2008",
   InvalidDot: "PFX2009",
+  DuplicateField: "PFX2010",
+  ResultTypeMismatch: "PFX2011",
 } as const;
 
 export type DiagnosticCode = (typeof DiagnosticCodes)[keyof typeof DiagnosticCodes];
@@ -53,6 +56,7 @@ const TEMPLATES: Record<DiagnosticCode, string> = {
   PFX1010: "The expression is nested too deeply.",
   PFX1011: "Use of a reserved word that is currently not supported.",
   PFX1012: "Unexpected characters. Characters are used in the formula in an unexpected way.",
+  PFX1013: "Expected colon. We expect a colon (:) at this point in the formula.",
   // Binder messages reuse upstream's English wording so compile-error expectations can match.
   PFX2001: "Name isn't valid. '{0}' isn't recognized.",
   PFX2002: "Incompatible types for comparison. These types can't be compared: {0}, {1}.",
@@ -62,6 +66,9 @@ const TEMPLATES: Record<DiagnosticCode, string> = {
   PFX2007: "'{0}' is an unknown or unsupported function.",
   PFX2008: "Invalid argument type ({1}). Expecting a {0} value instead.",
   PFX2009: "The '.' operator cannot be used on {0} values.",
+  PFX2010: "A field named '{0}' was specified more than once in this record.",
+  PFX2011:
+    "Argument type mismatch. The types of all result arguments must agree with or be coercible to the first result argument.",
   PFX2006:
     "Invalid argument type. Expecting one of the following: Number, Decimal, Date, Time, DateTime, Dynamic.",
 };
