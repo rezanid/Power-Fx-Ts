@@ -27,7 +27,12 @@ Status: provisional (milestone review pending). Upstream pin: `df4ceba5e08220db6
   prefix unary, as upstream.
 - **`Filter(source, predicate)`**: exactly two arguments (V1); source must be a table; predicate
   Boolean or coercible; result type is the source type. Evaluation: true keeps the row, false or
-  Blank drops it, an Error predicate yields an error row; a Blank row is a Blank scope; a Blank
+  Blank drops it, an Error predicate yields an error row. The predicate runs for **every** row,
+  including source error rows (`LazyFilterRowAsync`): an error row's scope value is the error itself
+  (`DValue.ToFormulaValue`), and `FormulaValueScope.Resolve` returns a non-record scope value for any
+  name, so a field access or the whole `ThisRecord` evaluates to that error. A constant `false`
+  drops an error row, a constant `true` keeps it (`Filter(Filter([0], 1/Value > 0), false)` is
+  empty). A Blank row is a Blank scope; a Blank
   table gives Blank; an Error source propagates. Empty tables are valid.
 - **`Table(...)`** and table literals `[ ... ]` (PowerFxV1 `TableSyntaxDoesntWrapRecords`:
   `[{a:1}]` is a table of records, `[1,2]` has a `Value` column). Record args are rows, an
@@ -53,7 +58,6 @@ nested record type unions, `[Blank()]`, mixed scalar/record literals, nested tab
   exact set (it may add `ErrBadType`) is untraced.
 - Arity below two reports the generic `BadArity`; three or more reports upstream's
   `ErrFilterFunction_OnlyTwoArgs` at the operator of the third argument.
-- Error rows in a source table are passed to the predicate unchanged (unverified upstream).
 - Unsupported: column projection `T.Field`, record/table equality, record/table unions in `If`,
   display names, delegation, data sources, and every other table function.
 - Partial-binding limitation from ADR 0005 remains: if a scope argument fails, body diagnostics are

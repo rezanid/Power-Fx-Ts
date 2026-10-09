@@ -392,6 +392,45 @@ describe("budgets, cancellation and immutability", () => {
     expect((await run(5000)).kind).toBe("value");
   });
 
+  it("evaluates the predicate for source error rows (upstream LazyFilterRowAsync)", async () => {
+    const E = "Filter([0], 1/Value > 0)"; // a one-row table whose only row is a Div0 error
+    expect(await run(`Filter(${E}, false)`)).toBe("Table()");
+    expect(await run(`Filter(${E}, true)`)).toBe("Table(Error:Div0)");
+    // The scope value of an error row is the error: any field or the whole row resolves to it.
+    expect(await run(`Filter(${E}, Value = 0)`)).toBe("Table(Error:Div0)");
+    expect(await run(`Filter(${E}, IsBlank(ThisRecord))`)).toBe("Table(Error:Div0)");
+    expect(await run(`Filter(${E} As r, r.Value > 0)`)).toBe("Table(Error:Div0)");
+    expect(await run(`Filter(Filter(${E}, true), false)`)).toBe("Table()");
+    // A predicate that raises its own error replaces the row with that error.
+    expect(await run(`Filter(${E}, Value = 0 Or 1/0 > 0)`)).toBe("Table(Error:Div0)");
+    expect(await run("Filter([1, 2], 1/0 > 0)")).toBe("Table(Error:Div0,Error:Div0)");
+    // Mixed rows keep their order.
+    expect(await run("Filter(Filter([0, 5, 6], 1/Value > 0), Value > 5 Or true)")).toBe(
+      "Table(Error:Div0,{Value:5},{Value:6})",
+    );
+  });
+
+  it("counts error rows against the budget and cancellation checks", async () => {
+    const text = "Filter(Filter([0, 0, 0], 1/Value > 0), false)";
+    const checked = engine.check(text, { schema });
+    const v = engine.validateValues(schema, all());
+    if (!v.ok) throw new Error("invalid input");
+    const steps = async (maxSteps: number) =>
+      new Engine({ maxSteps }).evaluateChecked(checked, { values: v.values });
+    expect((await steps(1000)).kind).toBe("value");
+    await expect(steps(10)).rejects.toThrow(/budget/);
+    let calls = 0;
+    const signal = {
+      aborted: false,
+      throwIfAborted() {
+        if (++calls > 12) throw new Error("cancelled");
+      },
+    };
+    await expect(engine.evaluate(text, { schema, values: v.values, signal })).rejects.toThrow(
+      "cancelled",
+    );
+  });
+
   it("checks cancellation while walking rows", async () => {
     let calls = 0;
     const signal = {

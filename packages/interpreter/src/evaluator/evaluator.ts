@@ -16,6 +16,7 @@ import {
   table,
   text,
   type BlankValue,
+  type ErrorValue,
   type FormulaValue,
   type RecordValue,
   type TableRow,
@@ -29,7 +30,7 @@ export function evaluate(root: BoundNode, options: EvaluationOptions): FormulaVa
 class Evaluator implements EvaluationContext {
   private steps = 0;
   /** Active row-scope values (`With`, `Filter`) by scope id; ids are unique per scope node. */
-  private readonly scopes = new Map<number, RecordValue | BlankValue>();
+  private readonly scopes = new Map<number, RecordValue | BlankValue | ErrorValue>();
 
   constructor(private readonly options: EvaluationOptions) {}
 
@@ -95,7 +96,8 @@ class Evaluator implements EvaluationContext {
       case "Local": {
         const scope = this.scopes.get(node.scopeId);
         if (scope === undefined) throw new Error(`No active scope for '${node.name}'.`);
-        if (scope.kind === "Blank") return blank;
+        // Upstream FormulaValueScope.Resolve: a non-record scope value is returned for any name.
+        if (scope.kind !== "Record") return scope;
         return scope.fields.find((f) => f.name === node.name)?.value ?? blank;
       }
       case "ScopeRecord": {
@@ -118,7 +120,7 @@ class Evaluator implements EvaluationContext {
     }
   }
 
-  private inScope<T>(id: number, value: RecordValue | BlankValue, run: () => T): T {
+  private inScope<T>(id: number, value: RecordValue | BlankValue | ErrorValue, run: () => T): T {
     const previous = this.scopes.get(id);
     this.scopes.set(id, value);
     try {
@@ -129,7 +131,11 @@ class Evaluator implements EvaluationContext {
     }
   }
 
-  /** Upstream `FilterTable`: true keeps the row, false/Blank drops it, an error becomes an error row. */
+  /**
+   * Upstream `LazyFilterRowAsync`: the predicate runs for every row, including error rows (whose
+   * scope value is the error itself). True keeps the row, false/Blank drops it, an error becomes an
+   * error row.
+   */
   private filter(node: Extract<BoundNode, { kind: "Filter" }>): FormulaValue {
     const source = this.evaluate(node.source);
     if (source.kind === "Error" || source.kind === "Blank") return source;
@@ -137,10 +143,6 @@ class Evaluator implements EvaluationContext {
     const rows: TableRow[] = [];
     for (const row of source.rows) {
       this.tick();
-      if (row.kind === "Error") {
-        rows.push(row);
-        continue;
-      }
       const verdict = this.inScope(node.scopeId, row, () => this.evaluate(node.predicate));
       if (verdict.kind === "Error") rows.push(verdict);
       else if (verdict.kind === "Boolean" && verdict.value) rows.push(row);
