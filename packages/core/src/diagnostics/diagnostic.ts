@@ -28,6 +28,13 @@ export const DiagnosticCodes = {
   InvalidDot: "PFX2009",
   DuplicateField: "PFX2010",
   ResultTypeMismatch: "PFX2011",
+  AsNotInContext: "PFX2012",
+  NeedTable: "PFX2013",
+  BooleanExpected: "PFX2014",
+  NeedRecordOrTable: "PFX2015",
+  TableDoesNotAcceptThisType: "PFX2016",
+  BadType: "PFX2017",
+  FilterOnlyTwoArgs: "PFX2018",
 } as const;
 
 export type DiagnosticCode = (typeof DiagnosticCodes)[keyof typeof DiagnosticCodes];
@@ -69,6 +76,14 @@ const TEMPLATES: Record<DiagnosticCode, string> = {
   PFX2010: "A field named '{0}' was specified more than once in this record.",
   PFX2011:
     "Argument type mismatch. The types of all result arguments must agree with or be coercible to the first result argument.",
+  PFX2012: "As is not permitted in this context",
+  PFX2013: "The first argument of '{0}' should be a table.",
+  PFX2014: "Expected boolean. We expect a boolean (true/false) at this point in the formula.",
+  PFX2015: "Only record or table values can be used in this context.",
+  PFX2016:
+    "Incompatible type. The item you are trying to put into a table has a type that is not compatible with the table.",
+  PFX2017: "Invalid argument type.",
+  PFX2018: "Use the And operator to combine multiple predicates into the second argument.",
   PFX2006:
     "Invalid argument type. Expecting one of the following: Number, Decimal, Date, Time, DateTime, Dynamic.",
 };

@@ -39,4 +39,9 @@ if (v.ok) await engine.evaluateChecked(checked, { values: v.values }); // "High"
 Record literals and `With` work too, e.g.
 `With({Score: Customer.RiskScore}, If(Score > 80, "High", "Normal"))`.
 
-See `docs/adr/0004-typed-context.md` and `docs/adr/0005-record-literals-and-with.md` for rules and limitations.
+Tables and row scopes: `Filter(Table({Score: 90}, {Score: 50}) As item, item.Score > 80)` returns
+`Table({Score:90})`; `ThisRecord`, `As`, table literals (`[...]`) and `Table(...)` share the same
+binder and evaluator.
+
+See `docs/adr/0004-typed-context.md`, `0005-record-literals-and-with.md` and
+`0006-tables-and-row-scopes.md` for rules and limitations.

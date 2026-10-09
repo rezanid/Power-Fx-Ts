@@ -76,6 +76,13 @@ export interface BinaryNode extends NodeBase {
   readonly right: ExpressionNode;
 }
 
+/** `left As name`: names the row scope created from `left` (upstream `AsNode`). */
+export interface AsNode extends NodeBase {
+  readonly kind: "As";
+  readonly left: ExpressionNode;
+  readonly name: NameNode | MissingNode;
+}
+
 export interface GroupNode extends NodeBase {
   readonly kind: "Group";
   readonly expression: ExpressionNode;
@@ -129,6 +136,7 @@ export type ExpressionNode =
   | CallNode
   | UnaryNode
   | BinaryNode
+  | AsNode
   | GroupNode
   | RecordNode
   | TableNode

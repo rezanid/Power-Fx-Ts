@@ -4,15 +4,15 @@
 - Runner: engine
 - Setup: `PowerFxV1,NumberIsFloat,DecimalSupport` (number mode: float, culture en-US, time zone UTC)
 - Cases: 22047 total, 7088 not applicable to this profile
-- Pass 678, fail 1, skip 46, unsupported 14234
-- Unsupported by reason: feature 11071, setup 3163, profile 0
+- Pass 739, fail 1, skip 46, unsupported 14173
+- Unsupported by reason: feature 11010, setup 3163, profile 0
 - Passing compile-error cases whose error set differs from upstream's (strict diagnostic, not a verdict): 34
 
 | File | Total | Pass | Fail | Skip | Unsupported |
 | ---- | ----: | ---: | ---: | ---: | ----------: |
 | Abs.txt | 22 | 0 | 0 | 0 | 22 |
 | AbsT.txt | 7 | 0 | 0 | 0 | 7 |
-| Acumatica.txt | 13 | 0 | 0 | 0 | 13 |
+| Acumatica.txt | 13 | 1 | 0 | 0 | 12 |
 | AddColumns_SupportColumnNamesAsIdentifiers.txt | 32 | 0 | 0 | 0 | 32 |
 | AndOrCases.txt | 127 | 28 | 0 | 0 | 99 |
 | ArgCoercion.txt | 17 | 0 | 0 | 0 | 17 |
@@ -81,14 +81,14 @@
 | EndsWith.txt | 51 | 0 | 0 | 0 | 51 |
 | Equality.txt | 28 | 20 | 0 | 0 | 8 |
 | Error.txt | 87 | 5 | 0 | 0 | 82 |
-| ErrorKinds.txt | 206 | 6 | 0 | 0 | 200 |
+| ErrorKinds.txt | 206 | 8 | 0 | 0 | 198 |
 | ErrorKinds_ColumnNamesAsIdentifiers.txt | 1 | 0 | 0 | 0 | 1 |
 | Escaping.txt | 4 | 3 | 0 | 0 | 1 |
 | Exp.txt | 26 | 0 | 0 | 0 | 26 |
 | ExpT.txt | 6 | 0 | 0 | 0 | 6 |
-| FilterFunctions.txt | 20 | 0 | 0 | 0 | 20 |
-| FilterFunctions_V1Compat.txt | 1 | 0 | 0 | 0 | 1 |
-| FilterLookUp_TwoArg_V1Compat.txt | 10 | 0 | 0 | 0 | 10 |
+| FilterFunctions.txt | 20 | 11 | 0 | 0 | 9 |
+| FilterFunctions_V1Compat.txt | 1 | 1 | 0 | 0 | 0 |
+| FilterLookUp_TwoArg_V1Compat.txt | 10 | 5 | 0 | 0 | 5 |
 | Find.txt | 99 | 0 | 0 | 0 | 99 |
 | FindT.txt | 67 | 0 | 0 | 0 | 67 |
 | Find_StronglyTypedBuiltinEnums.txt | 10 | 0 | 0 | 0 | 10 |
@@ -201,7 +201,7 @@
 | Rand.txt | 23 | 0 | 0 | 0 | 23 |
 | Rand_DecimalSupport.txt | 1 | 0 | 0 | 0 | 1 |
 | Rand_Float.txt | 11 | 0 | 0 | 0 | 11 |
-| Record.txt | 10 | 5 | 0 | 0 | 5 |
+| Record.txt | 10 | 6 | 0 | 0 | 4 |
 | Remove.txt | 33 | 0 | 0 | 0 | 33 |
 | Remove_V1Compact.txt | 4 | 0 | 0 | 0 | 4 |
 | RenameColumns_SupportColumnNamesAsIdentifiers.txt | 29 | 0 | 0 | 0 | 29 |
@@ -243,14 +243,14 @@
 | Substitute.txt | 67 | 0 | 0 | 0 | 67 |
 | SubstituteT.txt | 28 | 0 | 0 | 0 | 28 |
 | Summarize.txt | 46 | 0 | 0 | 0 | 46 |
-| Table.txt | 35 | 0 | 0 | 0 | 35 |
+| Table.txt | 35 | 17 | 0 | 0 | 18 |
 | TableCoercion.txt | 27 | 0 | 0 | 0 | 27 |
 | TableCoercion_StronglyTypedEnum.txt | 3 | 0 | 0 | 0 | 3 |
 | TableMathfuncs.txt | 9 | 0 | 0 | 0 | 9 |
-| TableNodes.txt | 20 | 0 | 0 | 0 | 20 |
+| TableNodes.txt | 20 | 13 | 0 | 0 | 7 |
 | TableStringfuncs.txt | 27 | 0 | 0 | 0 | 27 |
 | Table_Mutation.txt | 4 | 0 | 0 | 0 | 4 |
-| Table_V1Compat.txt | 2 | 0 | 0 | 0 | 2 |
+| Table_V1Compat.txt | 2 | 2 | 0 | 0 | 0 |
 | TabularOverloadsBlanksAndErrors.txt | 84 | 0 | 0 | 0 | 84 |
 | Testing.txt | 0 | 0 | 0 | 0 | 0 |
 | Text.txt | 71 | 0 | 0 | 0 | 71 |
@@ -287,14 +287,14 @@
 | WeekNum_StronglyTypedEnumEnabled.txt | 5 | 0 | 0 | 0 | 5 |
 | Weekday.txt | 38 | 0 | 0 | 0 | 38 |
 | Weekday_StronglyTypedEnum.txt | 24 | 0 | 0 | 0 | 24 |
-| With.txt | 21 | 9 | 0 | 0 | 12 |
+| With.txt | 21 | 15 | 0 | 0 | 6 |
 | With_Float.txt | 3 | 2 | 0 | 0 | 1 |
 | With_V1Compat.txt | 1 | 0 | 0 | 0 | 1 |
 | arithmetic.txt | 56 | 56 | 0 | 0 | 0 |
 | inScalar.txt | 39 | 0 | 0 | 0 | 39 |
 | inTable.txt | 25 | 0 | 0 | 0 | 25 |
 | inTable_V1Compat.txt | 2 | 0 | 0 | 0 | 2 |
-| literals.txt | 5 | 3 | 0 | 0 | 2 |
+| literals.txt | 5 | 5 | 0 | 0 | 0 |
 | mathfuncs.txt | 70 | 2 | 0 | 0 | 68 |
 | string.txt | 109 | 3 | 0 | 0 | 106 |
 | switch.txt | 81 | 0 | 0 | 0 | 81 |

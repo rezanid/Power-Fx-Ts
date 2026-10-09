@@ -72,7 +72,7 @@ opaque; a backend whose number representation is a mutable object must freeze it
 
 ## Limitations
 
-No tables, row scopes, option sets (record literals and `With` arrived in ADR 0005), untyped objects, locale-aware host
+No option sets (record literals and `With` arrived in ADR 0005; tables and row scopes in ADR 0006), untyped objects, locale-aware host
 values, Decimal backend, or schema-derived dependency tracking. The compat corpus has no variable
 setup, so these rules are tested by unit tests, not by upstream corpus verdicts; compat results are
 unchanged (`v1-float`: pass 617, fail 1, unsupported 14295).

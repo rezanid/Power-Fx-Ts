@@ -13,7 +13,9 @@ export function coerceValue(
 ): FormulaValue {
   if (value.kind === "Error") return value;
   // The binder rejects record coercion, so this is unreachable for bound formulas.
-  if (value.kind === "Record") throw new Error("Records cannot be coerced.");
+  if (value.kind === "Record" || value.kind === "Table") {
+    throw new Error("Records and tables cannot be coerced.");
+  }
   switch (to) {
     case "Number":
       switch (value.kind) {

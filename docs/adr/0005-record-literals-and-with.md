@@ -40,8 +40,7 @@ Status: provisional (milestone review pending). Upstream pin: `df4ceba5e08220db6
   field). Only follow-on diagnostics can differ.
 - If the `With` scope argument fails to bind, names in the body are not reported (avoids cascades,
   may hide genuine body errors until the scope is fixed).
-- Unsupported (reported as `unsupported`, never as a pass): `ThisRecord`/row scopes, `As`, tables,
-  record union in `If` (`If(false,{x:1},{z:2})`), record equality, string interpolation.
+- Unsupported (reported as `unsupported`, never as a pass): record union in `If` (`If(false,{x:1},{z:2})`), record equality, string interpolation.
 - `DisableReservedKeywords` is not modelled (PowerFxV1, our profile, leaves it off).
 
 ## Reserved words (PowerFxV1 profile)
@@ -53,7 +52,7 @@ reports the token's `ErrReservedKeyword` in operand position, and in a record fi
 runs the Ident/Colon/`ErrColonExpected` recovery (`ReservedKeyword*.txt`,
 `TexlTests.TestReservedWords_Disallowed`, which uses `PowerFxV1` with default parser options).
 So these are **invalid** formulas with diagnostics, not unsupported. `As` is a real keyword, so
-`{As:1}` is invalid; `1 As x` is genuinely unimplemented and remains `unsupported` ("As operator").
+`{As:1}` is invalid; `As` is implemented by ADR 0006 (`1 As x` is invalid: `As` is not permitted in that position).
 `Is` has no operator semantics upstream; it is only reserved. The compat runner quotes
 keyword/reserved field names when serializing, like upstream. A missing colon in a record now
 follows upstream recovery (offending token consumed, field list ends).

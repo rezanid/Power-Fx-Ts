@@ -6,6 +6,7 @@ import {
   deepFreeze,
   number,
   record,
+  table,
   text,
   type FormulaValue,
 } from "../values/values.js";
@@ -166,6 +167,15 @@ export function validateValues(
             name: f.name,
             value: own(raw, f.name) ? convert(f.type, raw[f.name], `${path}.${f.name}`) : blank,
           })),
+        );
+      }
+      case "Table": {
+        if (!Array.isArray(raw)) return bad("a table (array of records)");
+        return table(
+          raw.map((row, i) => {
+            const converted = convert(type.row, row, `${path}[${i}]`);
+            return converted.kind === "Record" || converted.kind === "Blank" ? converted : blank;
+          }),
         );
       }
       case "Blank":

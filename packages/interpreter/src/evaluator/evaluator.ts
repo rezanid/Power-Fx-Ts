@@ -13,9 +13,12 @@ import {
   error,
   number,
   record,
+  table,
   text,
+  type BlankValue,
   type FormulaValue,
   type RecordValue,
+  type TableRow,
 } from "../values/values.js";
 import { coerceValue } from "./coercion.js";
 
@@ -25,8 +28,8 @@ export function evaluate(root: BoundNode, options: EvaluationOptions): FormulaVa
 
 class Evaluator implements EvaluationContext {
   private steps = 0;
-  /** Active `With` scope records by scope id; ids are unique per `With` node. */
-  private readonly scopes = new Map<number, RecordValue>();
+  /** Active row-scope values (`With`, `Filter`) by scope id; ids are unique per scope node. */
+  private readonly scopes = new Map<number, RecordValue | BlankValue>();
 
   constructor(private readonly options: EvaluationOptions) {}
 
@@ -34,11 +37,16 @@ class Evaluator implements EvaluationContext {
     return this.options.numeric;
   }
 
-  evaluate(node: BoundNode): FormulaValue {
+  /** Cancellation and budget check; one step per node and per table row visited. */
+  private tick(): void {
     this.options.signal?.throwIfAborted();
     if (this.options.maxSteps !== undefined && ++this.steps > this.options.maxSteps) {
       throw new EvaluationBudgetExceeded();
     }
+  }
+
+  evaluate(node: BoundNode): FormulaValue {
+    this.tick();
     const numeric = this.numeric;
 
     switch (node.kind) {
@@ -82,20 +90,23 @@ class Evaluator implements EvaluationContext {
         const scope = this.evaluate(node.scope);
         if (scope.kind === "Error" || scope.kind === "Blank") return scope;
         if (scope.kind !== "Record") throw new Error("With scope is not a record.");
-        const previous = this.scopes.get(node.scopeId);
-        this.scopes.set(node.scopeId, scope);
-        try {
-          return this.evaluate(node.body);
-        } finally {
-          if (previous === undefined) this.scopes.delete(node.scopeId);
-          else this.scopes.set(node.scopeId, previous);
-        }
+        return this.inScope(node.scopeId, scope, () => this.evaluate(node.body));
       }
       case "Local": {
         const scope = this.scopes.get(node.scopeId);
         if (scope === undefined) throw new Error(`No active scope for '${node.name}'.`);
+        if (scope.kind === "Blank") return blank;
         return scope.fields.find((f) => f.name === node.name)?.value ?? blank;
       }
+      case "ScopeRecord": {
+        const scope = this.scopes.get(node.scopeId);
+        if (scope === undefined) throw new Error("No active row scope.");
+        return scope;
+      }
+      case "Table":
+        return this.table(node);
+      case "Filter":
+        return this.filter(node);
       case "FieldAccess": {
         const record = this.evaluate(node.record);
         if (record.kind === "Blank" || record.kind === "Error") return record;
@@ -105,6 +116,69 @@ class Evaluator implements EvaluationContext {
       case "Invalid":
         throw new Error("Cannot evaluate a formula that failed to bind.");
     }
+  }
+
+  private inScope<T>(id: number, value: RecordValue | BlankValue, run: () => T): T {
+    const previous = this.scopes.get(id);
+    this.scopes.set(id, value);
+    try {
+      return run();
+    } finally {
+      if (previous === undefined) this.scopes.delete(id);
+      else this.scopes.set(id, previous);
+    }
+  }
+
+  /** Upstream `FilterTable`: true keeps the row, false/Blank drops it, an error becomes an error row. */
+  private filter(node: Extract<BoundNode, { kind: "Filter" }>): FormulaValue {
+    const source = this.evaluate(node.source);
+    if (source.kind === "Error" || source.kind === "Blank") return source;
+    if (source.kind !== "Table") throw new Error("Filter source is not a table.");
+    const rows: TableRow[] = [];
+    for (const row of source.rows) {
+      this.tick();
+      if (row.kind === "Error") {
+        rows.push(row);
+        continue;
+      }
+      const verdict = this.inScope(node.scopeId, row, () => this.evaluate(node.predicate));
+      if (verdict.kind === "Error") rows.push(verdict);
+      else if (verdict.kind === "Boolean" && verdict.value) rows.push(row);
+    }
+    return table(rows);
+  }
+
+  /**
+   * Table construction. Record arguments become rows (Blank-filled to the table's row type), an
+   * untyped Blank becomes a Blank row, table arguments are spliced in, and an error table argument
+   * is the result (upstream `Table.txt`).
+   */
+  private table(node: Extract<BoundNode, { kind: "Table" }>): FormulaValue {
+    const names = node.type.kind === "Table" ? node.type.row.fields.map((f) => f.name) : [];
+    const conform = (row: TableRow): TableRow => {
+      if (row.kind !== "Record" || row.fields.length === names.length) return row;
+      // Filling follows the table row type's (ordinal) field order, so unioned rows are uniform.
+      const byName = new Map(row.fields.map((f) => [f.name, f.value]));
+      return record(names.map((name) => ({ name, value: byName.get(name) ?? blank })));
+    };
+    const rows: TableRow[] = [];
+    for (const item of node.items) {
+      const value = this.evaluate(item.value);
+      if (item.shape === "row") {
+        if (value.kind === "Record") rows.push(conform(value));
+        else if (value.kind === "Blank" || value.kind === "Error") rows.push(value);
+        else throw new Error("Table row is not a record.");
+      } else {
+        if (value.kind === "Error") return value;
+        if (value.kind === "Blank") continue;
+        if (value.kind !== "Table") throw new Error("Table argument is not a table.");
+        for (const row of value.rows) {
+          this.tick();
+          rows.push(conform(row));
+        }
+      }
+    }
+    return table(rows);
   }
 
   /** Evaluates a numeric operand: Blank counts as zero, errors propagate. */

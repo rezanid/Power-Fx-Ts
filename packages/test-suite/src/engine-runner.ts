@@ -54,6 +54,8 @@ export function serializeValue(value: FormulaValue, engine: Engine): string {
         .sort(byName)
         .map((f) => `${fieldName(f.name)}:${serializeValue(f.value, engine)}`)
         .join(",")}}`;
+    case "Table":
+      return `Table(${value.rows.map((r) => serializeValue(r, engine)).join(",")})`;
     case "Error":
       return `Error({Kind:ErrorKind.${value.errors[0]?.kind ?? "Unknown"}})`;
   }
