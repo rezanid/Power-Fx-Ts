@@ -35,6 +35,7 @@ export const DiagnosticCodes = {
   TableDoesNotAcceptThisType: "PFX2016",
   BadType: "PFX2017",
   FilterOnlyTwoArgs: "PFX2018",
+  DeprecatedDotUseShowColumns: "PFX2019",
 } as const;
 
 export type DiagnosticCode = (typeof DiagnosticCodes)[keyof typeof DiagnosticCodes];
@@ -83,6 +84,7 @@ const TEMPLATES: Record<DiagnosticCode, string> = {
   PFX2016:
     "Incompatible type. The item you are trying to put into a table has a type that is not compatible with the table.",
   PFX2017: "Invalid argument type.",
+  PFX2019: "Deprecated use of '.'. Please use the 'ShowColumns' function instead.",
   PFX2018: "Use the And operator to combine multiple predicates into the second argument.",
   PFX2006:
     "Invalid argument type. Expecting one of the following: Number, Decimal, Date, Time, DateTime, Dynamic.",

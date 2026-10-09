@@ -4,15 +4,15 @@
 - Runner: engine
 - Setup: `PowerFxV1,NumberIsFloat,DecimalSupport` (number mode: float, culture en-US, time zone UTC)
 - Cases: 22047 total, 7088 not applicable to this profile
-- Pass 739, fail 1, skip 46, unsupported 14173
-- Unsupported by reason: feature 11010, setup 3163, profile 0
+- Pass 783, fail 1, skip 46, unsupported 14129
+- Unsupported by reason: feature 10966, setup 3163, profile 0
 - Passing compile-error cases whose error set differs from upstream's (strict diagnostic, not a verdict): 34
 
 | File | Total | Pass | Fail | Skip | Unsupported |
 | ---- | ----: | ---: | ---: | ---: | ----------: |
 | Abs.txt | 22 | 0 | 0 | 0 | 22 |
 | AbsT.txt | 7 | 0 | 0 | 0 | 7 |
-| Acumatica.txt | 13 | 1 | 0 | 0 | 12 |
+| Acumatica.txt | 13 | 2 | 0 | 0 | 11 |
 | AddColumns_SupportColumnNamesAsIdentifiers.txt | 32 | 0 | 0 | 0 | 32 |
 | AndOrCases.txt | 127 | 28 | 0 | 0 | 99 |
 | ArgCoercion.txt | 17 | 0 | 0 | 0 | 17 |
@@ -44,7 +44,7 @@
 | Count.txt | 26 | 0 | 0 | 0 | 26 |
 | CountA.txt | 35 | 0 | 0 | 0 | 35 |
 | CountIf.txt | 18 | 0 | 0 | 0 | 18 |
-| CountRows.txt | 35 | 0 | 0 | 0 | 35 |
+| CountRows.txt | 35 | 18 | 0 | 0 | 17 |
 | Date.txt | 152 | 0 | 0 | 0 | 152 |
 | DateAdd.txt | 115 | 0 | 0 | 0 | 115 |
 | DateAdd_StronglyTypedBuiltinEnums.txt | 7 | 0 | 0 | 0 | 7 |
@@ -81,18 +81,18 @@
 | EndsWith.txt | 51 | 0 | 0 | 0 | 51 |
 | Equality.txt | 28 | 20 | 0 | 0 | 8 |
 | Error.txt | 87 | 5 | 0 | 0 | 82 |
-| ErrorKinds.txt | 206 | 8 | 0 | 0 | 198 |
+| ErrorKinds.txt | 206 | 11 | 0 | 0 | 195 |
 | ErrorKinds_ColumnNamesAsIdentifiers.txt | 1 | 0 | 0 | 0 | 1 |
 | Escaping.txt | 4 | 3 | 0 | 0 | 1 |
 | Exp.txt | 26 | 0 | 0 | 0 | 26 |
 | ExpT.txt | 6 | 0 | 0 | 0 | 6 |
-| FilterFunctions.txt | 20 | 11 | 0 | 0 | 9 |
+| FilterFunctions.txt | 20 | 14 | 0 | 0 | 6 |
 | FilterFunctions_V1Compat.txt | 1 | 1 | 0 | 0 | 0 |
-| FilterLookUp_TwoArg_V1Compat.txt | 10 | 5 | 0 | 0 | 5 |
+| FilterLookUp_TwoArg_V1Compat.txt | 10 | 10 | 0 | 0 | 0 |
 | Find.txt | 99 | 0 | 0 | 0 | 99 |
 | FindT.txt | 67 | 0 | 0 | 0 | 67 |
 | Find_StronglyTypedBuiltinEnums.txt | 10 | 0 | 0 | 0 | 10 |
-| FirstLast.txt | 28 | 0 | 0 | 0 | 28 |
+| FirstLast.txt | 28 | 8 | 0 | 0 | 20 |
 | FirstLastN.txt | 24 | 0 | 0 | 0 | 24 |
 | FirstLastN_RequiredSecondArgument.txt | 4 | 0 | 0 | 0 | 4 |
 | FirstLastN_V1Compat.txt | 2 | 0 | 0 | 0 | 2 |
@@ -201,7 +201,7 @@
 | Rand.txt | 23 | 0 | 0 | 0 | 23 |
 | Rand_DecimalSupport.txt | 1 | 0 | 0 | 0 | 1 |
 | Rand_Float.txt | 11 | 0 | 0 | 0 | 11 |
-| Record.txt | 10 | 6 | 0 | 0 | 4 |
+| Record.txt | 10 | 10 | 0 | 0 | 0 |
 | Remove.txt | 33 | 0 | 0 | 0 | 33 |
 | Remove_V1Compact.txt | 4 | 0 | 0 | 0 | 4 |
 | RenameColumns_SupportColumnNamesAsIdentifiers.txt | 29 | 0 | 0 | 0 | 29 |
@@ -243,7 +243,7 @@
 | Substitute.txt | 67 | 0 | 0 | 0 | 67 |
 | SubstituteT.txt | 28 | 0 | 0 | 0 | 28 |
 | Summarize.txt | 46 | 0 | 0 | 0 | 46 |
-| Table.txt | 35 | 17 | 0 | 0 | 18 |
+| Table.txt | 35 | 19 | 0 | 0 | 16 |
 | TableCoercion.txt | 27 | 0 | 0 | 0 | 27 |
 | TableCoercion_StronglyTypedEnum.txt | 3 | 0 | 0 | 0 | 3 |
 | TableMathfuncs.txt | 9 | 0 | 0 | 0 | 9 |

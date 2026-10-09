@@ -109,6 +109,25 @@ class Evaluator implements EvaluationContext {
         return this.table(node);
       case "Filter":
         return this.filter(node);
+      case "First": {
+        const source = this.evaluate(node.source);
+        if (source.kind === "Error" || source.kind === "Blank") return source;
+        if (source.kind !== "Table") throw new Error("First source is not a table.");
+        return source.rows[0] ?? blank;
+      }
+      case "CountRows": {
+        const source = this.evaluate(node.source);
+        if (source.kind === "Error") return source;
+        if (source.kind === "Blank") return this.count(0);
+        if (source.kind !== "Table") throw new Error("CountRows source is not a table.");
+        for (const row of source.rows) {
+          this.tick();
+          if (row.kind === "Error") return row;
+        }
+        return this.count(source.rows.length);
+      }
+      case "LookUp":
+        return this.lookUp(node);
       case "FieldAccess": {
         const record = this.evaluate(node.record);
         if (record.kind === "Blank" || record.kind === "Error") return record;
@@ -148,6 +167,36 @@ class Evaluator implements EvaluationContext {
       else if (verdict.kind === "Boolean" && verdict.value) rows.push(row);
     }
     return table(rows);
+  }
+
+  private count(n: number): FormulaValue {
+    const value = this.numeric.fromNumber(n);
+    return value === undefined ? error("Numeric") : number(value);
+  }
+
+  /**
+   * Upstream `LookUp` shares `LazyFilterAsync`: the predicate runs for every row (no
+   * short-circuit), then the first kept row is used, error rows included. The projection runs once,
+   * in that row's scope, error and Blank rows included. Upstream passes the null `row.Value` of
+   * such rows as the scope and throws a NullReferenceException when the projection reads it; here
+   * the scope value is the error (or Blank) itself, as for `Filter` predicates (ADR 0007).
+   */
+  private lookUp(node: Extract<BoundNode, { kind: "LookUp" }>): FormulaValue {
+    const source = this.evaluate(node.source);
+    if (source.kind === "Error" || source.kind === "Blank") return source;
+    if (source.kind !== "Table") throw new Error("LookUp source is not a table.");
+    let found: TableRow | undefined;
+    for (const row of source.rows) {
+      this.tick();
+      const verdict = this.inScope(node.scopeId, row, () => this.evaluate(node.predicate));
+      if (found !== undefined) continue;
+      if (verdict.kind === "Error") found = verdict;
+      else if (verdict.kind === "Boolean" && verdict.value) found = row;
+    }
+    if (found === undefined) return blank;
+    if (node.projection === undefined) return found;
+    const projection = node.projection;
+    return this.inScope(node.scopeId, found, () => this.evaluate(projection));
   }
 
   /**

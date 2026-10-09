@@ -155,7 +155,6 @@ describe("table construction", () => {
     expect(await run("[1, true]")).toBe("unsupported: Table element type coercion");
     expect(await run("[[1], [2]]")).toBe("unsupported: Table nested in a table literal");
     expect(await run("[Blank()]")).toBe("unsupported: Table of only Blank values");
-    expect(await run("[1, 2].Value")).toBe("unsupported: Column projection on a table");
   });
 });
 

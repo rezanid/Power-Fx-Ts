@@ -58,8 +58,9 @@ nested record type unions, `[Blank()]`, mixed scalar/record literals, nested tab
   exact set (it may add `ErrBadType`) is untraced.
 - Arity below two reports the generic `BadArity`; three or more reports upstream's
   `ErrFilterFunction_OnlyTwoArgs` at the operator of the third argument.
-- Unsupported: column projection `T.Field`, record/table equality, record/table unions in `If`,
-  display names, delegation, data sources, and every other table function.
+- Superseded by ADR 0007: `T.Field` is now an invalid-formula diagnostic; `First`, `CountRows`, `LookUp` are implemented.
+- Unsupported: record/table equality, record/table unions in `If`,
+  display names, delegation, data sources, and every other table function (beyond ADR 0007).
 - Partial-binding limitation from ADR 0005 remains: if a scope argument fails, body diagnostics are
   suppressed.
 

@@ -43,5 +43,9 @@ Tables and row scopes: `Filter(Table({Score: 90}, {Score: 50}) As item, item.Sco
 `Table({Score:90})`; `ThisRecord`, `As`, table literals (`[...]`) and `Table(...)` share the same
 binder and evaluator.
 
+Table access: `First(Filter(Table({Score: 90}, {Score: 50}), Score > 80)).Score` is `90`,
+`CountRows(...)` counts rows, and `LookUp(T As item, item.Score > 80, item.Score)` returns the first
+match's result formula (see ADR 0007).
+
 See `docs/adr/0004-typed-context.md`, `0005-record-literals-and-with.md` and
 `0006-tables-and-row-scopes.md` for rules and limitations.

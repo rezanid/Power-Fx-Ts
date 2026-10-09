@@ -102,5 +102,21 @@ export type BoundNode =
       readonly source: BoundNode;
       readonly predicate: BoundNode;
     })
+  /** `First(source)`: the first row, Blank for an empty or Blank table; an error row is returned. */
+  | (BoundBase & { readonly kind: "First"; readonly source: BoundNode })
+  /** `CountRows(source)`: Blank source gives 0; the first error row is returned. */
+  | (BoundBase & { readonly kind: "CountRows"; readonly source: BoundNode })
+  /**
+   * `LookUp(source, predicate[, projection])`: evaluates `predicate` for every row in the scope
+   * `scopeId` (upstream does not short-circuit), then yields the first row, or `projection`
+   * evaluated in that row's scope. No row gives Blank.
+   */
+  | (BoundBase & {
+      readonly kind: "LookUp";
+      readonly scopeId: number;
+      readonly source: BoundNode;
+      readonly predicate: BoundNode;
+      readonly projection: BoundNode | undefined;
+    })
   /** Placeholder for an expression that failed to bind; never evaluated. */
   | (BoundBase & { readonly kind: "Invalid" });
