@@ -33,10 +33,32 @@ Own design (no upstream equivalent; **for review**):
   Text a string, Boolean a boolean, Record a plain object. `null`/`undefined` is Blank.
 - A variable missing from the input is an error (`MissingVariable`); an omitted record field is
   Blank. Undeclared variables/fields are errors (closed schema).
-- A leading name that is not in the schema, followed by `.`, is `unsupported` ("Member access on
-  'X'"), because upstream may resolve it to an enum/option set/data source we do not model.
-  `X + 1` with unknown `X` remains an invalid-formula diagnostic.
+- Unknown roots: `Custmer.RiskScore` is an ordinary unknown-name diagnostic. Only the 12 built-in
+  upstream enum namespaces (`EnumStoreBuilder.DefaultEnumSymbols`, names from
+  `LanguageConstants.*EnumString` in `Microsoft.PowerFx.Core`: Color, DateTimeFormat, StartOfWeek,
+  SortOrder, TimeUnit, MatchOptions, Match, ErrorKind, JSONFormat, TraceSeverity, TraceOptions,
+  JoinType) are `unsupported` when used as `Enum.Member` ("Member access on 'X'"). Matching is
+  case-sensitive, as upstream, and a schema variable of the same name takes precedence. Option
+  sets, data sources and host-added enums resolve upstream only through host configuration, so they
+  are not in the list; if a host needs them it must declare them in the schema.
 - Record `=`/`<>` is unsupported (upstream record equality not traced).
+
+## Input contract
+
+- **All declared variables must be supplied**, whether or not a formula references them: a
+  validated value set belongs to the schema, not to one formula, so it is reusable across formulas.
+  Supply `null` for Blank.
+- **Extra input is rejected**, not ignored: undeclared variables and undeclared record fields are
+  `UnexpectedVariable`/`UnexpectedField` issues. Omitted record fields (at any depth) and a Blank
+  parent are Blank. All issues are collected with full paths (`A.B.C`).
+
+## Reuse of checked results
+
+`CheckResult` holds a deep-frozen snapshot of the schema and the numeric backend name; so does
+`ValidatedValues`. Mutating the host's schema afterwards changes neither. `evaluateChecked`
+throws `TypeError` if the schema snapshots differ or either the check or the values came from a
+different numeric backend (numbers are backend-specific opaque values). `maxSteps` and the signal
+are per-engine/per-call and do not affect semantics.
 
 ## Limitations
 

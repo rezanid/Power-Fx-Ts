@@ -7,6 +7,8 @@ import {
   type FormulaType,
   type ParseOptions,
   type Schema,
+  schemasEqual,
+  snapshotSchema,
   type UnsupportedFeature,
 } from "@powerfx-ts/core";
 import {
@@ -36,8 +38,10 @@ export interface CheckOptions {
 
 export interface CheckResult {
   readonly text: string;
-  /** The schema the formula was checked against. */
+  /** Frozen snapshot of the schema the formula was checked against. */
   readonly schema: Schema | undefined;
+  /** Numeric backend in effect when checked; results are only reusable with the same one. */
+  readonly numeric: NumericBackend["name"];
   /** Parse and binding diagnostics, parse diagnostics first. */
   readonly diagnostics: readonly Diagnostic[];
   /** Constructs outside the implemented slice; see `BindResult.unsupported`. */
@@ -92,9 +96,10 @@ export class Engine {
   }
 
   check(text: string, options: CheckOptions = {}): CheckResult {
+    const schema = options.schema === undefined ? undefined : snapshotSchema(options.schema);
     const parsed = parse(text, this.options.parse);
     const skipped = parsed.unsupportedSyntax.map((u) => ({ category: "construct" as const, ...u }));
-    const bound = bind(parsed, options.schema === undefined ? {} : { schema: options.schema });
+    const bound = bind(parsed, schema === undefined ? {} : { schema });
     const unsupported = [...skipped, ...bound.unsupported];
     // Binding diagnostics on a partially bound tree are not trustworthy, so they are dropped
     // whenever unsupported constructs were skipped.
@@ -106,7 +111,8 @@ export class Engine {
     const ok = !hasErrors && unsupported.length === 0;
     return {
       text,
-      schema: options.schema,
+      schema,
+      numeric: this.numeric.name,
       diagnostics,
       unsupported,
       type: bound.type,
@@ -138,11 +144,21 @@ export class Engine {
     signal: CancellationSignal | undefined = options.signal,
   ): Promise<EvaluationResult> {
     const values = options.values;
+    if (checked.numeric !== this.numeric.name) {
+      throw new TypeError(
+        `The formula was checked with the ${checked.numeric} numeric backend, not ${this.numeric.name}.`,
+      );
+    }
+    if (values !== undefined && values.numeric !== this.numeric.name) {
+      throw new TypeError(
+        `The values were validated with the ${values.numeric} numeric backend, not ${this.numeric.name}.`,
+      );
+    }
     if (checked.schema !== undefined) {
       if (values === undefined) {
         throw new TypeError("Values validated against the schema are required.");
       }
-      if (JSON.stringify(values.schema) !== JSON.stringify(checked.schema)) {
+      if (!schemasEqual(values.schema, checked.schema)) {
         throw new TypeError("The values were validated against a different schema.");
       }
     }

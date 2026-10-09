@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { defineSchema, NumberType, recordType, TextType, BooleanType } from "@powerfx-ts/core";
 import type { FormulaValue, ValidatedValues } from "@powerfx-ts/interpreter";
+import { floatBackend } from "@powerfx-ts/interpreter";
 import { Engine } from "../src/index.js";
 
 const engine = new Engine();
@@ -57,6 +58,24 @@ describe("checking against a schema (no runtime values)", () => {
   it("treats member access on an unresolved leading name as unsupported, not invalid", () => {
     const checked = engine.check("Color.Red", { schema });
     expect(checked.unsupported.map((u) => u.feature)).toEqual(["Member access on 'Color'"]);
+  });
+
+  it("only built-in upstream enum roots are unsupported; other unknown roots are unknown names", () => {
+    const typo = engine.check("Custmer.RiskScore", { schema });
+    expect(typo.unsupported).toEqual([]);
+    expect(typo.ok).toBe(false);
+    expect(typo.diagnostics.map((d) => d.message)).toContain(
+      "Name isn't valid. 'Custmer' isn't recognized.",
+    );
+    expect(engine.check("color.Red", { schema }).unsupported).toEqual([]); // case-sensitive
+    for (const root of ["Color", "TimeUnit", "ErrorKind", "SortOrder"]) {
+      expect(engine.check(`${root}.X`, { schema }).unsupported).toHaveLength(1);
+    }
+  });
+
+  it("lets a schema variable shadow an enum name", () => {
+    const shadow = defineSchema({ Color: recordType({ Red: NumberType }) });
+    expect(engine.check("Color.Red", { schema: shadow }).ok).toBe(true);
   });
 
   it("is case sensitive for variables and fields", () => {
@@ -183,5 +202,90 @@ describe("validating host input", () => {
   it("does not treat inherited properties as supplied", () => {
     expect(issues(Object.create({ Customer: null }))).toEqual(["InvalidType:"]);
     expect(issues({ Customer: { toString: 1 } })).toEqual(["UnexpectedField:Customer.toString"]);
+  });
+});
+
+describe("reusing checked results", () => {
+  it("snapshots the schema: mutating the host object after check changes nothing", async () => {
+    const mutable = {
+      variables: [{ name: "X", type: { kind: "Number" } }],
+    } as unknown as { variables: { name: string; type: { kind: string } }[] };
+    const checked = engine.check("X + 1", { schema: mutable as never });
+    mutable.variables[0]!.type.kind = "Text";
+    mutable.variables.push({ name: "Y", type: { kind: "Number" } });
+    expect(checked.schema?.variables).toHaveLength(1);
+    expect(checked.type.kind).toBe("Number");
+    expect(Object.isFrozen(checked.schema)).toBe(true);
+    const frozen = engine.validateValues(checked.schema!, { X: 1 });
+    expect(frozen.ok).toBe(true);
+    // Values validated against the mutated schema are rejected.
+    const stale = engine.validateValues(mutable as never, { X: "a", Y: 1 });
+    if (!stale.ok) throw new Error("expected valid values");
+    await expect(engine.evaluateChecked(checked, { values: stale.values })).rejects.toThrow(
+      /different schema/,
+    );
+  });
+
+  it("rejects reuse with an incompatible numeric configuration", async () => {
+    const other = new Engine({ numeric: { ...floatBackend, name: "decimal" } });
+    const checked = engine.check("X + 1", { schema: defineSchema({ X: NumberType }) });
+    const values = valid({ X: 1 }, defineSchema({ X: NumberType }));
+    await expect(other.evaluateChecked(checked, { values })).rejects.toThrow(/numeric backend/);
+    const otherChecked = other.check("X + 1", { schema: defineSchema({ X: NumberType }) });
+    await expect(engine.evaluateChecked(otherChecked, { values })).rejects.toThrow(
+      /numeric backend/,
+    );
+    const otherValues = other.validateValues(defineSchema({ X: NumberType }), { X: 1 });
+    if (!otherValues.ok) throw new Error("expected valid values");
+    await expect(engine.evaluateChecked(checked, { values: otherValues.values })).rejects.toThrow(
+      /numeric backend/,
+    );
+  });
+});
+
+describe("nested records", () => {
+  const nested = defineSchema({
+    A: recordType({ N: NumberType, B: recordType({ C: BooleanType, D: TextType }) }),
+  });
+  const nestedIssues = (input: unknown): string[] => {
+    const r = engine.validateValues(nested, input);
+    return r.ok ? [] : r.issues.map((i) => `${i.code}:${i.path}`);
+  };
+
+  it("treats omitted nested fields and records as Blank", async () => {
+    expect(await run("IsBlank(A.B.C)", { A: {} }, nested)).toBe("true");
+    expect(await run("IsBlank(A.B.C)", { A: { B: {} } }, nested)).toBe("true");
+    expect(await run("A.B.D", { A: { B: { D: "x" } } }, nested)).toBe('"x"');
+  });
+
+  it("propagates a Blank parent through nested access", async () => {
+    expect(await run("IsBlank(A.B.D)", { A: null }, nested)).toBe("true");
+    expect(await run("IsBlank(A.B.D)", { A: { B: null } }, nested)).toBe("true");
+    expect(await run("If(A.B.C, 1, 2)", { A: null }, nested)).toBe("2");
+  });
+
+  it("reports full paths for wrong nested types, unexpected fields and several issues at once", () => {
+    expect(nestedIssues({ A: { B: { C: "yes" } } })).toEqual(["InvalidType:A.B.C"]);
+    expect(nestedIssues({ A: { B: 3 } })).toEqual(["InvalidType:A.B"]);
+    expect(nestedIssues({ A: { B: { Z: 1 } } })).toEqual(["UnexpectedField:A.B.Z"]);
+    expect(nestedIssues({ A: { N: "1", B: { C: 1, D: 2 } } })).toEqual([
+      "InvalidType:A.N",
+      "InvalidType:A.B.C",
+      "InvalidType:A.B.D",
+    ]);
+  });
+});
+
+describe("which inputs must be supplied", () => {
+  it("requires every declared variable, even if the formula does not reference it", () => {
+    const two = defineSchema({ A: NumberType, B: NumberType });
+    const r = engine.validateValues(two, { A: 1 });
+    expect(r.ok).toBe(false);
+    expect(engine.validateValues(two, { A: 1, B: null }).ok).toBe(true);
+  });
+
+  it("rejects extra variables and extra record fields rather than ignoring them", () => {
+    expect(engine.validateValues(schema, { Customer: null, Extra: 1 }).ok).toBe(false);
+    expect(engine.validateValues(schema, { Customer: { Extra: 1 } }).ok).toBe(false);
   });
 });

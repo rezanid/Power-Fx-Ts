@@ -4,7 +4,7 @@ import {
   type Diagnostic,
   type DiagnosticCode,
 } from "../diagnostics/diagnostic.js";
-import { KNOWN_UPSTREAM_FUNCTIONS } from "../functions/known-names.js";
+import { KNOWN_UPSTREAM_ENUMS, KNOWN_UPSTREAM_FUNCTIONS } from "../functions/known-names.js";
 import { BUILTIN_FUNCTIONS, type FunctionRegistry } from "../functions/signature.js";
 import type { BoundBinaryOperator, BoundNode, CoercionTarget } from "../ir/bound-tree.js";
 import type { ParseResult } from "../parser/parser.js";
@@ -173,9 +173,13 @@ class Binder {
    * value, as upstream does.
    */
   private bindDotted(node: DottedNameNode): BoundNode {
-    // An unresolved leading name may be an enum, option set or data source upstream; those are not
-    // modelled, so it is unsupported rather than a user error.
-    if (node.left.kind === "Name" && !(this.schema && findVariable(this.schema, node.left.name))) {
+    // Built-in upstream enums are not modelled; other unknown roots fall through to the normal
+    // unknown-name diagnostic.
+    if (
+      node.left.kind === "Name" &&
+      !(this.schema && findVariable(this.schema, node.left.name)) &&
+      KNOWN_UPSTREAM_ENUMS.has(node.left.name)
+    ) {
       return this.notSupported(`Member access on '${node.left.name}'`, node.span);
     }
     const left = this.bindExpression(node.left);
