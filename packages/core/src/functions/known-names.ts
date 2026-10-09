@@ -161,3 +161,24 @@ export const KNOWN_UPSTREAM_FUNCTIONS: ReadonlySet<string> = new Set([
   "With",
   "Year",
 ]);
+
+/**
+ * Built-in enum namespaces of the pinned upstream (`EnumStoreBuilder.DefaultEnumSymbols`, names
+ * from `LanguageConstants.*EnumString`). `Enum.Member` resolves upstream but enums are not
+ * modelled here, so such access is `unsupported`. Any other unresolved root is an unknown name.
+ * Option sets, data sources and host-added enums are not in this list.
+ */
+export const KNOWN_UPSTREAM_ENUMS: ReadonlySet<string> = new Set([
+  "Color",
+  "DateTimeFormat",
+  "StartOfWeek",
+  "SortOrder",
+  "TimeUnit",
+  "MatchOptions",
+  "Match",
+  "ErrorKind",
+  "JSONFormat",
+  "TraceSeverity",
+  "TraceOptions",
+  "JoinType",
+]);

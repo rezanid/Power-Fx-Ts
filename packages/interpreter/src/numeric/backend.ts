@@ -22,6 +22,8 @@ export interface NumericBackend {
   readonly one: NumericValue;
   /** Parses a literal as produced by the lexer (invariant culture). */
   parseLiteral(text: string): NumericValue | undefined;
+  /** Converts a host JS number; undefined for NaN/±Infinity or values the backend cannot hold. */
+  fromNumber(n: number): NumericValue | undefined;
   /** Parses user text for implicit Text→Number coercion (invariant culture); undefined if invalid. */
   parseText(text: string): NumericValue | undefined;
   add(a: NumericValue, b: NumericValue): NumericResult;
@@ -68,6 +70,7 @@ export const floatBackend: NumericBackend = {
     const n = Number(text);
     return Number.isFinite(n) ? wrap(n) : undefined;
   },
+  fromNumber: (n) => (Number.isFinite(n) ? wrap(n) : undefined),
   parseText(text) {
     const trimmed = text.trim();
     if (!NUMBER_TEXT.test(trimmed)) return undefined;
@@ -85,3 +88,20 @@ export const floatBackend: NumericBackend = {
   isZero: (a) => asNumber(a) === 0,
   format: (a) => formatDouble(asNumber(a)),
 };
+
+const backendIds = new WeakMap<NumericBackend, number>();
+let nextBackendId = 1;
+
+/**
+ * Process-unique identity of a backend instance. Names are not unique (hosts may supply custom
+ * backends), and `NumericValue`s from different instances are not interchangeable, so reuse of
+ * checked results and validated values is keyed by this id, not by `name`.
+ */
+export function numericBackendId(backend: NumericBackend): number {
+  let id = backendIds.get(backend);
+  if (id === undefined) {
+    id = nextBackendId++;
+    backendIds.set(backend, id);
+  }
+  return id;
+}

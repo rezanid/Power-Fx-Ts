@@ -6,6 +6,9 @@ import {
   type Diagnostic,
   type FormulaType,
   type ParseOptions,
+  type Schema,
+  schemasEqual,
+  snapshotSchema,
   type UnsupportedFeature,
 } from "@powerfx-ts/core";
 import {
@@ -15,6 +18,10 @@ import {
   type FormulaValue,
   type NumericBackend,
   type NumericValue,
+  numericBackendId,
+  type ValidatedValues,
+  type ValidationResult,
+  validateValues,
 } from "@powerfx-ts/interpreter";
 
 export interface EngineOptions {
@@ -25,8 +32,17 @@ export interface EngineOptions {
   readonly parse?: ParseOptions;
 }
 
+export interface CheckOptions {
+  /** Types of the names the formula may use. No runtime values are needed to check. */
+  readonly schema?: Schema;
+}
+
 export interface CheckResult {
   readonly text: string;
+  /** Frozen snapshot of the schema the formula was checked against. */
+  readonly schema: Schema | undefined;
+  /** Identity of the numeric backend instance used; reusable only with that same instance. */
+  readonly numericId: number;
   /** Parse and binding diagnostics, parse diagnostics first. */
   readonly diagnostics: readonly Diagnostic[];
   /** Constructs outside the implemented slice; see `BindResult.unsupported`. */
@@ -45,9 +61,20 @@ export type EvaluationResult =
 
 export interface EvaluateOptions {
   readonly signal?: CancellationSignal;
+  /** Schema to check against; requires `values` validated against the same schema. */
+  readonly schema?: Schema;
+  readonly values?: ValidatedValues;
 }
 
-/** Compile (parse + bind) and evaluate constant formulas. No variables, context or I/O yet. */
+export interface EvaluateCheckedOptions {
+  readonly signal?: CancellationSignal;
+  readonly values?: ValidatedValues;
+}
+
+/**
+ * Compile (parse + bind) and evaluate formulas over an explicit schema and separately validated
+ * values. Checking and evaluation share one binder; there is no I/O.
+ */
 export class Engine {
   private readonly numeric: NumericBackend;
 
@@ -64,10 +91,16 @@ export class Engine {
     return this.numeric.format(value);
   }
 
-  check(text: string): CheckResult {
+  /** Validates plain host input against `schema`; never coerces. See `validateValues`. */
+  validateValues(schema: Schema, input: unknown): ValidationResult {
+    return validateValues(schema, input, this.numeric);
+  }
+
+  check(text: string, options: CheckOptions = {}): CheckResult {
+    const schema = options.schema === undefined ? undefined : snapshotSchema(options.schema);
     const parsed = parse(text, this.options.parse);
     const skipped = parsed.unsupportedSyntax.map((u) => ({ category: "construct" as const, ...u }));
-    const bound = bind(parsed);
+    const bound = bind(parsed, schema === undefined ? {} : { schema });
     const unsupported = [...skipped, ...bound.unsupported];
     // Binding diagnostics on a partially bound tree are not trustworthy, so they are dropped
     // whenever unsupported constructs were skipped.
@@ -79,6 +112,8 @@ export class Engine {
     const ok = !hasErrors && unsupported.length === 0;
     return {
       text,
+      schema,
+      numericId: numericBackendId(this.numeric),
       diagnostics,
       unsupported,
       type: bound.type,
@@ -92,7 +127,39 @@ export class Engine {
    * signal's reason when cancelled, or `EvaluationBudgetExceeded` when the budget runs out.
    */
   async evaluate(text: string, options: EvaluateOptions = {}): Promise<EvaluationResult> {
-    const checked = this.check(text);
+    const checked = this.check(
+      text,
+      options.schema === undefined ? {} : { schema: options.schema },
+    );
+    return this.evaluateChecked(
+      checked,
+      options.values === undefined ? {} : { values: options.values },
+      options.signal,
+    );
+  }
+
+  /** Evaluates an already checked formula with another set of values; the schema is unchanged. */
+  async evaluateChecked(
+    checked: CheckResult,
+    options: EvaluateCheckedOptions = {},
+    signal: CancellationSignal | undefined = options.signal,
+  ): Promise<EvaluationResult> {
+    const values = options.values;
+    const id = numericBackendId(this.numeric);
+    if (checked.numericId !== id) {
+      throw new TypeError("The formula was checked with a different numeric backend instance.");
+    }
+    if (values !== undefined && values.numericId !== id) {
+      throw new TypeError("The values were validated with a different numeric backend instance.");
+    }
+    if (checked.schema !== undefined) {
+      if (values === undefined) {
+        throw new TypeError("Values validated against the schema are required.");
+      }
+      if (!schemasEqual(values.schema, checked.schema)) {
+        throw new TypeError("The values were validated against a different schema.");
+      }
+    }
     // A too-large literal is a semantic error upstream (alongside the enclosing call's errors),
     // so it does not make unsupported syntax a user error.
     const syntaxErrors = checked.diagnostics.some(
@@ -105,7 +172,8 @@ export class Engine {
     if (checked.bound === undefined) return { kind: "invalid", diagnostics: checked.diagnostics };
     const value = evaluate(checked.bound, {
       numeric: this.numeric,
-      ...(options.signal === undefined ? {} : { signal: options.signal }),
+      ...(values === undefined ? {} : { variables: values.values }),
+      ...(signal === undefined ? {} : { signal }),
       ...(this.options.maxSteps === undefined ? {} : { maxSteps: this.options.maxSteps }),
     });
     return { kind: "value", value };

@@ -30,9 +30,19 @@ export interface ErrorValue {
   readonly errors: readonly FormulaError[];
 }
 
-export type FormulaValue = NumberValue | TextValue | BooleanValue | BlankValue | ErrorValue;
+export interface RecordFieldValue {
+  readonly name: string;
+  readonly value: FormulaValue;
+}
+export interface RecordValue {
+  readonly kind: "Record";
+  readonly fields: readonly RecordFieldValue[];
+}
 
-export const blank: BlankValue = { kind: "Blank" };
+export type FormulaValue =
+  NumberValue | TextValue | BooleanValue | BlankValue | ErrorValue | RecordValue;
+
+export const blank: BlankValue = Object.freeze({ kind: "Blank" });
 export const number = (value: NumericValue): NumberValue => ({ kind: "Number", value });
 export const text = (value: string): TextValue => ({ kind: "Text", value });
 export const boolean = (value: boolean): BooleanValue => ({ kind: "Boolean", value });

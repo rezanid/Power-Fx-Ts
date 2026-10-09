@@ -4,14 +4,22 @@ import {
   type Diagnostic,
   type DiagnosticCode,
 } from "../diagnostics/diagnostic.js";
-import { KNOWN_UPSTREAM_FUNCTIONS } from "../functions/known-names.js";
+import { KNOWN_UPSTREAM_ENUMS, KNOWN_UPSTREAM_FUNCTIONS } from "../functions/known-names.js";
 import { BUILTIN_FUNCTIONS, type FunctionRegistry } from "../functions/signature.js";
 import type { BoundBinaryOperator, BoundNode, CoercionTarget } from "../ir/bound-tree.js";
 import type { ParseResult } from "../parser/parser.js";
-import type { BinaryNode, CallNode, ExpressionNode, UnaryNode } from "../syntax/nodes.js";
+import type {
+  BinaryNode,
+  CallNode,
+  DottedNameNode,
+  ExpressionNode,
+  UnaryNode,
+} from "../syntax/nodes.js";
 import type { Span } from "../text/span.js";
+import { findVariable, type Schema } from "../types/schema.js";
 import {
   BooleanType,
+  findField,
   NumberType,
   TextType,
   typeName,
@@ -21,6 +29,8 @@ import {
 
 export interface BindOptions {
   readonly functions?: FunctionRegistry;
+  /** Names the formula may reference; without it every name is unrecognized. */
+  readonly schema?: Schema;
 }
 
 /** A construct the parser accepts but this engine slice cannot bind yet (not a user error). */
@@ -58,7 +68,7 @@ const ORDERING: Readonly<Record<string, BoundBinaryOperator>> = {
 };
 
 export function bind(parsed: ParseResult, options: BindOptions = {}): BindResult {
-  const binder = new Binder(parsed, options.functions ?? BUILTIN_FUNCTIONS);
+  const binder = new Binder(parsed, options.functions ?? BUILTIN_FUNCTIONS, options.schema);
   const root = binder.bindExpression(parsed.root);
   return {
     root,
@@ -75,6 +85,7 @@ class Binder {
   constructor(
     private readonly parsed: ParseResult,
     private readonly functions: FunctionRegistry,
+    private readonly schema: Schema | undefined,
   ) {}
 
   private report(code: DiagnosticCode, span: Span, args: string[] = []): void {
@@ -108,6 +119,10 @@ class Binder {
     preserveBlank = false,
   ): BoundNode {
     if (to === undefined || node.type.kind === to || node.type.kind === "Unknown") return node;
+    if (node.type.kind === "Record") {
+      this.report(DiagnosticCodes.BadTypeExpected, node.span, [to, "Record"]);
+      return this.invalid(node.span);
+    }
     const type = to === "Number" ? NumberType : to === "Text" ? TextType : BooleanType;
     const coerced: BoundNode = { kind: "Coerce", to, operand: node, span: node.span, type };
     return preserveBlank ? { ...coerced, preserveBlank } : coerced;
@@ -129,11 +144,16 @@ class Binder {
         return this.bindBinary(node);
       case "Call":
         return this.bindCall(node);
-      case "Name":
-        this.report(DiagnosticCodes.NameNotRecognized, node.span, [node.name]);
-        return this.invalid(node.span);
+      case "Name": {
+        const variable = this.schema && findVariable(this.schema, node.name);
+        if (variable === undefined || variable === null) {
+          this.report(DiagnosticCodes.NameNotRecognized, node.span, [node.name]);
+          return this.invalid(node.span);
+        }
+        return { kind: "Variable", name: variable.name, span: node.span, type: variable.type };
+      }
       case "DottedName":
-        return this.notSupported("Member access", node.span);
+        return this.bindDotted(node);
       case "Record":
         return this.notSupported("Record literal", node.span);
       case "Table":
@@ -145,6 +165,46 @@ class Binder {
         // Already reported by the parser.
         return this.invalid(node.span);
     }
+  }
+
+  /**
+   * Mirrors upstream `Binder.PostVisit(DottedNameNode)`: errors are reported from the dot to the
+   * end of the member name. A left side that already failed to bind is reported as an `Error`
+   * value, as upstream does.
+   */
+  private bindDotted(node: DottedNameNode): BoundNode {
+    // Built-in upstream enums are not modelled; other unknown roots fall through to the normal
+    // unknown-name diagnostic.
+    if (
+      node.left.kind === "Name" &&
+      !(this.schema && findVariable(this.schema, node.left.name)) &&
+      KNOWN_UPSTREAM_ENUMS.has(node.left.name)
+    ) {
+      return this.notSupported(`Member access on '${node.left.name}'`, node.span);
+    }
+    const left = this.bindExpression(node.left);
+    if (node.right.kind === "Missing") return this.invalid(node.span);
+    const span = { start: node.dot.start, end: node.right.span.end };
+    if (left.type.kind === "Unknown") {
+      this.report(DiagnosticCodes.InvalidDot, span, ["Error"]);
+      return this.invalid(node.span);
+    }
+    if (left.type.kind !== "Record") {
+      this.report(DiagnosticCodes.InvalidDot, span, [typeName(left.type)]);
+      return this.invalid(node.span);
+    }
+    const field = findField(left.type, node.right.name);
+    if (field === undefined) {
+      this.report(DiagnosticCodes.NameNotRecognized, span, [node.right.name]);
+      return this.invalid(node.span);
+    }
+    return {
+      kind: "FieldAccess",
+      record: left,
+      field: field.name,
+      span: node.span,
+      type: field.type,
+    };
   }
 
   private bindUnary(node: UnaryNode): BoundNode {
@@ -182,7 +242,9 @@ class Binder {
     if (ordering !== undefined) {
       // Mirrors upstream BinderUtils.CheckComparisonArgTypesCore: each operand is checked on its
       // own against Number/Decimal/Date/Time/DateTime/Dynamic, so Text and Boolean are rejected.
-      const bad = [left, right].filter((o) => o.type.kind === "Boolean" || o.type.kind === "Text");
+      const bad = [left, right].filter(
+        (o) => o.type.kind === "Boolean" || o.type.kind === "Text" || o.type.kind === "Record",
+      );
       for (const operand of bad) {
         this.report(DiagnosticCodes.InvalidArgumentType, operand.span, []);
       }
@@ -218,6 +280,10 @@ class Binder {
       case "Neq": {
         const lk = left.type.kind;
         const rk = right.type.kind;
+        if (lk === "Record" || rk === "Record") {
+          // Upstream record equality has its own rules, not yet traced or implemented.
+          return this.notSupported("Record comparison", node.span);
+        }
         if (lk !== rk && lk !== "Blank" && rk !== "Blank") {
           this.report(DiagnosticCodes.IncompatibleTypesForComparison, this.operatorSpan(node), [
             typeName(left.type),

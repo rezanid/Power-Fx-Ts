@@ -19,6 +19,8 @@ function show(value: FormulaValue): string {
       return JSON.stringify(value.value);
     case "Number":
       return engine.formatNumber(value.value);
+    case "Record":
+      return `{${value.fields.map((f) => `${f.name}:${show(f.value)}`).join(",")}}`;
     case "Error":
       return `Error:${value.errors[0]?.kind}`;
   }
