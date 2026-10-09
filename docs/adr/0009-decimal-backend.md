@@ -68,10 +68,33 @@ Known deviations (reported as **failures**, not hidden):
 - **Cascaded diagnostics (30 cases).** For invalid decimal literals upstream also reports "has some
   invalid arguments" and type errors; we report the literal diagnostic only (same partial-binding
   limitation as before).
-- Division/rounding use exact-rational half-even; rare tie cases may differ from .NET.
-- Float-mode mixed typing with Blank/Text/Boolean follows the upstream source (`CheckDecimalBinaryOp`)
-  but was not verifiable with the reference (the harness runs decimal mode only).
+- **`^` in float mode:** V8 `Math.pow` differs from .NET `Math.Pow` in the last ulp for some inputs
+  (e.g. `2^1.5`; 5 of the mixed-arithmetic vectors per mode). Pre-existing float-backend deviation,
+  not Decimal-specific; the differential test allows a 4e-16 relative tolerance for `^` only.
 - Evaluation-budget accounting is unchanged (not step-identical).
+
+## Differential verification against System.Decimal and the pinned reference
+
+`tools/reference-harness` (C#, built against the pinned upstream) runs expressions in **both**
+`NumberIsFloat` modes. Float mode requires `ParserOptions.NumberIsFloat = true` in addition to
+`RecalcEngine(..., numberIsFloat: true)`; the first harness only set the engine flag and silently ran
+decimal semantics, which is why float-mode mixed typing was previously unverified. It now is.
+
+`pnpm --filter @powerfx-ts/engine test` replays `packages/engine/test/fixtures/reference-vectors.json`
+(4,334 vectors, regenerated with `generate`): literal rounding boundaries, all-pairs `+ - * /` over ~23
+boundary operands (scale reduction, signed division, max/min overflow), 600 seeded random vectors
+per operator class, Float→Decimal and Decimal→Float conversions, and Blank/Text/Boolean/Decimal/Float
+mixes for unary, conversion, arithmetic, comparison and `If` in both modes. The harness also
+cross-checks 2,776 arithmetic/literal vectors directly against raw `System.Decimal`: **0 disagreements**
+(Power Fx decimal arithmetic is plain System.Decimal). Our engine matches every vector except the `^`
+ulp differences above.
+
+The differential run found and fixed two real defects: `Decimal(Float)` must overflow when
+`|x| >= 2^96` (checked on the double, before 15-significant-digit rounding), and `Float(Decimal)` is
+.NET's `(double)decimal` algorithm (`(low64 + high32·2^64) / 10^scale` in double arithmetic), which
+is not always the nearest double. Division/rounding use exact-rational half-even and agree with
+.NET on every vector in the fixture (rounding boundaries, scale reduction, signed division); behavior outside
+the sampled inputs is not proven.
 
 Unsupported: Date/Time, `Mod`, `ParseJSON`, `Round*`, `Sqrt` and other math builtins (many OpMatrix
 cases), Dynamic values.
@@ -86,5 +109,21 @@ cases), Dynamic values.
 No previously passing case regressed (the one failure at `Text_ExcelCompat_PowerFxV1Compat.txt:13`
 is pre-existing). All other new failures are cases that were previously `unsupported` and are now
 executed (the two categories above, plus one error-table serialization at
-`ValueFuncs_NumberIsFloat.txt:53`). The runner compares Decimal results exactly and scale-insensitively
-like upstream `BaseRunner`.
+`ValueFuncs_NumberIsFloat.txt:53`).
+
+### Result comparison (corrected)
+
+An earlier claim that the runner compared Decimal results "exactly" was wrong: Decimal results fell
+through to the float tolerance (`|a-b| < 1e-5`), so expected `1` passed actual `1.000001`. Traced in
+upstream `BaseRunner.cs`: when the original result is a `DecimalValue`, the verdict is only
+`decimal.Parse(expected, NumberStyles.Float) == value` (scale-insensitive, no tolerance; `.Parse`
+rounds over-long expectations such as `79149013500763574019524425909.091`, which `decimalParseEquals`
+reproduces); Float or other results keep the 1e-5 / 1e-14 tolerance and the >17-digit expectation
+rejection. `compareResult` now follows this, and reports a separate diagnostic (`valueMatch`, "passing
+numeric cases accepted only by upstream's float tolerance") that is not a verdict. The fix changed no
+verdict on the pinned corpus (2,121 / 262 before and after); it is covered by unit tests.
+
+### Case-level before/after evidence
+
+See `docs/research/decimal-before-after.md`: per-case transition matrix against `main` for both
+profiles. Previously passing cases that no longer pass: **0** in both profiles.

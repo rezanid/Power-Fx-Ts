@@ -7,6 +7,7 @@
 - Pass 1263, fail 233, skip 46, unsupported 13417
 - Unsupported by reason: feature 10254, setup 3163, profile 0
 - Passing compile-error cases whose error set differs from upstream's (strict diagnostic, not a verdict): 34
+- Passing numeric cases accepted only by upstream's float tolerance (diagnostic, not a verdict): 6
 
 | File | Total | Pass | Fail | Skip | Unsupported |
 | ---- | ----: | ---: | ---: | ---: | ----------: |

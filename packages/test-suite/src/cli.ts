@@ -27,6 +27,7 @@ function formatMarkdown(report: CompatReport): string {
     `- Pass ${t.pass}, fail ${t.fail}, skip ${t.skip}, unsupported ${t.unsupported}`,
     `- Unsupported by reason: feature ${report.unsupportedByCategory.feature}, setup ${report.unsupportedByCategory.setup}, profile ${report.unsupportedByCategory.profile}`,
     `- Passing compile-error cases whose error set differs from upstream's (strict diagnostic, not a verdict): ${report.strictErrorMismatches}`,
+    `- Passing numeric cases accepted only by upstream's float tolerance (diagnostic, not a verdict): ${report.toleranceOnlyPasses}`,
     "",
     "| File | Total | Pass | Fail | Skip | Unsupported |",
     "| ---- | ----: | ---: | ---: | ---: | ----------: |",
@@ -64,7 +65,15 @@ async function main(): Promise<void> {
   const report = await runCompat({ files, profile, runner, runnerName, upstreamCommit });
   const outDir = join(packageRoot, "reports");
   mkdirSync(outDir, { recursive: true });
-  writeFileSync(join(outDir, `${profileName}.${runnerName}.json`), JSON.stringify(report, null, 2));
+  const { caseOutcomes, ...serializable } = report;
+  writeFileSync(
+    join(outDir, `${profileName}.${runnerName}.json`),
+    JSON.stringify(serializable, null, 2),
+  );
+  writeFileSync(
+    join(outDir, `${profileName}.${runnerName}.cases.tsv`),
+    caseOutcomes.map((c) => `${c.file.split("/").pop()}:${c.line}\t${c.outcome}`).join("\n") + "\n",
+  );
   writeFileSync(join(outDir, `${profileName}.${runnerName}.md`), formatMarkdown(report));
   console.log(formatMarkdown(report).split("\n").slice(0, 8).join("\n"));
 }

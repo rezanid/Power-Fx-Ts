@@ -7,3 +7,7 @@ packages/test-suite/reports/*.json
 upstream/*
 !upstream/.gitkeep
 !upstream/README.md
+
+tools/**/bin/
+tools/**/obj/
+packages/test-suite/reports/*.tsv

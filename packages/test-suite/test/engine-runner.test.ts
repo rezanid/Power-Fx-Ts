@@ -22,6 +22,68 @@ describe("compareResult rules mirrored from upstream BaseRunner", () => {
     expect(compareResult(at("x", "3"), { kind: "value", text: "4" }).outcome).toBe("fail");
   });
 
+  it("compares Decimal results strictly and scale-insensitively, never with tolerance", () => {
+    const dec = (text: string) => ({ kind: "value", text, numeric: "decimal" }) as const;
+    for (const [expected, actual] of [
+      ["1", "1.000001"],
+      ["1", "1.0000000000000000000000000001"],
+      ["0.3", "0.30000000000000004"],
+      ["100", "100.00001"],
+      ["abc", "1"],
+    ] as const) {
+      expect(
+        compareResult(at("x", expected), dec(actual)).outcome,
+        `${expected} vs ${actual}`,
+      ).toBe("fail");
+    }
+    for (const [expected, actual] of [
+      ["1", "1.0"],
+      ["1.50", "1.5"],
+      ["24e3", "24000"],
+      ["-0.0", "0"],
+      [" 7 ", "7"],
+    ] as const) {
+      const r = compareResult(at("x", expected), dec(actual));
+      expect(r.outcome, `${expected} vs ${actual}`).toBe("pass");
+      expect(r.valueMatch).toBe("strict");
+    }
+  });
+
+  it("rounds over-long Decimal expectations like decimal.Parse", () => {
+    const dec = (text: string) => ({ kind: "value", text, numeric: "decimal" }) as const;
+    const r = compareResult(
+      at("x", "79149013500763574019524425909.091"),
+      dec("79149013500763574019524425909"),
+    );
+    expect(r.outcome).toBe("pass");
+    expect(
+      compareResult(
+        at("x", "79149013500763574019524425909.091"),
+        dec("79149013500763574019524425910"),
+      ).outcome,
+    ).toBe("fail");
+    expect(compareResult(at("x", "0.00000000000000000000000000004"), dec("0")).outcome).toBe(
+      "pass",
+    );
+    expect(compareResult(at("x", "0.00000000000000000000000000006"), dec("0")).outcome).toBe(
+      "fail",
+    );
+  });
+
+  it("keeps upstream's tolerance for Float results and flags it as a diagnostic", () => {
+    const tolerated = compareResult(at("x", "1"), { kind: "value", text: "1.000001" });
+    expect(tolerated.outcome).toBe("pass");
+    expect(tolerated.valueMatch).toBe("tolerance");
+    const exact = compareResult(at("x", "1.5"), { kind: "value", text: "1.5" });
+    expect(exact.valueMatch).toBe("strict");
+    expect(
+      compareResult(at("x", "0.12345678901234567890"), {
+        kind: "value",
+        text: "0.1234567890123456",
+      }).outcome,
+    ).toBe("fail");
+  });
+
   it("treats Decimal in expected error text as Number", () => {
     const expected =
       "Errors: Error 2-3: Incompatible types for comparison. These types can't be compared: Decimal, Text.";

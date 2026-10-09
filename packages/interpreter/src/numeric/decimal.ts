@@ -38,7 +38,24 @@ function format(a: NumericValue): string {
   return `${mantissa < 0n ? "-" : ""}${digits.slice(0, point)}${fraction === "" ? "" : `.${fraction}`}`;
 }
 
-const toNumber = (a: NumericValue): number => Number(format(a));
+const TWO_POW_64 = 18446744073709552000; // the double nearest 2^64
+const TWO_POW_96 = 2 ** 96;
+const LOW_64 = (1n << 64n) - 1n;
+// Literals, not `10 ** n`: V8's pow is not correctly rounded, .NET's table is.
+const DOUBLE_POWERS_10 = Array.from({ length: 29 }, (_, i) => Number(`1e${i}`));
+
+/**
+ * .NET `(double)decimal` (`DecCalc.VarR8FromDec`): `(low64 + high32 * 2^64) / 10^scale` in double
+ * arithmetic. It is not the nearest double to the decimal value; matching it is required for
+ * Float(Decimal) and mixed comparisons to agree with upstream.
+ */
+const toNumber = (a: NumericValue): number => {
+  const { mantissa, scale } = unwrap(a);
+  const magnitude = mantissa < 0n ? -mantissa : mantissa;
+  const dbl =
+    (Number(magnitude & LOW_64) + Number(magnitude >> 64n) * TWO_POW_64) / DOUBLE_POWERS_10[scale]!;
+  return mantissa < 0n ? -dbl : dbl;
+};
 
 /**
  * Exact decimal backend mirroring .NET `System.Decimal`, the upstream representation (ADR 0009):
@@ -55,7 +72,7 @@ export const decimalBackend: NumericBackend = {
    * result of `0.1+0.2` converts to `0.3`. This is a conversion, not a host-input path.
    */
   fromNumber(n) {
-    if (!Number.isFinite(n)) return undefined;
+    if (!Number.isFinite(n) || Math.abs(n) >= TWO_POW_96) return undefined;
     return parse(n.toPrecision(15));
   },
   parseExact(text) {
