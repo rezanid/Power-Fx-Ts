@@ -229,7 +229,7 @@ export async function runCompat(options: {
       if (result.unsupportedCategory !== undefined) {
         unsupportedByCategory[result.unsupportedCategory]++;
       }
-      if (result.strictErrors === "differs") {
+      if (result.outcome === "pass" && result.strictErrors === "differs") {
         strictErrorMismatches++;
         if (strictMismatchSamples.length < 50) {
           strictMismatchSamples.push({ file: result.file, line: result.line });

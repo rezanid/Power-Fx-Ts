@@ -87,7 +87,7 @@ display names are interleaved; the slice needs only literals, identifiers, unary
 Pinned commit `df4ceba…`; 22,047 cases, 7,088 not applicable to the profile.
 **Pass 617, fail 1, skip 46, unsupported 14,295** (feature 11,132, setup 3,163, profile 0).
 `v1-decimal`: 0 pass / 0 fail / 16,117 unsupported (decimal backend not implemented).
-Passing compile-error cases whose error set is not identical to upstream's: 34 (32 are the ordering
+Passing compile-error cases whose error set is not identical to upstream's: 33 (32 are the ordering
 matrices, where the corpus lists only some operand errors; upstream's lenient rule accepts them).
 
 "Unsupported" = the formula uses a known function, syntax, type or setup the slice lacks; it says

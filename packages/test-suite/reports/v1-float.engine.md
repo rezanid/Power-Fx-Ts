@@ -6,7 +6,7 @@
 - Cases: 22047 total, 7088 not applicable to this profile
 - Pass 617, fail 1, skip 46, unsupported 14295
 - Unsupported by reason: feature 11132, setup 3163, profile 0
-- Passing compile-error cases whose error set differs from upstream's (strict diagnostic, not a verdict): 34
+- Passing compile-error cases whose error set differs from upstream's (strict diagnostic, not a verdict): 33
 
 | File | Total | Pass | Fail | Skip | Unsupported |
 | ---- | ----: | ---: | ---: | ---: | ----------: |
