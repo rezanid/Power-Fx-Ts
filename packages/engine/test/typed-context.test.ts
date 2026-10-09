@@ -226,6 +226,32 @@ describe("reusing checked results", () => {
     );
   });
 
+  it("keys reuse on backend identity, not name: same-named custom backends are incompatible", async () => {
+    const a = new Engine({ numeric: { ...floatBackend } });
+    const b = new Engine({ numeric: { ...floatBackend } });
+    const sch = defineSchema({ X: NumberType });
+    const checked = a.check("X + 1", { schema: sch });
+    const mine = a.validateValues(sch, { X: 1 });
+    const theirs = b.validateValues(sch, { X: 1 });
+    if (!mine.ok || !theirs.ok) throw new Error("expected valid values");
+    expect((await a.evaluateChecked(checked, { values: mine.values })).kind).toBe("value");
+    await expect(b.evaluateChecked(checked, { values: theirs.values })).rejects.toThrow(
+      /different numeric backend/,
+    );
+    await expect(a.evaluateChecked(checked, { values: theirs.values })).rejects.toThrow(
+      /different numeric backend/,
+    );
+    // Engines sharing one backend instance remain interchangeable.
+    const shared = { ...floatBackend };
+    const c = new Engine({ numeric: shared });
+    const d = new Engine({ numeric: shared });
+    const cv = c.validateValues(sch, { X: 2 });
+    if (!cv.ok) throw new Error("expected valid values");
+    expect(
+      (await d.evaluateChecked(c.check("X", { schema: sch }), { values: cv.values })).kind,
+    ).toBe("value");
+  });
+
   it("rejects reuse with an incompatible numeric configuration", async () => {
     const other = new Engine({ numeric: { ...floatBackend, name: "decimal" } });
     const checked = engine.check("X + 1", { schema: defineSchema({ X: NumberType }) });

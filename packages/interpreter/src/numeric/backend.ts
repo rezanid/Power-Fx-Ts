@@ -88,3 +88,20 @@ export const floatBackend: NumericBackend = {
   isZero: (a) => asNumber(a) === 0,
   format: (a) => formatDouble(asNumber(a)),
 };
+
+const backendIds = new WeakMap<NumericBackend, number>();
+let nextBackendId = 1;
+
+/**
+ * Process-unique identity of a backend instance. Names are not unique (hosts may supply custom
+ * backends), and `NumericValue`s from different instances are not interchangeable, so reuse of
+ * checked results and validated values is keyed by this id, not by `name`.
+ */
+export function numericBackendId(backend: NumericBackend): number {
+  let id = backendIds.get(backend);
+  if (id === undefined) {
+    id = nextBackendId++;
+    backendIds.set(backend, id);
+  }
+  return id;
+}

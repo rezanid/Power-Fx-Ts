@@ -1,5 +1,5 @@
 import { snapshotSchema, type FormulaType, type Schema } from "@powerfx-ts/core";
-import type { NumericBackend } from "../numeric/backend.js";
+import { numericBackendId, type NumericBackend } from "../numeric/backend.js";
 import { blank, boolean, number, text, type FormulaValue } from "../values/values.js";
 
 export type ValueIssueCode =
@@ -21,8 +21,8 @@ declare const validatedBrand: unique symbol;
 export interface ValidatedValues {
   readonly [validatedBrand]: true;
   readonly schema: Schema;
-  /** Numbers are backend-specific, so values only work with the backend that created them. */
-  readonly numeric: NumericBackend["name"];
+  /** Numbers are backend-specific, so values only work with the backend instance that made them. */
+  readonly numericId: number;
   readonly values: ReadonlyMap<string, FormulaValue>;
 }
 
@@ -80,7 +80,14 @@ export function validateValues(
   }
   return issues.length > 0
     ? { ok: false, issues }
-    : { ok: true, values: { schema, numeric: numeric.name, values } as unknown as ValidatedValues };
+    : {
+        ok: true,
+        values: {
+          schema,
+          numericId: numericBackendId(numeric),
+          values,
+        } as unknown as ValidatedValues,
+      };
 
   function convert(type: FormulaType, raw: unknown, path: string): FormulaValue {
     if (raw === null || raw === undefined) return blank;

@@ -18,6 +18,7 @@ import {
   type FormulaValue,
   type NumericBackend,
   type NumericValue,
+  numericBackendId,
   type ValidatedValues,
   type ValidationResult,
   validateValues,
@@ -40,8 +41,8 @@ export interface CheckResult {
   readonly text: string;
   /** Frozen snapshot of the schema the formula was checked against. */
   readonly schema: Schema | undefined;
-  /** Numeric backend in effect when checked; results are only reusable with the same one. */
-  readonly numeric: NumericBackend["name"];
+  /** Identity of the numeric backend instance used; reusable only with that same instance. */
+  readonly numericId: number;
   /** Parse and binding diagnostics, parse diagnostics first. */
   readonly diagnostics: readonly Diagnostic[];
   /** Constructs outside the implemented slice; see `BindResult.unsupported`. */
@@ -112,7 +113,7 @@ export class Engine {
     return {
       text,
       schema,
-      numeric: this.numeric.name,
+      numericId: numericBackendId(this.numeric),
       diagnostics,
       unsupported,
       type: bound.type,
@@ -144,15 +145,12 @@ export class Engine {
     signal: CancellationSignal | undefined = options.signal,
   ): Promise<EvaluationResult> {
     const values = options.values;
-    if (checked.numeric !== this.numeric.name) {
-      throw new TypeError(
-        `The formula was checked with the ${checked.numeric} numeric backend, not ${this.numeric.name}.`,
-      );
+    const id = numericBackendId(this.numeric);
+    if (checked.numericId !== id) {
+      throw new TypeError("The formula was checked with a different numeric backend instance.");
     }
-    if (values !== undefined && values.numeric !== this.numeric.name) {
-      throw new TypeError(
-        `The values were validated with the ${values.numeric} numeric backend, not ${this.numeric.name}.`,
-      );
+    if (values !== undefined && values.numericId !== id) {
+      throw new TypeError("The values were validated with a different numeric backend instance.");
     }
     if (checked.schema !== undefined) {
       if (values === undefined) {

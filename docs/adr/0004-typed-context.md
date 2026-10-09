@@ -54,10 +54,12 @@ Own design (no upstream equivalent; **for review**):
 
 ## Reuse of checked results
 
-`CheckResult` holds a deep-frozen snapshot of the schema and the numeric backend name; so does
-`ValidatedValues`. Mutating the host's schema afterwards changes neither. `evaluateChecked`
+`CheckResult` holds a deep-frozen snapshot of the schema and the numeric backend _instance id_
+(`numericBackendId`); so does `ValidatedValues`. Hosts may supply custom backends, whose names are
+not unique, so identity (not `name`) decides compatibility; engines sharing one backend instance
+are interchangeable. Mutating the host's schema afterwards changes neither. `evaluateChecked`
 throws `TypeError` if the schema snapshots differ or either the check or the values came from a
-different numeric backend (numbers are backend-specific opaque values). `maxSteps` and the signal
+different backend instance (numbers are backend-specific opaque values). `maxSteps` and the signal
 are per-engine/per-call and do not affect semantics.
 
 ## Limitations
