@@ -47,5 +47,9 @@ Table access: `First(Filter(Table({Score: 90}, {Score: 50}), Score > 80)).Score`
 `CountRows(...)` counts rows, and `LookUp(T As item, item.Score > 80, item.Score)` returns the first
 match's result formula (see ADR 0007).
 
+Record/table unions: `If` results, `Table(...)` arguments and table literals with differing record
+types union field by field (missing fields are Blank; same-name Number/Text/Boolean fields coerce to
+the left type) through explicit `Conform` nodes (see ADR 0008).
+
 See `docs/adr/0004-typed-context.md`, `0005-record-literals-and-with.md` and
 `0006-tables-and-row-scopes.md` for rules and limitations.

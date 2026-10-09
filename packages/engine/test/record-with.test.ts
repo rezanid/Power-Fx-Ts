@@ -179,8 +179,8 @@ describe("If with record results", () => {
   it("rejects a record mixed with a scalar", () => {
     expect(diag('If(true, {a: 1}, "test")').length).toBe(1);
   });
-  it("leaves differing record types unsupported", async () => {
-    expect(await run("If(false, {x: 1}, {z: 2})")).toMatch(/^unsupported/);
+  it("unions differing record types (see type-unions.test.ts)", async () => {
+    expect(await run("If(false, {x: 1}, {z: 2})")).toBe("{x:Blank(),z:2}");
   });
   it("accepts identical record types", async () => {
     expect(await run("If(true, {x: 1}, {x: 2})")).toBe("{x:1}");

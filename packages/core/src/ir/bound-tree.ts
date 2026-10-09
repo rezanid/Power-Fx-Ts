@@ -1,5 +1,6 @@
 import type { Span } from "../text/span.js";
 import type { FormulaType } from "../types/formula-type.js";
+import type { ConformPlan } from "../types/union.js";
 
 /** Scalar types an operand can be implicitly converted to. */
 export type CoercionTarget = "Number" | "Text" | "Boolean";
@@ -51,6 +52,16 @@ export type BoundNode =
       readonly operand: BoundNode;
       /** Blank operands stay Blank instead of becoming the target's zero value. */
       readonly preserveBlank?: boolean;
+    })
+  /**
+   * Rebuilds a record or table value as the union type of `If` results and table rows: fields
+   * follow the target order, absent fields become Blank, and mismatched scalar fields coerce
+   * (Blank, error and rows that are errors pass through unchanged).
+   */
+  | (BoundBase & {
+      readonly kind: "Conform";
+      readonly operand: BoundNode;
+      readonly plan: ConformPlan;
     })
   | (BoundBase & {
       readonly kind: "Call";

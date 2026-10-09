@@ -47,8 +47,8 @@ Status: provisional (milestone review pending). Upstream pin: `df4ceba5e08220db6
   Blank for a Blank row (reads give Blank). 2-argument `LookUp` returns the error row (verified).
 - `CountRows` is always a float Number; the decimal result under `disable:NumberIsFloat` is not
   modelled (no Decimal backend exists).
-- Record/table `If` unions and coercing row unions remain unsupported (the `FirstLast_V1Compat`
-  cases need them), as do `Sequence`-based large-table cases.
+- Record/table `If` unions and coercing row unions are now supported (ADR 0008); `Sequence`-based
+  large-table cases remain unsupported, as do `Sequence`-based large-table cases.
 - Delegation, data sources, mutation, sorting, grouping and other functions are out of scope.
 
 ## Compatibility results

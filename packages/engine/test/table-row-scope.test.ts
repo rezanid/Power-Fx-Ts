@@ -148,12 +148,7 @@ describe("table construction", () => {
     expect(await run("[{a: 1}, 1]")).toMatch(/^invalid: Incompatible type\. The item/);
   });
 
-  it("reports upstream coercing unions and constructs it cannot model as unsupported", async () => {
-    expect(await run("Table({a: 0}, {a: true})")).toBe(
-      "unsupported: Table argument field type coercion",
-    );
-    expect(await run("[1, true]")).toBe("unsupported: Table element type coercion");
-    expect(await run("[[1], [2]]")).toBe("unsupported: Table nested in a table literal");
+  it("reports constructs it cannot model as unsupported", async () => {
     expect(await run("[Blank()]")).toBe("unsupported: Table of only Blank values");
   });
 });

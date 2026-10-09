@@ -6,6 +6,7 @@ import {
 } from "../diagnostics/diagnostic.js";
 import { KNOWN_UPSTREAM_ENUMS, KNOWN_UPSTREAM_FUNCTIONS } from "../functions/known-names.js";
 import { BUILTIN_FUNCTIONS, type FunctionRegistry } from "../functions/signature.js";
+import { conformPlan, unionRecords, unionTypes } from "../types/union.js";
 import type { BoundBinaryOperator, BoundNode, CoercionTarget } from "../ir/bound-tree.js";
 import type { ParseResult } from "../parser/parser.js";
 import type {
@@ -31,7 +32,6 @@ import {
   type RecordField,
   type RecordTypeOf,
   tableType,
-  typesEqual,
 } from "../types/formula-type.js";
 
 export interface BindOptions {
@@ -476,23 +476,12 @@ class Binder {
     };
   }
 
-  /**
-   * Unions record types the way this slice supports: identical field types are merged, disjoint
-   * fields are added (and Blank-filled in rows). Upstream additionally coerces same-name fields of
-   * different types (e.g. Boolean to Number); that returns `undefined` here and is reported as
-   * unsupported by the caller rather than approximated.
-   */
-  private unionRows(a: RecordTypeOf, b: RecordTypeOf): RecordTypeOf | undefined {
-    const byName = new Map(a.fields.map((f) => [f.name, f]));
-    for (const f of b.fields) {
-      const existing = byName.get(f.name);
-      if (existing === undefined) byName.set(f.name, f);
-      else if (!typesEqual(existing.type, f.type)) return undefined;
-    }
-    const fields = [...byName.values()].sort((x, y) =>
-      x.name < y.name ? -1 : x.name > y.name ? 1 : 0,
-    );
-    return { kind: "Record", fields };
+  /** Wraps `node` in an explicit `Conform` when its type differs from the union `target`. */
+  private conformTo(node: BoundNode, target: FormulaType): BoundNode {
+    const plan = conformPlan(node.type, target);
+    return plan === undefined
+      ? node
+      : { kind: "Conform", operand: node, plan, span: node.span, type: target };
   }
 
   /**
@@ -505,47 +494,46 @@ class Binder {
     if (items.length === 0) {
       return { kind: "Table", items: [], span: node.span, type: tableType([]) };
     }
-    if (items.some((i) => i.type.kind === "Table")) {
-      return this.notSupported("Table nested in a table literal", node.span);
-    }
     const hasRecord = items.some((i) => i.type.kind === "Record");
-    let rowType: RecordTypeOf = { kind: "Record", fields: [] };
-    const rows: { shape: "row"; value: BoundNode }[] = [];
-
-    if (hasRecord) {
-      for (const [i, item] of items.entries()) {
-        if (item.type.kind === "Record") {
-          const union = this.unionRows(rowType, item.type);
-          if (union === undefined) {
-            return this.notSupported("Table row field type coercion", node.items[i]!.span);
-          }
-          rowType = union;
-        } else if (item.type.kind !== "Blank") {
-          this.report(DiagnosticCodes.TableDoesNotAcceptThisType, node.items[i]!.span);
-          return this.invalid(node.span);
-        }
-        rows.push({ shape: "row", value: item });
-      }
-    } else {
-      const scalar = items.find((i) => i.type.kind !== "Blank")?.type;
-      if (scalar === undefined) return this.notSupported("Table of only Blank values", node.span);
-      if (items.some((i) => i.type.kind !== "Blank" && i.type.kind !== scalar.kind)) {
-        return this.notSupported("Table element type coercion", node.span);
-      }
-      rowType = { kind: "Record", fields: [{ name: "Value", type: scalar }] };
-      for (const item of items) {
-        rows.push({
-          shape: "row",
-          value: {
+    if (!hasRecord && items.every((i) => i.type.kind === "Blank")) {
+      return this.notSupported("Table of only Blank values", node.span);
+    }
+    // Scalar and table items become `{Value: item}` rows; Blank items stay Blank rows beside records.
+    const rowOf = (item: BoundNode): BoundNode =>
+      hasRecord || item.type.kind === "Record"
+        ? item
+        : {
             kind: "Record",
             fields: [{ name: "Value", value: item }],
             span: item.span,
             type: { kind: "Record", fields: [{ name: "Value", type: item.type }] },
-          },
-        });
+          };
+    let rowType: RecordTypeOf | undefined;
+    const rows: BoundNode[] = [];
+    for (const [i, item] of items.entries()) {
+      if (hasRecord && item.type.kind !== "Record" && item.type.kind !== "Blank") {
+        this.report(DiagnosticCodes.TableDoesNotAcceptThisType, node.items[i]!.span);
+        return this.invalid(node.span);
       }
+      const row = rowOf(item);
+      if (row.type.kind === "Record") {
+        const union = rowType === undefined ? row.type : unionRecords(rowType, row.type);
+        if (union === undefined) {
+          this.report(DiagnosticCodes.TableDoesNotAcceptThisType, node.items[i]!.span);
+          return this.invalid(node.span);
+        }
+        rowType = union;
+      }
+      rows.push(row);
     }
-    return { kind: "Table", items: rows, span: node.span, type: { kind: "Table", row: rowType } };
+    if (rowType === undefined) return this.notSupported("Table of only Blank values", node.span);
+    const target = rowType;
+    return {
+      kind: "Table",
+      items: rows.map((value) => ({ shape: "row" as const, value: this.conformTo(value, target) })),
+      span: node.span,
+      type: { kind: "Table", row: target },
+    };
   }
 
   /**
@@ -559,12 +547,11 @@ class Binder {
       this.report(DiagnosticCodes.InvalidFunctionArguments, node.callee.span, ["Table"]);
       return this.invalid(node.span);
     }
-    let rowType: RecordTypeOf = { kind: "Record", fields: [] };
-    const items: { shape: "row" | "rows"; value: BoundNode }[] = [];
+    let rowType: RecordTypeOf | undefined;
+    const bound: { shape: "row" | "rows"; value: BoundNode }[] = [];
     for (const [i, arg] of args.entries()) {
-      const argSpan = node.args[i]!.span;
       if (arg.type.kind === "Blank") {
-        items.push({ shape: "row", value: arg });
+        bound.push({ shape: "row", value: arg });
         continue;
       }
       if (arg.type.kind !== "Record" && arg.type.kind !== "Table") {
@@ -573,14 +560,24 @@ class Binder {
         return this.invalid(node.span);
       }
       const argRow = arg.type.kind === "Record" ? arg.type : arg.type.row;
-      const union = this.unionRows(rowType, argRow);
+      const union = rowType === undefined ? argRow : unionRecords(rowType, argRow);
       if (union === undefined) {
-        return this.notSupported("Table argument field type coercion", argSpan);
+        this.report(DiagnosticCodes.InvalidFunctionArguments, node.callee.span, ["Table"]);
+        this.report(DiagnosticCodes.TableDoesNotAcceptThisType, node.args[i]!.span);
+        return this.invalid(node.span);
       }
       rowType = union;
-      items.push({ shape: arg.type.kind === "Record" ? "row" : "rows", value: arg });
+      bound.push({ shape: arg.type.kind === "Record" ? "row" : "rows", value: arg });
     }
-    return { kind: "Table", items, span: node.span, type: { kind: "Table", row: rowType } };
+    const target: RecordTypeOf = rowType ?? { kind: "Record", fields: [] };
+    const items = bound.map(({ shape, value }) => ({
+      shape,
+      value:
+        value.type.kind === "Blank"
+          ? value
+          : this.conformTo(value, shape === "row" ? target : { kind: "Table", row: target }),
+    }));
+    return { kind: "Table", items, span: node.span, type: { kind: "Table", row: target } };
   }
 
   /**
@@ -736,26 +733,29 @@ class Binder {
   }
 
   /**
-   * Result arguments of `If` must agree. Identical record types are fine; a record mixed with a
-   * scalar is upstream's result-type mismatch; differing records need upstream's record union
-   * (V1 compat) which is not implemented, so they are unsupported.
+   * Result type of an `If` whose results include records or tables (upstream
+   * `TryDetermineReturnTypePowerFxV1CompatRules`: fold `TryUnionWithCoerce` left to right). Returns
+   * the union type, `undefined` when no result is an aggregate, or a diagnostic node when the
+   * results do not unify.
    */
-  private checkIfRecordResults(args: readonly BoundNode[], node: CallNode): BoundNode | undefined {
+  private ifAggregateUnion(
+    args: readonly BoundNode[],
+    node: CallNode,
+  ): { readonly union: FormulaType } | { readonly error: BoundNode } | undefined {
     const results = args
       .filter((_, i) => i % 2 === 1 || (args.length % 2 === 1 && i === args.length - 1))
       .map((a) => a.type)
-      .filter((t) => t.kind !== "Blank" && t.kind !== "Unknown");
-    const records = results.filter((t) => t.kind === "Record" || t.kind === "Table");
-    if (records.length === 0) return undefined;
-    if (records.length !== results.length || records.some((t) => t.kind !== records[0]!.kind)) {
+      .filter((t) => t.kind !== "Unknown");
+    if (!results.some((t) => t.kind === "Record" || t.kind === "Table")) return undefined;
+    let union: FormulaType | undefined = results[0];
+    for (const type of results.slice(1)) {
+      union = union === undefined ? undefined : unionTypes(union, type);
+    }
+    if (union === undefined) {
       this.report(DiagnosticCodes.ResultTypeMismatch, node.span);
-      return this.invalid(node.span);
+      return { error: this.invalid(node.span) };
     }
-    const first = JSON.stringify(records[0]);
-    if (records.some((t) => JSON.stringify(t) !== first)) {
-      return this.notSupported("Record or table type union in If", node.span);
-    }
-    return undefined;
+    return { union };
   }
 
   private bindCall(node: CallNode): BoundNode {
@@ -800,19 +800,25 @@ class Binder {
       return this.invalid(node.span);
     }
 
+    let union: FormulaType | undefined;
     if (name === "If") {
-      const mismatch = this.checkIfRecordResults(args, node);
-      if (mismatch !== undefined) return mismatch;
+      const result = this.ifAggregateUnion(args, node);
+      if (result !== undefined && "error" in result) return result.error;
+      union = result?.union;
     }
     const check = signature.check(args.map((a) => a.type));
+    const isResult = (i: number): boolean =>
+      i % 2 === 1 || (args.length % 2 === 1 && i === args.length - 1);
     return {
       kind: "Call",
       fn: name,
       args: args.map((a, i) =>
-        this.coerce(a, check.coercions[i], check.preserveBlank?.[i] ?? false),
+        union !== undefined && isResult(i)
+          ? this.conformTo(a, union)
+          : this.coerce(a, check.coercions[i], check.preserveBlank?.[i] ?? false),
       ),
       span: node.span,
-      type: check.returnType,
+      type: union ?? check.returnType,
     };
   }
 }
