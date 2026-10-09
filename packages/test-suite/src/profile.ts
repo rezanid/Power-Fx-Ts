@@ -77,6 +77,17 @@ export function isApplicable(fileSetup: SetupSettings, active: CompatibilityProf
   return true;
 }
 
+/**
+ * Names of enabled file-level setup entries that the profile does not itself define: runner-side
+ * handlers (`AllEnumsSetup`) and parser/engine flags (`EnableExpressionChaining`, `TextFirst`).
+ * An engine must declare support for each, otherwise the file is reported as unsupported.
+ */
+export function requiredSetup(fileSetup: SetupSettings, active: CompatibilityProfile): string[] {
+  return Object.entries(fileSetup)
+    .filter(([key, enabled]) => enabled && !(key in active.settings))
+    .map(([key]) => setupName(key));
+}
+
 /** Enabled runner-side handlers a file needs (flags and parser options are not included). */
 export function requiredHandlers(fileSetup: SetupSettings): string[] {
   return Object.entries(fileSetup)

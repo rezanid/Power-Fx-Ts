@@ -3,6 +3,7 @@ import { mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { PROFILES } from "./profile.js";
+import { createEngineRunner } from "./engine-runner.js";
 import { runCompat, unsupportedRunner, type CompatReport } from "./runner.js";
 import { parseTxtTestFile } from "./txt-format.js";
 
@@ -20,6 +21,7 @@ function formatMarkdown(report: CompatReport): string {
     `# Compatibility report: ${report.profile}`,
     "",
     `- Upstream commit: \`${report.upstreamCommit}\``,
+    `- Runner: ${report.runner}`,
     `- Setup: \`${report.setupString}\` (number mode: ${report.numberMode}, culture ${report.culture}, time zone ${report.timeZone})`,
     `- Cases: ${t.cases} total, ${t.inapplicable} not applicable to this profile`,
     `- Pass ${t.pass}, fail ${t.fail}, skip ${t.skip}, unsupported ${t.unsupported}`,
@@ -48,11 +50,20 @@ async function main(): Promise<void> {
     .sort()
     .map((name) => parseTxtTestFile(name, readFileSync(join(casesDir, name), "utf8")));
 
-  const report = await runCompat({ files, profile, runner: unsupportedRunner, upstreamCommit });
+  const runnerName = process.argv[3] ?? "engine";
+  const runner =
+    runnerName === "engine"
+      ? createEngineRunner()
+      : runnerName === "unsupported"
+        ? unsupportedRunner
+        : undefined;
+  if (!runner) throw new Error(`Unknown runner ${runnerName}: engine | unsupported`);
+
+  const report = await runCompat({ files, profile, runner, runnerName, upstreamCommit });
   const outDir = join(packageRoot, "reports");
   mkdirSync(outDir, { recursive: true });
-  writeFileSync(join(outDir, `${profileName}.json`), JSON.stringify(report, null, 2));
-  writeFileSync(join(outDir, `${profileName}.md`), formatMarkdown(report));
+  writeFileSync(join(outDir, `${profileName}.${runnerName}.json`), JSON.stringify(report, null, 2));
+  writeFileSync(join(outDir, `${profileName}.${runnerName}.md`), formatMarkdown(report));
   console.log(formatMarkdown(report).split("\n").slice(0, 8).join("\n"));
 }
 

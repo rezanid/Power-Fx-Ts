@@ -28,8 +28,10 @@ Format (implemented in `packages/test-suite/src/txt-format.ts`):
   `Error({Kind:ErrorKind.Div0})`, `Errors: Error 0-3: msg|Error ...` (compile errors), `#SKIP`, `#NoValue`.
 - Comparison is by exact string, with exceptions in upstream `BaseRunner.RunAsync2` (date/datetime
   tick tolerance, float tolerance via `NumberCompare`, Decimal→Number message rewriting, `Error*`
-  expectations re-run as `IsError(...)`). **Only exact match, `#SKIP` and compile-error matching are
-  implemented so far.**
+  expectations re-run as `IsError(...)`). **Implemented so far:** exact match, `#SKIP`, compile-error matching
+  (every expected message must appear and none extra; Decimal→Number rewriting) and float tolerance
+  (`NumberCompare`: abs 1e-5 or rel 1e-14). Not implemented: date tick tolerance, `Error*`→`IsError`
+  re-run, `#OVERRIDE:` merging, `#NoValue`. Note upstream accepts _extra_ actual errors; we are stricter.
 
 Top expected-result shapes: numbers (~4k), strings (~2.7k), booleans (~4.3k), compile errors (~2.9k),
 `Error({Kind:...})` (~2.5k), tables (~1k), `Blank()`, dates/datetimes.
@@ -74,3 +76,20 @@ display names are interleaved; the slice needs only literals, identifiers, unary
   (not in scope; tools only).
 - No `THIRD_PARTY`/`NOTICE` file in the tree. **Still to audit:** NuGet dependencies, vendored data
   (localization strings under `src/strings`, `localize`), and any generated files before reusing them.
+
+## Vertical-slice compatibility results (`v1-float`, engine runner)
+
+Pinned commit `df4ceba…`; 22,047 cases, 7,088 not applicable to the profile.
+**Pass 613, fail 3, skip 46, unsupported 14,297.** `v1-decimal`: 0 pass / 0 fail / 16,117
+unsupported (decimal backend not implemented, so everything reports `unsupported`).
+
+"Unsupported" = the formula uses a function, type or setup the slice lacks; it says nothing about
+semantics. Passes require a real parse → bind → evaluate and an upstream-style comparison.
+
+Remaining failures (kept visible): parser message wording for `Blank(` (Blank.txt 136) and `1.2.3`
+(Error.txt 122, 125). Not yet verified: culture/time-zone dependent behavior, `-0` formatting,
+text comparison versus .NET culture comparison (we use `Intl.Collator` en-US).
+
+Semantics learned from the corpus: `=`/`<>` between different types is a compile error; `Blank`
+equals only Blank; ordering operators reject Boolean operands, and Text only next to Number
+(error spans follow an observed matrix); `If` result arguments keep Blank as Blank.

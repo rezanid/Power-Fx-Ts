@@ -1,4 +1,4 @@
-import { isApplicable, requiredHandlers, type CompatibilityProfile } from "./profile.js";
+import { isApplicable, requiredSetup, type CompatibilityProfile } from "./profile.js";
 import type { TxtTestCase, TxtTestFile } from "./txt-format.js";
 
 /** Outcome of running one expression in a candidate engine. */
@@ -10,7 +10,10 @@ export type RunResult =
   | { readonly kind: "unsupported"; readonly reason: string };
 
 export interface ExpressionRunner {
-  /** Setup handlers this engine can provide; files needing others are reported as unsupported. */
+  /**
+   * File-level `#SETUP:` names (handlers and parser flags, without arguments) this engine honors.
+   * Files requiring any other enabled setup are reported as unsupported, never run.
+   */
   readonly supportedHandlers: ReadonlySet<string>;
   run(input: string, profile: CompatibilityProfile): Promise<RunResult>;
 }
@@ -33,6 +36,7 @@ export interface FileSummary {
 
 export interface CompatReport {
   readonly upstreamCommit: string;
+  readonly runner: string;
   readonly profile: string;
   readonly setupString: string;
   readonly numberMode: string;
@@ -68,25 +72,52 @@ export function compareResult(testCase: TxtTestCase, result: RunResult): CaseRes
   if (result.kind === "errors") {
     if (/^Errors: (Error|Warning)/.test(expected)) {
       const actual = new Set(result.errors);
-      const missing = expectedErrors(expected).filter((e) => !actual.has(e));
-      return missing.length === 0
+      const wanted = new Set(expectedErrors(expected));
+      // Upstream accepts expected messages naming Decimal when a Number-only engine reports Number.
+      const matches = (e: string): boolean =>
+        actual.has(e) || decimalAsNumberVariants(e).some((v) => actual.has(v));
+      const missing = [...wanted].filter((e) => !matches(e));
+      const extra = [...actual].filter(
+        (a) => ![...wanted].some((w) => w === a || decimalAsNumberVariants(w).includes(a)),
+      );
+      return missing.length === 0 && extra.length === 0
         ? { ...base, outcome: "pass" }
         : { ...base, outcome: "fail", message: `Wrong errors: ${result.errors.join(" | ")}` };
     }
     return { ...base, outcome: "fail", message: `Unexpected errors: ${result.errors.join(" | ")}` };
   }
-  return result.text === expected
+  return result.text === expected || numbersClose(expected, result.text)
     ? { ...base, outcome: "pass" }
     : { ...base, outcome: "fail", message: `Expected ${expected} but got ${result.text}` };
+}
+
+function decimalAsNumberVariants(exp: string): string[] {
+  return [
+    exp.replace(/( Decimal, Number, | Number, Decimal, | Decimal, (?!Number))/g, " Number, "),
+    exp.replace(/(['(])Decimal([')])/g, "$1Number$2"),
+    exp.replace(/ Decimal( value|\.)/g, " Number$1"),
+  ];
+}
+
+const NUMBER_TEXT = /^[+-]?(\d+\.?\d*|\.\d+)([eE][+-]?\d+)?$/;
+
+/** Mirrors upstream BaseRunner.NumberCompare: absolute 1e-5 or relative 1e-14 tolerance. */
+export function numbersClose(expected: string, actual: string): boolean {
+  if (!NUMBER_TEXT.test(expected) || !NUMBER_TEXT.test(actual)) return false;
+  const b = Number(expected);
+  const a = Number(actual);
+  const diff = Math.abs(a - b);
+  return diff < 1e-5 || (b !== 0 && Math.abs(diff / b) < 1e-14);
 }
 
 export async function runCompat(options: {
   readonly files: readonly TxtTestFile[];
   readonly profile: CompatibilityProfile;
   readonly runner: ExpressionRunner;
+  readonly runnerName: string;
   readonly upstreamCommit: string;
 }): Promise<CompatReport> {
-  const { files, profile, runner, upstreamCommit } = options;
+  const { files, profile, runner, runnerName, upstreamCommit } = options;
   const totals = { ...emptyCounts(), cases: 0, inapplicable: 0 };
   const summaries: FileSummary[] = [];
   const failures: CaseResult[] = [];
@@ -105,7 +136,9 @@ export async function runCompat(options: {
       });
       continue;
     }
-    const missing = requiredHandlers(file.setup).filter((h) => !runner.supportedHandlers.has(h));
+    const missing = requiredSetup(file.setup, profile).filter(
+      (name) => !runner.supportedHandlers.has(name),
+    );
     const counts = emptyCounts();
     for (const testCase of file.cases) {
       let result: CaseResult;
@@ -137,6 +170,7 @@ export async function runCompat(options: {
 
   return {
     upstreamCommit,
+    runner: runnerName,
     profile: profile.name,
     setupString: profile.setupString,
     numberMode: profile.numberMode,

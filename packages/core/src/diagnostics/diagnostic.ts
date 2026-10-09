@@ -15,6 +15,12 @@ export const DiagnosticCodes = {
   InvalidNumber: "PFX1009",
   NestedTooDeeply: "PFX1010",
   ReservedWord: "PFX1011",
+  NameNotRecognized: "PFX2001",
+  IncompatibleTypesForComparison: "PFX2002",
+  InvalidFunctionArguments: "PFX2003",
+  BadArity: "PFX2004",
+  BadArityMinimum: "PFX2005",
+  InvalidArgumentType: "PFX2006",
 } as const;
 
 export type DiagnosticCode = (typeof DiagnosticCodes)[keyof typeof DiagnosticCodes];
@@ -40,6 +46,14 @@ const TEMPLATES: Record<DiagnosticCode, string> = {
   PFX1009: "Invalid number.",
   PFX1010: "The expression is nested too deeply.",
   PFX1011: "Use of a reserved word that is currently not supported.",
+  // Binder messages reuse upstream's English wording so compile-error expectations can match.
+  PFX2001: "Name isn't valid. '{0}' isn't recognized.",
+  PFX2002: "Incompatible types for comparison. These types can't be compared: {0}, {1}.",
+  PFX2003: "The function '{0}' has some invalid arguments.",
+  PFX2004: "Invalid number of arguments: received {0}, expected {1}.",
+  PFX2005: "Invalid number of arguments: received {0}, expected {1} or more.",
+  PFX2006:
+    "Invalid argument type. Expecting one of the following: Number, Decimal, Date, Time, DateTime, Dynamic.",
 };
 
 export function formatMessage(code: DiagnosticCode, args: readonly string[]): string {
