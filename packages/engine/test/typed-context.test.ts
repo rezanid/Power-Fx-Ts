@@ -315,3 +315,59 @@ describe("which inputs must be supplied", () => {
     expect(engine.validateValues(schema, { Customer: { Extra: 1 } }).ok).toBe(false);
   });
 });
+
+describe("validated values are immutable at runtime", () => {
+  const sch = defineSchema({ N: NumberType, C: recordType({ Score: NumberType }) });
+  const get = (): ValidatedValues => valid({ N: 1, C: { Score: 5 } }, sch);
+
+  it("has no working map mutators", () => {
+    const m = get().values as unknown as Record<string, unknown>;
+    for (const op of ["set", "delete", "clear"]) {
+      expect(m[op]).toBeUndefined();
+    }
+    expect(Object.isFrozen(get())).toBe(true);
+    expect(() => {
+      (get() as { values: unknown }).values = new Map();
+    }).toThrow(TypeError);
+    expect(get().values.get("N")?.kind).toBe("Number");
+    expect([...get().values.keys()]).toEqual(["N", "C"]);
+  });
+
+  it("freezes scalar and nested record values", () => {
+    const n = get().values.get("N") as { value: unknown };
+    expect(() => {
+      n.value = 0;
+    }).toThrow(TypeError);
+    const c = get().values.get("C") as { fields: { name: string; value: unknown }[] };
+    expect(() => c.fields.push({ name: "X", value: null })).toThrow(TypeError);
+    expect(() => {
+      c.fields[0]!.value = null;
+    }).toThrow(TypeError);
+    expect(() => {
+      c.fields[0]!.name = "Other";
+    }).toThrow(TypeError);
+    const inner = c.fields[0]!.value as { value: unknown };
+    expect(() => {
+      inner.value = 0;
+    }).toThrow(TypeError);
+  });
+
+  it("returns frozen record results, so evaluation cannot leak mutable state", async () => {
+    const values = get();
+    const result = await engine.evaluate("C", { schema: sch, values });
+    if (result.kind !== "value" || result.value.kind !== "Record")
+      throw new Error("expected record");
+    expect(Object.isFrozen(result.value)).toBe(true);
+    expect(() => (result.value as { fields: unknown[] }).fields.push(1)).toThrow(TypeError);
+    expect(await run("C.Score + N", { N: 1, C: { Score: 5 } }, sch)).toBe("6");
+  });
+
+  it("is unaffected by later mutation of the host's input object", async () => {
+    const input = { N: 1, C: { Score: 5 } };
+    const values = valid(input, sch);
+    input.C.Score = 99;
+    const checked = engine.check("C.Score", { schema: sch });
+    const r = await engine.evaluateChecked(checked, { values });
+    expect(r.kind === "value" && show(r.value)).toBe("5");
+  });
+});

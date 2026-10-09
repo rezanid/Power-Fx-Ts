@@ -62,6 +62,14 @@ throws `TypeError` if the schema snapshots differ or either the check or the val
 different backend instance (numbers are backend-specific opaque values). `maxSteps` and the signal
 are per-engine/per-call and do not affect semantics.
 
+## Immutability
+
+`ValidatedValues` is frozen and its `values` is a mutator-free read-only map (a frozen `Map` would
+still allow `set`/`delete`/`clear`). Every value object, record and field array is deep-frozen, so
+a record returned by evaluation exposes no mutable validated state. The host's input object is
+copied during validation and later changes to it have no effect. Custom `NumericBackend` values are
+opaque; a backend whose number representation is a mutable object must freeze it itself.
+
 ## Limitations
 
 No tables, row scopes, record literals, `With`, option sets, untyped objects, locale-aware host

@@ -30,6 +30,50 @@ export type ValidationResult =
   | { readonly ok: true; readonly values: ValidatedValues }
   | { readonly ok: false; readonly issues: readonly ValueIssue[] };
 
+/** Map view without mutators; `Object.freeze(new Map())` would still allow set/delete/clear. */
+class ReadOnlyMap<K, V> implements ReadonlyMap<K, V> {
+  readonly #map: Map<K, V>;
+  constructor(entries: Iterable<readonly [K, V]>) {
+    this.#map = new Map(entries);
+    Object.freeze(this);
+  }
+  get size(): number {
+    return this.#map.size;
+  }
+  get(key: K): V | undefined {
+    return this.#map.get(key);
+  }
+  has(key: K): boolean {
+    return this.#map.has(key);
+  }
+  forEach(cb: (value: V, key: K, map: ReadonlyMap<K, V>) => void, thisArg?: unknown): void {
+    this.#map.forEach((value, key) => cb.call(thisArg, value, key, this));
+  }
+  keys(): MapIterator<K> {
+    return this.#map.keys();
+  }
+  values(): MapIterator<V> {
+    return this.#map.values();
+  }
+  entries(): MapIterator<[K, V]> {
+    return this.#map.entries();
+  }
+  [Symbol.iterator](): MapIterator<[K, V]> {
+    return this.#map.entries();
+  }
+}
+
+function freezeValue(value: FormulaValue): FormulaValue {
+  if (value.kind === "Record") {
+    for (const f of value.fields) {
+      freezeValue(f.value);
+      Object.freeze(f);
+    }
+    Object.freeze(value.fields);
+  }
+  return Object.freeze(value);
+}
+
 const own = (o: object, key: string): boolean => Object.prototype.hasOwnProperty.call(o, key);
 
 const isPlainObject = (v: unknown): v is Record<string, unknown> => {
@@ -82,11 +126,11 @@ export function validateValues(
     ? { ok: false, issues }
     : {
         ok: true,
-        values: {
+        values: Object.freeze({
           schema,
           numericId: numericBackendId(numeric),
-          values,
-        } as unknown as ValidatedValues,
+          values: new ReadOnlyMap([...values].map(([k, val]) => [k, freezeValue(val)] as const)),
+        }) as unknown as ValidatedValues,
       };
 
   function convert(type: FormulaType, raw: unknown, path: string): FormulaValue {
