@@ -62,6 +62,32 @@ static class P
         catch (DivideByZeroException) { return "Div0"; }
     }
 
+    // Canonical, implementation-neutral rendering used by `probe` (tests parse the same grammar).
+    static string SerType(FormulaType t) => t switch
+    {
+        DecimalType => "Decimal",
+        NumberType => "Number",
+        StringType => "Text",
+        BooleanType => "Boolean",
+        BlankType => "Blank",
+        RecordType r => "{" + string.Join(",", r.GetFieldTypes().OrderBy(f => f.Name, StringComparer.Ordinal).Select(f => f.Name + ":" + SerType(f.Type))) + "}",
+        TableType tt => "Table" + SerType(tt.ToRecord()),
+        _ => t.ToString(),
+    };
+
+    static string SerValue(FormulaValue v) => v switch
+    {
+        BlankValue => "Blank",
+        DecimalValue d => "Decimal(" + d.Value.ToString(Inv) + ")",
+        NumberValue n => "Number(" + n.Value.ToString("R", Inv) + ")",
+        StringValue s => JsonSerializer.Serialize(s.Value),
+        BooleanValue b => b.Value ? "true" : "false",
+        ErrorValue e => "Error(" + string.Join("+", e.Errors.Select(x => x.Kind.ToString())) + ")",
+        RecordValue r => "{" + string.Join(",", r.Fields.Select(f => f.Name + ":" + SerValue(f.Value))) + "}",
+        TableValue t => "Table[" + string.Join(",", t.Rows.Select(x => x.IsValue ? SerValue(x.Value) : x.IsBlank ? "Blank" : SerValue(x.ToFormulaValue()))) + "]",
+        _ => v.ToExpression(),
+    };
+
     static string Lit(string s) => s.StartsWith("-") ? "(" + s + ")" : s;
 
     static IEnumerable<(string group, string mode, string expr, string direct)> Vectors()
@@ -285,6 +311,33 @@ static class P
                 var c = e.Check(line, new ParserOptions { Culture = new CultureInfo("en-US"), NumberIsFloat = args[1] == "float" });
                 var errs = c.Errors.Where(x => !x.IsWarning).Select(x => x.ToString());
                 Console.WriteLine($"{line}\n   => {(c.IsSuccess ? "OK" : string.Join("|", errs))}");
+            }
+            return 0;
+        }
+        if (args.Length >= 3 && args[0] == "probe")
+        {
+            // Static result type (CheckResult.ReturnType), compile errors, and the full value
+            // (FormulaValue.ToExpression, so multi-error values and record shapes are visible).
+            // Output: tab-separated `expr`, canonical `type`, canonical `result`; a result starting with `ERRORS:` is a compile failure.
+            var e = Engine(args[1]);
+            var opts = new ParserOptions { Culture = new CultureInfo("en-US"), NumberIsFloat = args[1] == "float" };
+            foreach (var line in File.ReadAllLines(args[2]).Where(l => l.Trim() != ""))
+            {
+                var c = e.Check(line, opts);
+                var type = c.ReturnType == null ? "" : SerType(c.ReturnType);
+                if (!c.IsSuccess)
+                {
+                    Console.WriteLine($"{line}\t{type}\tERRORS:{string.Join("|", c.Errors.Where(x => !x.IsWarning).Select(x => x.ToString()))}");
+                    continue;
+                }
+                string result;
+                try
+                {
+                    var v = e.EvalAsync(line, System.Threading.CancellationToken.None, opts).GetAwaiter().GetResult();
+                    result = SerValue(v);
+                }
+                catch (Exception x) { result = "EXCEPTION:" + (x.InnerException?.Message ?? x.Message).Split('\n')[0]; }
+                Console.WriteLine($"{line}\t{type}\t{result}");
             }
             return 0;
         }

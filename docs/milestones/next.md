@@ -1,6 +1,8 @@
 # Next milestone: `Coalesce`
 
-Status: **PROPOSED**, pending owner acceptance. Do not implement until accepted.
+Status: **ACCEPTED** by the owner (chat decision: "Accept Coalesce as scoped") and **IMPLEMENTED** on
+branch `rezanid-continue-handoff-milestone`; pending independent review. Result: ADR 0012 and
+`docs/research/coalesce-before-after.md`.
 
 Upstream pin: `df4ceba5e08220db670c25afead342ce699c50b5`. Implementation baseline: `f2fa9d8`
 (`main` after PR #10). Profiles: `v1-float` (default) and `v1-decimal`, both PowerFxV1, en-US.
@@ -134,7 +136,8 @@ the compat runner and reference-vector tests in `packages/engine/test`.
 6. ADR written; build, test, lint and format pass; draft PR with CI green on the final commit;
    independent review before merge. Do not merge without owner acceptance.
 
-## Open decision for the owner
+## Next milestone (proposal only, not started)
 
-Accept `Coalesce` as scoped here, or prefer `IfError` (56 cases, needs error-value semantics) or
-`IsEmpty` (34 cases, needs table/Blank rules).
+Proposal: `IfError` (56 cases, needs error-value semantics) or `IsEmpty` (34 cases, needs table/Blank
+rules); the owner chooses. Also a candidate: aligning `If`/array-literal empty-text coercion with
+upstream (ADR 0012 deviation).
