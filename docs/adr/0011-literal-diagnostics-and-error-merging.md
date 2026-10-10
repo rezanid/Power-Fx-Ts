@@ -28,6 +28,16 @@ Two compatibility gaps remained after ADR 0010 (baseline: 2 failures in `v1-floa
 - The enclosing node returns a well-typed result, so Errors do not propagate: `(1 + 1E100) * 2`
   yields only the two diagnostics of `1 + 1E100`. The same rule holds in both profiles; float
   overflows at ~1e309, decimal at 7.9e28 (the corpus uses `1E400` / `1E100` equivalents).
+- Recovery: an operator, unary operator or conversion call with an Error-typed operand returns a
+  node of its normal result type (Number for arithmetic/`^`/unary `-`/`%`, Text for `&`, Boolean for
+  logic, `!` and comparisons, the target kind for `Value`/`Decimal`/`Float`), not Unknown. The other
+  operand is still checked (a Record/Table operand gets the operator's accepted-type list), and the
+  enclosing construct binds normally: `(1 + 1E100) = {a:1}` also reports "Number, Record", and
+  `If((1 + 1E100), 1, 2)` adds nothing for `If`. Recovered types are Number even in decimal mode, as
+  in the reference. Verified for both profiles in `literal-diagnostics.test.ts`.
+- A scalar compared with a Record/Table now reports "Incompatible types for comparison" (as upstream)
+  instead of "unsupported"; aggregate-to-aggregate equality remains unsupported. Record/Table operands
+  of arithmetic, `&`, logic and unary operators use the operator's accepted-type message.
 - Corpus entries list only a subset of the reference's diagnostics; the runner checks containment, so
   emitting all of them (e.g. both operands of `big / big`) is compatible and matches the reference.
 

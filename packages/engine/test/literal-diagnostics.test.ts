@@ -99,6 +99,56 @@ describe.each([
   });
 });
 
+// Recovery: the operator keeps its result type and the other operand is still checked. Expected
+// diagnostics come from the pinned reference (harness `check`), as [source text, message] pairs.
+describe.each([
+  ["decimal", dec, "1E100"],
+  ["float", flt, "1E400"],
+] as const)("recovered result types (%s profile)", (_mode, e, L) => {
+  const rec = (s: string) => s.replaceAll("L", L);
+  const lines = (f: string) => {
+    const formula = rec(f);
+    return e
+      .check(formula)
+      .diagnostics.map((d) => `${formula.slice(d.span.start, d.span.end)} | ${d.message}`);
+  };
+  const cases: [string, string[]][] = [
+    ["(1 + L) = {a:1}", [`L | ${TL}`, `L | ${ARITH}`, `= | ${CMP("Number", "Record")}`]],
+    ["{a:1} = (L + 1)", [`L | ${TL}`, `L | ${ARITH}`, `= | ${CMP("Record", "Number")}`]],
+    ["L + {a:1}", [`L | ${TL}`, `L | ${ARITH}`, `{a:1} | ${ARITH}`]],
+    ["{a:1} + L", [`L | ${TL}`, `{a:1} | ${ARITH}`, `L | ${ARITH}`]],
+    ["L - {a:1}", [`L | ${TL}`, `L | ${ARITH}`, `{a:1} | ${NUM}`]],
+    ["L ^ {a:1}", [`L | ${TL}`, `L | ${NUM}`, `{a:1} | ${NUM}`]],
+    ["L & {a:1}", [`L | ${TL}`, `L | ${CONCAT}`, `{a:1} | ${CONCAT}`]],
+    ["L < {a:1}", [`L | ${TL}`, `L | ${ORDER}`, `{a:1} | ${ORDER}`]],
+    ["L = {a:1}", [`L | ${TL}`, `= | ${CMP("Error", "Record")}`]],
+    ["If((1 + L), 1, 2)", [`L | ${TL}`, `L | ${ARITH}`]],
+    ["If(1 + L > 0, 1, 2)", [`L | ${TL}`, `L | ${ARITH}`]],
+    ['(L & "a") = 1', [`L | ${TL}`, `L | ${CONCAT}`, `= | ${CMP("Text", "Number")}`]],
+    ["(L && true) = 1", [`L | ${TL}`, `L | ${BOOL}`, `= | ${CMP("Boolean", "Number")}`]],
+    ["(L < 1) && 3", [`L | ${TL}`, `L | ${ORDER}`]],
+    ["-(L + 1) & {a:1}", [`L | ${TL}`, `L | ${ARITH}`, `{a:1} | ${CONCAT}`]],
+    ["Value(L + 1) + {a:1}", [`L | ${TL}`, `L | ${ARITH}`, `{a:1} | ${ARITH}`]],
+  ];
+  it.each(cases)("%s", (f, expected) => {
+    expect(lines(f).sort()).toEqual(expected.map(rec).sort());
+  });
+});
+
+describe("aggregate operands use the operator's accepted types (reference-backed)", () => {
+  it.each([
+    ["{a:1} + 1", "0-5", ARITH],
+    ["1 - {a:1}", "4-9", NUM],
+    ['{a:1} & "a"', "0-5", CONCAT],
+    ["{a:1} && true", "0-5", BOOL],
+    ["!{a:1}", "1-6", BOOL],
+    ["-{a:1}", "1-6", NUM],
+    ["{a:1} ^ 2", "0-5", NUM],
+  ])("%s", (f, span, message) => {
+    for (const e of [dec, flt]) expect(messages(e, f)).toEqual([`${span} ${message}`]);
+  });
+});
+
 describe("combined operand errors (StandardErrorHandling)", () => {
   const big = "Decimal(340282366920938463463374607431768211456)";
   async function kinds(e: Engine, f: string): Promise<string[]> {

@@ -203,6 +203,11 @@ class Binder {
     this.report(DiagnosticCodes.InvalidArgumentTypeOneOf, operand.span, [accepted]);
   }
 
+  /** Upstream keeps the operator's or function's result type after an operand error. */
+  private recovered(span: Span, type: FormulaType): BoundNode {
+    return { kind: "Invalid", span, type };
+  }
+
   private invalid(span: Span): BoundNode {
     return { kind: "Invalid", span, type: UnknownType };
   }
@@ -534,7 +539,7 @@ class Binder {
       }
       this.report(DiagnosticCodes.InvalidFunctionArguments, node.callee.span, [name]);
       this.diagnostics.push(...errors);
-      return this.invalid(node.span);
+      return this.recovered(node.span, TARGET_TYPES[to]);
     }
     if (operand.type.kind === "Unknown") return this.invalid(node.span);
     if (operand.type.kind === "Record" || operand.type.kind === "Table") {
@@ -778,9 +783,12 @@ class Binder {
 
   private bindUnary(node: UnaryNode): BoundNode {
     const operand = this.bindExpression(node.operand);
-    if (this.isErrorTyped(operand)) {
+    if (
+      this.isErrorTyped(operand) ||
+      (node.op !== "Percent" && (operand.type.kind === "Record" || operand.type.kind === "Table"))
+    ) {
       this.reportErrorOperand(operand, UNARY_ACCEPTED[node.op]);
-      return this.invalid(node.span);
+      return this.recovered(node.span, node.op === "Not" ? BooleanType : NumberType);
     }
     if (operand.type.kind === "Unknown") return this.invalid(node.span);
     const target: CoercionTarget = node.op === "Not" ? "Boolean" : this.unaryKind(operand.type);
@@ -797,7 +805,13 @@ class Binder {
     const left = this.bindExpression(node.left);
     const right = this.bindExpression(node.right);
     const op = node.op;
-    if (this.isErrorTyped(left) || this.isErrorTyped(right)) {
+    const aggregate = (n: BoundNode): boolean =>
+      n.type.kind === "Record" || n.type.kind === "Table";
+    if (
+      this.isErrorTyped(left) ||
+      this.isErrorTyped(right) ||
+      (BINARY_ACCEPTED[op] !== undefined && (aggregate(left) || aggregate(right)))
+    ) {
       return this.bindErrorOperands(node, left, right);
     }
     if (left.type.kind === "Unknown" || right.type.kind === "Unknown") {
@@ -865,6 +879,17 @@ class Binder {
       case "Neq": {
         const lk = left.type.kind;
         const rk = right.type.kind;
+        const aggregate = (k: string): boolean => k === "Record" || k === "Table";
+        const scalar = (k: string): boolean =>
+          k === "Number" || k === "Decimal" || k === "Text" || k === "Boolean";
+        if ((aggregate(lk) && scalar(rk)) || (scalar(lk) && aggregate(rk))) {
+          // A scalar never compares with an aggregate upstream (CheckEqualArgTypesCore).
+          this.report(DiagnosticCodes.IncompatibleTypesForComparison, this.operatorSpan(node), [
+            typeName(left.type),
+            typeName(right.type),
+          ]);
+          return this.recovered(node.span, BooleanType);
+        }
         if (lk === "Record" || rk === "Record" || lk === "Table" || rk === "Table") {
           // Upstream aggregate equality has its own rules, not yet traced or implemented.
           return this.notSupported("Record or table comparison", node.span);
@@ -895,30 +920,46 @@ class Binder {
     }
   }
 
-  /** Diagnostics for a binary operator with an out-of-range literal operand (see above). */
+  /**
+   * Diagnostics for a binary operator with an out-of-range literal operand. The other operand is
+   * still checked, and the node keeps the operator's result type so the enclosing expression is
+   * checked normally (verified against the reference).
+   */
   private bindErrorOperands(node: BinaryNode, left: BoundNode, right: BoundNode): BoundNode {
     const op = node.op;
+    const resultType: FormulaType =
+      op === "Concat"
+        ? TextType
+        : op === "And" || op === "Or" || ORDERING[op] !== undefined || op === "Eq" || op === "Neq"
+          ? BooleanType
+          : NumberType;
     if (op === "Eq" || op === "Neq") {
       // Upstream CheckEqualArgTypesCore reports one comparison error at the operator.
       this.report(DiagnosticCodes.IncompatibleTypesForComparison, this.operatorSpan(node), [
         this.isErrorTyped(left) ? "Error" : typeName(left.type),
         this.isErrorTyped(right) ? "Error" : typeName(right.type),
       ]);
-      return this.invalid(node.span);
+      return this.recovered(node.span, resultType);
     }
     const accepted = BINARY_ACCEPTED[op];
-    if (accepted === undefined) return this.invalid(node.span);
-    if (ORDERING[op] !== undefined) {
-      for (const operand of [left, right]) {
-        if (this.isErrorTyped(operand)) {
-          this.report(DiagnosticCodes.InvalidArgumentType, operand.span, []);
-        }
+    if (accepted === undefined) return this.recovered(node.span, resultType);
+    const operands: [BoundNode, string][] = [
+      [left, accepted[0]],
+      [right, accepted[1]],
+    ];
+    for (const [operand, list] of operands) {
+      const bad =
+        this.isErrorTyped(operand) ||
+        operand.type.kind === "Record" ||
+        operand.type.kind === "Table";
+      if (!bad) continue;
+      if (ORDERING[op] !== undefined) {
+        this.report(DiagnosticCodes.InvalidArgumentType, operand.span, []);
+      } else {
+        this.reportErrorOperand(operand, list);
       }
-    } else {
-      if (this.isErrorTyped(left)) this.reportErrorOperand(left, accepted[0]);
-      if (this.isErrorTyped(right)) this.reportErrorOperand(right, accepted[1]);
     }
-    return this.invalid(node.span);
+    return this.recovered(node.span, resultType);
   }
 
   private binary(
