@@ -27,7 +27,9 @@ Excluded (each reported `unsupported`, never approximated):
 
 - Legacy (non-V1) compatibility rules (`CheckTypesLegacy`, `Supertype`).
 - New value kinds: Date, Time, DateTime, option sets, untyped objects, GUID, etc.
-- Aggregate shapes the existing union does not support (these stay as unsupported as in `If`).
+- Unimplemented types or features inside aggregates are `unsupported`. Incompatible combinations of
+  supported types (Record vs Table, aggregate vs scalar, incompatible nested field types) are
+  `invalid` with upstream's diagnostics, as in `If`.
 - `IfError`, `Left` and any other function family, behavior functions, delegation, editor UI.
 - Any general coercion overhaul. Only what `Coalesce` needs is added; `If` behavior is unchanged.
 
@@ -84,7 +86,7 @@ reports count all 82 as applicable in both profiles. `Coalesce.txt` (no `#SETUP`
 | `Coalesce_V1Compat.txt` records                       | 3, 6, 9, 12, 15                                                                                                                                 |     5 | In scope, **required**                                                                             |
 
 Totals: 42 + 5 = 47 in scope; 35 excluded. The in-scope Number-to-Text cases (for example line 88,
-`Coalesce("", 1, 2)` is `"1"`) and Boolean-to-Number case (line 185, `0` gives `false`) show the
+`Coalesce("", 1, 2)` is `"1"`) and Number-to-Boolean case (line 185, `0` gives `false`) show the
 coercion-before-selection requirement. Re-derive this table mechanically from the corpus at the start
 of implementation and treat any drift as a finding.
 
