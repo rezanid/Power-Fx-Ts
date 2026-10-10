@@ -15,19 +15,25 @@ diagnostics, merged operand errors, recovered result types).
 
 ## Source and test map
 
-| Area                                                      | Location                                                                                      |
-| --------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
-| Lexer, parser, syntax nodes                               | `packages/core/src/{lexer,parser,syntax}`                                                     |
-| Binder (types, scopes, coercions, diagnostics)            | `packages/core/src/binding/binder.ts`; bound tree `ir/bound-tree.ts`                          |
-| Types, symbols, function signatures                       | `packages/core/src/{types,symbols,functions}` (`functions/signature.ts` = builtin signatures) |
-| Numeric backends, text parsing                            | `packages/core/src/numeric`, `packages/interpreter/src/numeric`, `core/src/text`              |
-| Diagnostics/templates                                     | `packages/core/src/diagnostics/diagnostic.ts`                                                 |
-| Values (frozen), evaluator, coercion, builtins            | `packages/interpreter/src/{values,evaluator,functions}`                                       |
-| Engine facade (`check`, `evaluate`), recalc, dependencies | `packages/engine/src`                                                                         |
-| Compat runner, profiles, reports                          | `packages/test-suite` (`reports/*.engine.md` committed)                                       |
-| Behavior tests                                            | `packages/engine/test/*.test.ts` (reference vectors in `fixtures/`)                           |
-| Executable C# reference                                   | `tools/reference-harness` (`eval`, `check`, `generate`, `parse`)                              |
-| Language service, serialization, test-runner              | skeletal packages, not yet in scope                                                           |
+| Area                                           | Location                                                                                                  |
+| ---------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| Lexer, parser, syntax nodes                    | `packages/core/src/lexer/`, `packages/core/src/parser/`, `packages/core/src/syntax/`                      |
+| Binder (types, scopes, coercions, diagnostics) | `packages/core/src/binding/binder.ts`                                                                     |
+| Bound tree                                     | `packages/core/src/ir/bound-tree.ts`                                                                      |
+| Types, schema, record/table unions             | `packages/core/src/types/{formula-type,schema,union}.ts`                                                  |
+| Builtin signatures and known names             | `packages/core/src/functions/{signature,known-names}.ts`                                                  |
+| Diagnostics and message templates              | `packages/core/src/diagnostics/diagnostic.ts`                                                             |
+| Numeric text scanning (core side) / Decimal    | `packages/core/src/numeric/{text-number,decimal}.ts`                                                      |
+| Numeric backends (float/decimal), text parsing | `packages/interpreter/src/numeric/{backend,decimal,text-number}.ts`                                       |
+| Values (frozen)                                | `packages/interpreter/src/values/values.ts`                                                               |
+| Evaluator, coercion                            | `packages/interpreter/src/evaluator/{evaluator,coercion}.ts`                                              |
+| Builtin implementations                        | `packages/interpreter/src/functions/builtins.ts`                                                          |
+| Runtime context and host-input validation      | `packages/interpreter/src/runtime/{context,validate}.ts`                                                  |
+| Engine facade (`check`, `evaluate`)            | `packages/engine/src/engine.ts` (`dependencies/`, `recalc/` are empty placeholders)                       |
+| Compat runner, profiles, reports               | `packages/test-suite/src/*.ts`; committed `packages/test-suite/reports/*.engine.md`                       |
+| Behavior tests and reference fixtures          | `packages/engine/test/*.test.ts`, `packages/engine/test/fixtures/*.json`                                  |
+| Executable C# reference                        | `tools/reference-harness/Program.cs` (`eval`, `check`, `generate`, `parse`)                               |
+| Language service, serialization, test-runner   | `packages/language-service`, `packages/serialization`, `packages/test-runner`: skeletal, not yet in scope |
 
 ## Accepted decisions (details in ADRs)
 
@@ -52,13 +58,24 @@ diagnostics, merged operand errors, recovered result types).
 
 ## Verification evidence
 
-Previously recorded (PR #10, not re-run for this handoff): at `59e68db` (last code commit, tree
-identical to the baseline apart from the merge commit) build, lint, format and 438 tests passed;
+Historical semantic evidence (recorded in PR #10, **not re-run** for this documentation PR): at
+`59e68db`, whose tree is identical to baseline `f2fa9d8`, build, lint, format and 438 tests passed;
 both compat profiles produced the counts above with 0 per-case pass-to-non-pass regressions against
-the PR #9 baseline (`docs/research/compat-cleanup-before-after.md`). GitHub CI on the baseline SHA
-`f2fa9d8`: success (checked at handoff time via `gh run list`).
-Run now: none; this handoff is documentation-only. Re-run the commands in `AGENTS.md` before
-starting new work to confirm a clean baseline.
+the PR #9 baseline (`docs/research/compat-cleanup-before-after.md`). Baseline CI: GitHub Actions
+run for `f2fa9d8` on `main` reported success when this handoff was prepared
+(`gh run list --branch main`); no durable run URL was recorded, so treat it as previously
+reported evidence without an independently linked run (find it in the repository's Actions tab
+for commit `f2fa9d8`).
+
+Checks for this documentation PR (#11): `pnpm format:check` and a path/link check of the files
+referenced by these documents. Nothing else was run.
+
+## Stale ADR status labels
+
+ADRs 0004 (`proposed`) and 0005–0009 (`provisional (milestone review pending)`) still carry their
+original labels although their milestone PRs were reviewed and merged; ADR 0001–0003, 0010 and 0011
+are `accepted`. This PR does not change any status or accept any new decision; the owner may update
+the labels separately.
 
 ## Reports and research
 

@@ -38,11 +38,13 @@ Browser-native TypeScript implementation of Microsoft Power Fx. Plan: `docs/Powe
 - Compatibility verdicts: `pass`, `fail`, `skip` and `unsupported` are distinct; `invalid` (compile
   diagnostics) is distinct from `unsupported` (not implemented). Report unsupported constructs
   explicitly; never approximate them silently or weaken a verdict to gain a pass.
+- Compatibility comparisons keep upstream's verdict rules (exact Decimal comparison, upstream float
+  tolerance); stricter or looser diagnostics are reported separately, never folded into verdicts.
 
-## Verification (run what the change needs; all must pass before review)
+## Verification (run what the change needs; code changes need all of them before review)
 
 ```
-pnpm install
+pnpm install   # only if dependencies are missing or manifests changed
 pnpm build && pnpm test && pnpm lint && pnpm format:check
 pnpm --filter @powerfx-ts/test-suite compat v1-float
 pnpm --filter @powerfx-ts/test-suite compat v1-decimal
