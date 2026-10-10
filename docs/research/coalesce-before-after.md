@@ -1,6 +1,9 @@
 # Coalesce: before/after evidence
 
 Baseline: `main` `820c9be` (artifacts `/tmp/cf/base-*.tsv`, local only). Pin `df4ceba5`.
+Compat runs executed on the working tree whose source is identical to PR head commit `e97aed4`; the
+final PR head `d4df60d` only added tests/docs (`git diff e97aed4 d4df60d` touches only
+`coalesce.test.ts` and `docs/agent-handoff.md`). Merge commit `f9df8bb`.
 Per-case comparison of `packages/test-suite/reports/<profile>.engine.cases.tsv` (git-ignored).
 
 | Profile      | Before (pass / fail / skip / unsupported) | After                 | Pass-to-non-pass | Other verdict changes |

@@ -1,21 +1,20 @@
 # Agent handoff: current state
 
-Implementation baseline: `820c9be` (`main` after PR #11; code identical to `f2fa9d8`, PR #10). The `Coalesce`
-milestone (ADR 0012) is implemented on branch `rezanid-continue-handoff-milestone`, pending review.
+Implementation baseline: `f9df8bb` (`main` after PR #12, `Coalesce`). The empty-text milestone (ADR 0013)
+is implemented on branch `rezanid-empty-text-handoff` (PR #13) and is **pending review, not merged**. Previous baselines: `820c9be` (PR #11,
+docs only), `f2fa9d8` (PR #10).
 Upstream pin: `df4ceba5e08220db670c25afead342ce699c50b5` (`docs/provenance.md`).
 Profiles: `v1-float` (default, PowerFxV1 + NumberIsFloat) and `v1-decimal` (opt-in
 `new Engine({ numberMode: "decimal" })`), culture en-US, UTC.
 
-## Completed milestones (merged; PRs #2–#10)
+## Completed milestones (all merged; PRs #2–#10, #12)
 
 Vertical slice (lexer/parser/binder/evaluator, compat runner) → parser parity → typed context and
 schema separation → record literals and `With` → tables, row scopes, `Filter`, `ThisRecord`/`As` →
 `T.Field`, `First`, `CountRows`, `LookUp` → record/table type unions → Decimal backend →
 culture-aware numeric text parsing (en-US, fr-FR) → compat cleanup (cascaded out-of-range-literal
-diagnostics, merged operand errors, recovered result types).
-
-Pending review, **not merged**: `Coalesce` (PR #12, ADR 0012, branch
-`rezanid-continue-handoff-milestone`).
+diagnostics, merged operand errors, recovered result types) → `Coalesce` (PR #12; spec archived at
+`docs/milestones/0012-coalesce-milestone-spec.md`).
 
 ## Source and test map
 
@@ -47,8 +46,10 @@ Pending review, **not merged**: `Coalesce` (PR #12, ADR 0012, branch
   `Conform` nodes; `If` lazy); 0009 Decimal (opt-in, float default retained); 0010 numeric text
   parsing (en-US/fr-FR; unsupported locales are a run-time `unsupported` after Blank/error
   precedence); 0011 literal diagnostics and merged errors.
-- **Provisional, pending PR #12 review (not accepted):** ADR 0012 `Coalesce` (`emptyTextAsBlank`
-  coercion flag; fold-time coercions; record/table conformance).
+- ADR 0013 (**provisional, pending review of PR #13**): keep `emptyTextAsBlank` and enable it explicitly at
+  `If` results, table literals and `Table(...)`; `Conform` stays non-universal.
+- ADR 0012 `Coalesce` (accepted; `emptyTextAsBlank` coercion flag, fold-time coercions, record/table
+  conformance).
 - Custom numeric backends must implement `fromScanned` (ADR 0010 migration notes).
 - Evaluation-budget accounting is per evaluated node; exact upstream step counts are not required.
 
@@ -57,8 +58,8 @@ Pending review, **not merged**: `Coalesce` (PR #12, ADR 0012, branch
 - Compat (committed reports): `v1-float` 2207 pass / 1 fail / 46 skip / 12705 unsupported;
   `v1-decimal` 2737 / 1 / 56 / 13379 (with `Coalesce`; previously 2147/…/12765 and 2665/…/13451). The one failure in each is `Text_ExcelCompat_PowerFxV1Compat.txt:13`
   (`Text()` formatting). Most unsupported cases are unimplemented builtins (e.g. `IfError`, `IsEmpty`, math/text/date functions, `Text`).
-- `If(false,1,"")`, `If(false,{a:1},{a:""})` and `[{a:1},{a:""}]` give 0/false where upstream gives Blank
-  (ADR 0012); `Coalesce` is correct via `emptyTextAsBlank`.
+- Empty text in `If` results, table literals and `Table(...)` is Blank (ADR 0013, option B, pending review);
+  other future retention sites must be probed before enabling `emptyTextAsBlank`.
 - Float `^` last-ulp differences; `If(1E100, …)` condition diagnostic; aggregate (record/table)
   equality; locales beyond en-US/fr-FR; culture-specific formatting; option sets, untyped objects,
   dates/times, behavior functions, delegation, connectors, editor UI.
@@ -74,22 +75,31 @@ run for `f2fa9d8` on `main` reported success when this handoff was prepared
 reported evidence without an independently linked run (find it in the repository's Actions tab
 for commit `f2fa9d8`).
 
-Checks for this documentation PR (#11): `pnpm format:check` and a path/link check of the files
-referenced by these documents. Nothing else was run.
+`Coalesce` (PR #12), exact commits: implementation `e97aed4`; final PR head `d4df60d` (tests and docs
+only versus `e97aed4`); merge commit `f9df8bb` on `main`. At `d4df60d`: build, lint, format and 927
+tests passed locally; PR CI passed (run 38090497080); `main` CI at `f9df8bb` passed (run 38091188532).
+Both compat profiles were run on a tree whose source equals `e97aed4`: v1-float 2207 / 1 / 46 / 12705,
+v1-decimal 2737 / 1 / 56 / 13379, 0 pass-to-non-pass regressions (`docs/research/coalesce-before-after.md`).
+The compat runs were not repeated at `d4df60d`/`f9df8bb` (no source change since `e97aed4`).
+
+Empty-text milestone (PR #13): implementation commit `f0c7ea9` on baseline `f9df8bb`; build, lint, format and
+1109 tests passed locally; both compat profiles had zero per-case transitions against a baseline generated in an
+isolated worktree at `f9df8bb` (`docs/research/empty-text-before-after.md`). Later commits are documentation
+only; CI for the final PR head is recorded in the PR.
 
 ## Stale ADR status labels
 
 ADRs 0004 (`proposed`) and 0005–0009 (`provisional (milestone review pending)`) still carry their
-original labels although their milestone PRs were reviewed and merged; ADR 0001–0003, 0010 and 0011
-are `accepted`. This PR does not change any status or accept any new decision; the owner may update
+original labels although their milestone PRs were reviewed and merged; ADR 0001–0003, 0010, 0011
+and 0012 are `accepted`. The PR that records the merge of PR #12 changes only ADR 0012's status (owner-accepted); it accepts no other decision; the owner may update
 the labels separately.
 
 ## Reports and research
 
 `docs/research/` (`upstream-inventory.md`, `decimal-before-after.md`, `numeric-text-before-after.md`,
-`compat-cleanup-before-after.md`); `packages/test-suite/reports/`.
+`compat-cleanup-before-after.md`, `coalesce-before-after.md`, `empty-text-before-after.md`, `empty-text-probes/`); `packages/test-suite/reports/`.
 
 ## Next
 
-Proposal only (not started): `docs/milestones/next.md` lists `IfError` or `IsEmpty`; owner decides.
-Verification evidence for `Coalesce`: `docs/research/coalesce-before-after.md`.
+Proposal only (not started): `docs/milestones/next.md` (candidates `IfError`, `IsEmpty`); owner decides.
+Pending review: PR #13, `docs/milestones/0013-empty-text-coercion-milestone-spec.md`, ADR 0013.

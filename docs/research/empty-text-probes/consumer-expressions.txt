@@ -1,0 +1,9 @@
+If("",1,2)
+!""
+""||true
+-""
+IsBlank(If(false,1,""))
+If(false,1,"")+1
+IsBlank(If(false,1,""))
+If(false,1,"",2)
+If(true,1,If(false,2,""))

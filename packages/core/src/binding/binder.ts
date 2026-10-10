@@ -247,10 +247,11 @@ class Binder {
     }
     const type = TARGET_TYPES[to];
     const coerced: BoundNode = { kind: "Coerce", to, operand: node, span: node.span, type };
-    if (!preserveBlank) return coerced;
-    return emptyTextAsBlank
-      ? { ...coerced, preserveBlank, emptyTextAsBlank }
-      : { ...coerced, preserveBlank };
+    return {
+      ...coerced,
+      ...(preserveBlank ? { preserveBlank } : {}),
+      ...(emptyTextAsBlank ? { emptyTextAsBlank } : {}),
+    };
   }
 
   bindExpression(node: ExpressionNode): BoundNode {
@@ -735,7 +736,10 @@ class Binder {
     const target = rowType;
     return {
       kind: "Table",
-      items: rows.map((value) => ({ shape: "row" as const, value: this.conformTo(value, target) })),
+      items: rows.map((value) => ({
+        shape: "row" as const,
+        value: this.conformTo(value, target, true),
+      })),
       span: node.span,
       type: { kind: "Table", row: target },
     };
@@ -780,7 +784,7 @@ class Binder {
       value:
         value.type.kind === "Blank"
           ? value
-          : this.conformTo(value, shape === "row" ? target : { kind: "Table", row: target }),
+          : this.conformTo(value, shape === "row" ? target : { kind: "Table", row: target }, true),
     }));
     return { kind: "Table", items, span: node.span, type: { kind: "Table", row: target } };
   }
@@ -1112,8 +1116,13 @@ class Binder {
       fn: name,
       args: args.map((a, i) =>
         union !== undefined && isResult(i)
-          ? this.conformTo(a, union)
-          : this.coerce(a, check.coercions[i], check.preserveBlank?.[i] ?? false),
+          ? this.conformTo(a, union, true)
+          : this.coerce(
+              a,
+              check.coercions[i],
+              check.preserveBlank?.[i] ?? false,
+              name === "If" && isResult(i),
+            ),
       ),
       span: node.span,
       type: union ?? check.returnType,

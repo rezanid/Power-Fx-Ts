@@ -1,12 +1,12 @@
 # ADR 0012: `Coalesce`
 
-Status: provisional (milestone review pending). Pinned upstream `df4ceba5`. Baseline `main` `820c9be`
-(implementation baseline `f2fa9d8`).
+Status: accepted (owner-accepted scope; independently reviewed; merged as PR #12, merge commit `f9df8bb`).
+Pinned upstream `df4ceba5`. Baseline `main` `820c9be` (implementation baseline `f2fa9d8`).
 
 ## Context
 
 `Coalesce.txt` (77 cases) and `Coalesce_V1Compat.txt` (5) were all `unsupported`. Scope and corpus
-classification: `docs/milestones/next.md`.
+classification: `docs/milestones/0012-coalesce-milestone-spec.md`.
 
 ## Decisions
 
@@ -40,10 +40,8 @@ classification: `docs/milestones/next.md`.
 
 ## Known deviations and limits
 
-- Pre-existing, not changed (out of scope): `If(false,{a:1},{a:""})`, `If(false,1,"")`,
-  `If(false,true,"")` and `[{a:1},{a:""}]` yield Blank upstream; we yield `0`/`false` because
-  `coerceValue`/`Conform` map `""` to zero. A future milestone could route them through
-  `emptyTextAsBlank` semantics.
+- Not changed here: `If(false,{a:1},{a:""})`, `If(false,1,"")`, `If(false,true,"")` and `[{a:1},{a:""}]`
+  yielded `0`/`false` where upstream gives Blank. Corrected afterwards by ADR 0013 (option B).
 - Excluded and still `unsupported`: 35 corpus cases (Left ×4, IfError ×2, Date/Time/DateTime ×29),
   legacy `CheckTypesLegacy`, new value kinds.
 - Probes for Error-typed argument cascades are compared by containment, like the compat runner.
