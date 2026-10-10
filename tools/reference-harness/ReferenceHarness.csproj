@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>disable</Nullable>
+    <RollForward>Major</RollForward>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="Program.cs" />
+    <ProjectReference Include="../../upstream/Power-Fx/src/libraries/Microsoft.PowerFx.Interpreter/Microsoft.PowerFx.Interpreter.csproj" />
+  </ItemGroup>
+</Project>

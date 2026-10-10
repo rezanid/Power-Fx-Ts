@@ -26,8 +26,8 @@ doubles (`NumberIsFloat`) and a set of feature flags. Many expected results (e.g
 - Smaller first slice, and no legacy profile matrix in the engine or reports.
 - `v1-float` results for `Number` may differ from `v1-decimal` until Phase 2; those cases are
   tracked as known deviations, not hidden.
-- Decimal library (vetted package vs. in-house BigInt-scaled) is chosen in Phase 2 against
-  `Decimal*.txt` and `DecimalMathFuncs*.txt`.
+- Decimal library choice: in-house BigInt-scaled decimal, opt-in via `numberMode: "decimal"`; see
+  ADR 0009 (the default remains float pending a maintainer decision).
 
 ## Open questions
 

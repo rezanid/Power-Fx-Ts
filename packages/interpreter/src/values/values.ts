@@ -7,6 +7,11 @@ export interface NumberValue {
   readonly kind: "Number";
   readonly value: NumericValue;
 }
+/** Exact decimal value (upstream `DecimalValue`); `NumberValue` is the float variety. */
+export interface DecimalValue {
+  readonly kind: "Decimal";
+  readonly value: NumericValue;
+}
 export interface TextValue {
   readonly kind: "Text";
   readonly value: string;
@@ -47,7 +52,14 @@ export interface TableValue {
 }
 
 export type FormulaValue =
-  NumberValue | TextValue | BooleanValue | BlankValue | ErrorValue | RecordValue | TableValue;
+  | NumberValue
+  | DecimalValue
+  | TextValue
+  | BooleanValue
+  | BlankValue
+  | ErrorValue
+  | RecordValue
+  | TableValue;
 
 /**
  * Every value (and nested record, field, error array and error object) is frozen on creation so no
@@ -81,6 +93,8 @@ export const table = (rows: readonly TableRow[]): TableValue =>
 export const blank: BlankValue = Object.freeze({ kind: "Blank" });
 export const number = (value: NumericValue): NumberValue =>
   Object.freeze({ kind: "Number", value });
+export const decimal = (value: NumericValue): DecimalValue =>
+  Object.freeze({ kind: "Decimal", value });
 export const text = (value: string): TextValue => Object.freeze({ kind: "Text", value });
 export const boolean = (value: boolean): BooleanValue => Object.freeze({ kind: "Boolean", value });
 

@@ -3,3 +3,6 @@ node_modules
 pnpm-lock.yaml
 upstream
 packages/test-suite/reports
+packages/engine/test/fixtures
+tools/reference-harness/bin
+tools/reference-harness/obj

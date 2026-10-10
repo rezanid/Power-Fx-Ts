@@ -1,4 +1,5 @@
 import { createDiagnostic, DiagnosticCodes, type Diagnostic } from "../diagnostics/diagnostic.js";
+import { parseDecimalText } from "../numeric/decimal.js";
 import type { Token, TokenKind } from "./tokens.js";
 
 export interface LexResult {
@@ -48,7 +49,13 @@ function isDigit(c: string | undefined): boolean {
 /** Maximum finite value of a 64-bit float; larger literals are rejected. */
 const MAX_NUMBER = Number.MAX_VALUE;
 
-export function lex(text: string): LexResult {
+export interface LexOptions {
+  /** `float` (default) range-checks literals as doubles; `decimal` as .NET decimals. */
+  readonly numberMode?: "float" | "decimal";
+}
+
+export function lex(text: string, options: LexOptions = {}): LexResult {
+  const decimalMode = options.numberMode === "decimal";
   const tokens: Token[] = [];
   const diagnostics: Diagnostic[] = [];
   let pos = 0;
@@ -167,7 +174,11 @@ export function lex(text: string): LexResult {
           pos = p;
         }
       }
-      if (Math.abs(Number(text.slice(start, pos))) > MAX_NUMBER) {
+      const literal = text.slice(start, pos);
+      const tooLarge = decimalMode
+        ? parseDecimalText(literal) === undefined
+        : Math.abs(Number(literal)) > MAX_NUMBER;
+      if (tooLarge) {
         fail(start, pos, DiagnosticCodes.NumberTooLarge);
         continue;
       }

@@ -13,8 +13,8 @@ export type NumericResult =
   | { readonly ok: false; readonly kind: NumericErrorKind };
 
 /**
- * Arithmetic, parsing and formatting of Power Fx numbers. The evaluator is written against this
- * interface so a Decimal backend can be added in Phase 2 without changing evaluation code.
+ * Arithmetic, parsing and formatting of one variety of Power Fx number (float or decimal). The
+ * evaluator is written against this interface and picks the backend by value kind.
  */
 export interface NumericBackend {
   readonly name: "float" | "decimal";
@@ -35,6 +35,13 @@ export interface NumericBackend {
   /** Negative, zero or positive, like a comparator. */
   compare(a: NumericValue, b: NumericValue): number;
   isZero(a: NumericValue): boolean;
+  /**
+   * Parses text that must be represented exactly (host input): `undefined` if it is malformed,
+   * out of range, or would lose precision. No whitespace is trimmed.
+   */
+  parseExact(text: string): NumericValue | undefined;
+  /** The nearest JS number; used for Decimal→Float conversion and never for host input. */
+  toNumber(a: NumericValue): number;
   /** Invariant-culture text form used for Text coercion and result serialization. */
   format(a: NumericValue): string;
 }
@@ -77,20 +84,41 @@ export const floatBackend: NumericBackend = {
     const n = Number(trimmed);
     return Number.isFinite(n) ? wrap(n) : undefined;
   },
+  parseExact(text) {
+    return NUMBER_TEXT.test(text) ? floatBackend.parseLiteral(text) : undefined;
+  },
   add: (a, b) => checked(asNumber(a) + asNumber(b)),
   sub: (a, b) => checked(asNumber(a) - asNumber(b)),
   mul: (a, b) => checked(asNumber(a) * asNumber(b)),
   div: (a, b) =>
     asNumber(b) === 0 ? { ok: false, kind: "Div0" } : checked(asNumber(a) / asNumber(b)),
-  pow: (a, b) => checked(Math.pow(asNumber(a), asNumber(b))),
+  pow: (a, b) =>
+    asNumber(a) === 0 && asNumber(b) < 0
+      ? { ok: false, kind: "Div0" }
+      : checked(Math.pow(asNumber(a), asNumber(b))),
   negate: (a) => wrap(-asNumber(a)),
   compare: (a, b) => (asNumber(a) < asNumber(b) ? -1 : asNumber(a) > asNumber(b) ? 1 : 0),
   isZero: (a) => asNumber(a) === 0,
   format: (a) => formatDouble(asNumber(a)),
+  toNumber: asNumber,
 };
+
+/**
+ * The two numeric varieties of Power Fx (ADR 0009): `float` backs the Number type and `decimal`
+ * the Decimal type. Both are needed whenever a formula can contain either.
+ */
+export interface Numerics {
+  readonly float: NumericBackend;
+  readonly decimal: NumericBackend;
+}
 
 const backendIds = new WeakMap<NumericBackend, number>();
 let nextBackendId = 1;
+
+/** Identity of a pair of backends; reuse is keyed by both instances (see `numericBackendId`). */
+export function numericsId(numerics: Numerics): string {
+  return `${numericBackendId(numerics.float)}:${numericBackendId(numerics.decimal)}`;
+}
 
 /**
  * Process-unique identity of a backend instance. Names are not unique (hosts may supply custom

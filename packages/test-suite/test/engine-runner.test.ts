@@ -1,9 +1,11 @@
+import { readFileSync } from "node:fs";
 import { Engine } from "@powerfx-ts/engine";
 import { describe, expect, it } from "vitest";
 import {
   PROFILES,
   compareResult,
   createEngineRunner,
+  decimalParseEquals,
   numbersClose,
   runCompat,
   type TxtTestFile,
@@ -20,6 +22,111 @@ describe("compareResult rules mirrored from upstream BaseRunner", () => {
     expect(numbersClose('"1"', '"1"')).toBe(false);
     expect(compareResult(at("x", "2E100"), { kind: "value", text: "2E+100" }).outcome).toBe("pass");
     expect(compareResult(at("x", "3"), { kind: "value", text: "4" }).outcome).toBe("fail");
+  });
+
+  it("compares Decimal results strictly and scale-insensitively, never with tolerance", () => {
+    const dec = (text: string) => ({ kind: "value", text, numeric: "decimal" }) as const;
+    for (const [expected, actual] of [
+      ["1", "1.000001"],
+      ["1", "1.0000000000000000000000000001"],
+      ["0.3", "0.30000000000000004"],
+      ["100", "100.00001"],
+      ["abc", "1"],
+    ] as const) {
+      expect(
+        compareResult(at("x", expected), dec(actual)).outcome,
+        `${expected} vs ${actual}`,
+      ).toBe("fail");
+    }
+    for (const [expected, actual] of [
+      ["1", "1.0"],
+      ["1.50", "1.5"],
+      ["24e3", "24000"],
+      ["-0.0", "0"],
+      [" 7 ", "7"],
+    ] as const) {
+      const r = compareResult(at("x", expected), dec(actual));
+      expect(r.outcome, `${expected} vs ${actual}`).toBe("pass");
+      expect(r.valueMatch).toBe("strict");
+    }
+  });
+
+  it("rounds over-long Decimal expectations like decimal.Parse", () => {
+    const dec = (text: string) => ({ kind: "value", text, numeric: "decimal" }) as const;
+    const r = compareResult(
+      at("x", "79149013500763574019524425909.091"),
+      dec("79149013500763574019524425909"),
+    );
+    expect(r.outcome).toBe("pass");
+    expect(
+      compareResult(
+        at("x", "79149013500763574019524425909.091"),
+        dec("79149013500763574019524425910"),
+      ).outcome,
+    ).toBe("fail");
+    expect(compareResult(at("x", "0.00000000000000000000000000004"), dec("0")).outcome).toBe(
+      "pass",
+    );
+    expect(compareResult(at("x", "0.00000000000000000000000000006"), dec("0")).outcome).toBe(
+      "fail",
+    );
+  });
+
+  it("rounds expectation ties half-even, matching System.Decimal parsing", () => {
+    const dec = (text: string) => ({ kind: "value", text, numeric: "decimal" }) as const;
+    const ok = (input: string, actual: string) =>
+      compareResult(at("x", input), dec(actual)).outcome === "pass";
+    // Positive/negative ties; even and odd retained digit.
+    expect(ok("0.00000000000000000000000000005", "0")).toBe(true);
+    expect(ok("0.00000000000000000000000000015", "0.0000000000000000000000000002")).toBe(true);
+    expect(ok("0.00000000000000000000000000025", "0.0000000000000000000000000002")).toBe(true);
+    expect(ok("0.00000000000000000000000000035", "0.0000000000000000000000000004")).toBe(true);
+    expect(ok("-0.00000000000000000000000000025", "-0.0000000000000000000000000002")).toBe(true);
+    expect(ok("-0.00000000000000000000000000015", "-0.0000000000000000000000000002")).toBe(true);
+    // Away-from-zero (the previous behaviour) is rejected for even retained digits.
+    expect(ok("0.00000000000000000000000000005", "0.0000000000000000000000000001")).toBe(false);
+    expect(ok("0.00000000000000000000000000025", "0.0000000000000000000000000003")).toBe(false);
+    // Immediately above/below a tie.
+    expect(ok("0.000000000000000000000000000050001", "0.0000000000000000000000000001")).toBe(true);
+    expect(ok("0.000000000000000000000000000049999", "0")).toBe(true);
+    expect(ok("0.000000000000000000000000000250001", "0.0000000000000000000000000003")).toBe(true);
+    expect(ok("0.000000000000000000000000000250001", "0.0000000000000000000000000002")).toBe(false);
+  });
+
+  it("agrees with raw System.Decimal parsing on every reference vector", () => {
+    const fixture = JSON.parse(
+      readFileSync(new URL("./fixtures/decimal-parse.json", import.meta.url), "utf8"),
+    ) as { entries: { input: string; parsed: string }[] };
+    expect(fixture.entries.length).toBeGreaterThan(100);
+    for (const { input, parsed } of fixture.entries) {
+      if (parsed === "Overflow") continue;
+      expect(decimalParseEquals(input, parsed), `${input} -> ${parsed}`).toBe(true);
+      // The neighbouring value (one unit in the last place) must be rejected.
+      const sign = parsed.startsWith("-") ? "-" : "";
+      const magnitude = parsed.replace("-", "");
+      const places = magnitude.includes(".") ? magnitude.split(".")[1]!.length : 0;
+      const neighbour = (BigInt(magnitude.replace(".", "")) + 1n)
+        .toString()
+        .padStart(places + 1, "0");
+      const text =
+        sign +
+        (places === 0 ? neighbour : `${neighbour.slice(0, -places)}.${neighbour.slice(-places)}`);
+      expect(decimalParseEquals(input, text), `${input} !-> ${text}`).toBe(false);
+    }
+  });
+
+  it("keeps upstream's tolerance for Float results and flags it as a diagnostic", () => {
+    const tolerated = compareResult(at("x", "1"), { kind: "value", text: "1.000001" });
+    expect(tolerated.outcome).toBe("pass");
+    expect(tolerated.valueMatch).toBe("tolerance");
+    const exact = compareResult(at("x", "1.5"), { kind: "value", text: "1.5" });
+    expect(exact.valueMatch).toBe("strict");
+    expect(
+      compareResult(at("x", "0.12345678901234567890"), {
+        kind: "value",
+        text: "0.1234567890123456",
+      }).outcome,
+    ).toBe("fail");
   });
 
   it("treats Decimal in expected error text as Number", () => {
@@ -105,8 +212,11 @@ describe("engine runner end to end", () => {
     expect(report.totals).toMatchObject({ pass: 1, fail: 2, unsupported: 1 });
   });
 
-  it("is unsupported for a profile with a different number mode", async () => {
-    const result = await createEngineRunner().run("1", PROFILES["v1-decimal"]!);
-    expect(result.kind).toBe("unsupported");
+  it("evaluates each profile in its own number mode", async () => {
+    const runner = createEngineRunner();
+    const decimal = await runner.run("0.1+0.2", PROFILES["v1-decimal"]!);
+    const float = await runner.run("0.1+0.2", PROFILES["v1-float"]!);
+    expect(decimal).toEqual({ kind: "value", text: "0.3", numeric: "decimal" });
+    expect(float).toEqual({ kind: "value", text: "0.30000000000000004" });
   });
 });

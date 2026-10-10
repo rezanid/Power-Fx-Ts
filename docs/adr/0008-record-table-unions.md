@@ -42,7 +42,7 @@ Status: provisional (milestone review pending). Upstream pin: `df4ceba5e08220db6
 | Scalar + Table items in literals      | `[[1],Blank()]`                                   | Supported (`{Value:...}` wrapping, as upstream)                  |
 | All-Blank table                       | `[Blank()]`                                       | Unsupported ("Table of only Blank values")                       |
 | Date/DateTime/GUID/Color etc. fields  |                                                   | Unsupported (types not modelled)                                 |
-| Decimal                               |                                                   | Unsupported (no Decimal backend)                                 |
+| Decimal                               |                                                   | Supported as a scalar (left type wins; see ADR 0009)             |
 | `Switch`/`IfError`/`Coalesce` unions  |                                                   | Unsupported (not implemented)                                    |
 
 Compatibility result (`v1-float`): pass 783 → 826, fail 1 (unchanged, `Text_ExcelCompat`),

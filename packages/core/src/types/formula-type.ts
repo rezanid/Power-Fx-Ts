@@ -1,10 +1,11 @@
 /**
- * Static types. Dates and the Decimal/Float split (ADR 0002, Phase 2) are intentionally
- * absent; the union is closed so adding them forces every `switch` over types to be revisited.
+ * Static types. `Number` is the IEEE-754 float type (upstream `DType.Number`) and `Decimal` is the
+ * exact decimal type (`DType.Decimal`); dates are intentionally absent. The union is closed so adding them forces every `switch` over types to be revisited.
  * Types are plain JSON-serializable data so they can cross a worker boundary.
  */
 export type FormulaType =
   | { readonly kind: "Number" }
+  | { readonly kind: "Decimal" }
   | { readonly kind: "Text" }
   | { readonly kind: "Boolean" }
   /** Type of the `Blank()` literal; compatible with every other type. */
@@ -26,6 +27,7 @@ export interface RecordField {
 export type FormulaTypeKind = FormulaType["kind"];
 
 export const NumberType: FormulaType = { kind: "Number" };
+export const DecimalType: FormulaType = { kind: "Decimal" };
 export const TextType: FormulaType = { kind: "Text" };
 export const BooleanType: FormulaType = { kind: "Boolean" };
 export const BlankType: FormulaType = { kind: "Blank" };
@@ -33,7 +35,8 @@ export const UnknownType: FormulaType = { kind: "Unknown" };
 
 /** Name as shown in diagnostics (matches upstream display names). */
 export function typeName(type: FormulaType): string {
-  return type.kind === "Unknown" ? "Unknown" : type.kind;
+  // Upstream displays Decimal as "Number" in diagnostics.
+  return type.kind === "Decimal" ? "Number" : type.kind;
 }
 
 /** Builds a record type from `{ name: type }` pairs, keeping insertion order. */

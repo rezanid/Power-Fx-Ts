@@ -4,7 +4,12 @@ import type { TxtTestCase, TxtTestFile } from "./txt-format.js";
 /** Outcome of running one expression in a candidate engine. */
 export type RunResult =
   /** `text` is the compact serialized expression form (e.g. `Table({Value:1})`, `Blank()`). */
-  | { readonly kind: "value"; readonly text: string }
+  | {
+      readonly kind: "value";
+      readonly text: string;
+      /** Set when the top-level result is a Decimal; upstream then compares exact numeric value. */
+      readonly numeric?: "decimal";
+    }
   /** Compile errors, formatted like upstream (`Error 0-3: Invalid argument type...`). */
   | { readonly kind: "errors"; readonly errors: readonly string[] }
   | {
@@ -39,6 +44,12 @@ export interface CaseResult {
   readonly unsupportedCategory?: UnsupportedCategory;
   /** Compile-error cases only: exact set equality with the expectation (diagnostic, not a verdict). */
   readonly strictErrors?: "identical" | "differs";
+  /**
+   * Passing numeric cases only (diagnostic, not a verdict): `strict` when expected and actual are
+   * equal as exact, scale-insensitive decimals; `tolerance` when the verdict relied on upstream's
+   * float tolerance. Decimal results can only pass `strict`.
+   */
+  readonly valueMatch?: "strict" | "tolerance";
 }
 
 export interface FileSummary {
@@ -62,10 +73,16 @@ export interface CompatReport {
   };
   readonly files: readonly FileSummary[];
   readonly failures: readonly CaseResult[];
+  /** One entry per executed case, for case-level before/after comparisons (not serialized to JSON). */
+  readonly caseOutcomes: readonly { file: string; line: number; outcome: CaseOutcome }[];
   /** Passing compile-error cases whose actual errors differ from the expectation set. */
   readonly strictErrorMismatches: number;
   /** First 50 such cases, for inspection. */
   readonly strictMismatchSamples: readonly { file: string; line: number }[];
+  /** Passing numeric cases accepted only by upstream's float tolerance (diagnostic, not a verdict). */
+  readonly toleranceOnlyPasses: number;
+  /** First 50 such cases. */
+  readonly toleranceSamples: readonly { file: string; line: number }[];
   readonly unsupportedByCategory: Readonly<Record<UnsupportedCategory, number>>;
 }
 
@@ -125,6 +142,13 @@ export function compareResult(testCase: TxtTestCase, result: RunResult): CaseRes
     }
     return { ...base, outcome: "fail", message: `Unexpected errors: ${result.errors.join(" | ")}` };
   }
+  if (result.numeric === "decimal") {
+    // Upstream BaseRunner: a Decimal result passes only on `decimal.Parse(expected) == value`
+    // (scale-insensitive, no tolerance); the float tolerance below is never applied to it.
+    return expected === result.text || decimalParseEquals(expected, result.text)
+      ? { ...base, outcome: "pass", valueMatch: "strict" }
+      : { ...base, outcome: "fail", message: `Expected ${expected} but got ${result.text}` };
+  }
   if (result.text === expected || numbersClose(expected, result.text)) {
     if (result.text !== expected && !isPreciseEnoughForFloat(expected)) {
       return {
@@ -133,9 +157,75 @@ export function compareResult(testCase: TxtTestCase, result: RunResult): CaseRes
         message: `Float result can't match high precision Decimal expected ${expected}`,
       };
     }
-    return { ...base, outcome: "pass" };
+    // Diagnostic only: did the verdict rely on upstream's float tolerance (1e-5 absolute, 1e-14
+    // relative) rather than strict, scale-insensitive numeric equality?
+    const numeric = NUMBER_TEXT.test(expected) && NUMBER_TEXT.test(result.text);
+    return {
+      ...base,
+      outcome: "pass",
+      ...(numeric
+        ? { valueMatch: decimalTextsEqual(expected, result.text) ? "strict" : "tolerance" }
+        : {}),
+    };
   }
   return { ...base, outcome: "fail", message: `Expected ${expected} but got ${result.text}` };
+}
+
+const DECIMAL_TEXT = /^([+-]?)(\d*)(?:\.(\d*))?(?:[eE]([+-]?\d+))?$/;
+
+/**
+ * Upstream `BaseRunner` (the `OriginalValue is DecimalValue` branch) passes a Decimal result only
+ * when `decimal.Parse(expected) == value`: exact and scale-insensitive, with no tolerance.
+ */
+export function decimalTextsEqual(a: string, b: string): boolean {
+  const scale = (t: string): { m: bigint; s: number } | undefined => {
+    const m = DECIMAL_TEXT.exec(t.trim());
+    if (m === null || (m[2] === "" && (m[3] ?? "") === "")) return undefined;
+    const exponent = Number(m[4] ?? "0");
+    if (Math.abs(exponent) > 100) return undefined;
+    const fraction = m[3] ?? "";
+    const mantissa = BigInt(`${m[2]}${fraction}` || "0") * (m[1] === "-" ? -1n : 1n);
+    return { m: mantissa, s: fraction.length - exponent };
+  };
+  const x = scale(a);
+  const y = scale(b);
+  if (x === undefined || y === undefined) return false;
+  const common = Math.max(x.s, y.s);
+  return x.m * 10n ** BigInt(common - x.s) === y.m * 10n ** BigInt(common - y.s);
+}
+
+const MAX_DECIMAL = 2n ** 96n - 1n;
+
+/**
+ * `decimal.Parse(expected, NumberStyles.Float) == value`. `decimal.Parse` rounds an expectation
+ * with more fractional digits than System.Decimal holds (scale > 28 or a mantissa above 96 bits)
+ * instead of failing, and upstream's own expectations rely on that (DecimalDotnetRuntime.txt).
+ * Rounding is half-even (the sign is irrelevant), verified against raw `decimal.Parse`.
+ */
+export function decimalParseEquals(expected: string, actual: string): boolean {
+  if (decimalTextsEqual(expected, actual)) return true;
+  const m = DECIMAL_TEXT.exec(expected.trim());
+  if (m === null || (m[2] === "" && (m[3] ?? "") === "") || m[4] !== undefined) return false;
+  const negative = m[1] === "-";
+  const digits = `${m[2]}${m[3] ?? ""}`.replace(/^0+(?=\d)/, "");
+  const scale = (m[3] ?? "").length;
+  // Fewest dropped fractional digits that leave scale <= 28 and a mantissa within 96 bits,
+  // applied as a single rounding step.
+  let drop = Math.max(0, scale - 28);
+  const rounded = (n: number): bigint => {
+    const kept = digits.slice(0, Math.max(0, digits.length - n)) || "0";
+    const dropped = n === 0 ? "" : digits.padStart(n, "0").slice(-n);
+    const quotient = BigInt(kept);
+    if (dropped === "") return quotient;
+    const head = Number(dropped[0]);
+    const tie = head === 5 && !/[1-9]/.test(dropped.slice(1));
+    const up = head > 5 || (head === 5 && !tie) || (tie && quotient % 2n === 1n);
+    return up ? quotient + 1n : quotient;
+  };
+  while (rounded(drop) > MAX_DECIMAL) drop++;
+  if (drop > scale) return false;
+  if (drop === 0) return false;
+  return decimalTextsEqual(`${negative ? "-" : ""}${rounded(drop)}e-${scale - drop}`, actual);
 }
 
 /** Upstream rejects fuzzy float matches when the expectation has more than 17 decimal digits. */
@@ -175,6 +265,7 @@ export async function runCompat(options: {
   const totals = { ...emptyCounts(), cases: 0, inapplicable: 0 };
   const summaries: FileSummary[] = [];
   const failures: CaseResult[] = [];
+  const caseOutcomes: { file: string; line: number; outcome: CaseOutcome }[] = [];
   const unsupportedByCategory: Record<UnsupportedCategory, number> = {
     feature: 0,
     setup: 0,
@@ -182,6 +273,8 @@ export async function runCompat(options: {
   };
   let strictErrorMismatches = 0;
   const strictMismatchSamples: { file: string; line: number }[] = [];
+  let toleranceOnlyPasses = 0;
+  const toleranceSamples: { file: string; line: number }[] = [];
   const disabled = new Set(files.flatMap((f) => f.disables.map((d) => d.toLowerCase())));
 
   for (const file of files) {
@@ -225,9 +318,16 @@ export async function runCompat(options: {
       }
       counts[result.outcome]++;
       totals[result.outcome]++;
+      caseOutcomes.push({ file: result.file, line: result.line, outcome: result.outcome });
       if (result.outcome === "fail") failures.push(result);
       if (result.unsupportedCategory !== undefined) {
         unsupportedByCategory[result.unsupportedCategory]++;
+      }
+      if (result.outcome === "pass" && result.valueMatch === "tolerance") {
+        toleranceOnlyPasses++;
+        if (toleranceSamples.length < 50) {
+          toleranceSamples.push({ file: result.file, line: result.line });
+        }
       }
       if (result.outcome === "pass" && result.strictErrors === "differs") {
         strictErrorMismatches++;
@@ -251,8 +351,11 @@ export async function runCompat(options: {
     unsupportedByCategory,
     strictErrorMismatches,
     strictMismatchSamples,
+    toleranceOnlyPasses,
+    toleranceSamples,
     files: summaries,
     failures,
+    caseOutcomes,
   };
 }
 

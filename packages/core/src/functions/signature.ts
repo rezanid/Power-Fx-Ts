@@ -40,7 +40,14 @@ function resultTarget(types: readonly FormulaType[]): FormulaType {
 
 function coercionTo(from: FormulaType, to: FormulaType): CoercionTarget | undefined {
   if (from.kind === to.kind) return undefined;
-  if (to.kind === "Number" || to.kind === "Text" || to.kind === "Boolean") return to.kind;
+  if (
+    to.kind === "Number" ||
+    to.kind === "Decimal" ||
+    to.kind === "Text" ||
+    to.kind === "Boolean"
+  ) {
+    return to.kind;
+  }
   return undefined;
 }
 
