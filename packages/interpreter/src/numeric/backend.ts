@@ -26,6 +26,11 @@ export interface NumericBackend {
   fromNumber(n: number): NumericValue | undefined;
   /** Parses user text for implicit Text→Number coercion (invariant culture); undefined if invalid. */
   parseText(text: string): NumericValue | undefined;
+  /**
+   * Builds a number from scanned culture text, `±0.digits × 10^scale` (see `ScannedNumber`), without
+   * going through a JS number for exact backends. `undefined` if it is out of range for the backend.
+   */
+  fromScanned(negative: boolean, digits: string, scale: number): NumericValue | undefined;
   add(a: NumericValue, b: NumericValue): NumericResult;
   sub(a: NumericValue, b: NumericValue): NumericResult;
   mul(a: NumericValue, b: NumericValue): NumericResult;
@@ -60,7 +65,7 @@ function checked(n: number): NumericResult {
  * for decimal exponents in [-5, 14] and `d.dddE+XX` otherwise (two-digit minimum exponent).
  */
 export function formatDouble(n: number): string {
-  if (n === 0) return "0";
+  if (n === 0) return Object.is(n, -0) ? "-0" : "0";
   const [mantissa = "", exponentText = "0"] = n.toExponential().split("e");
   const exponent = Number(exponentText);
   if (exponent >= -5 && exponent < 15) return String(n);
@@ -78,6 +83,10 @@ export const floatBackend: NumericBackend = {
     return Number.isFinite(n) ? wrap(n) : undefined;
   },
   fromNumber: (n) => (Number.isFinite(n) ? wrap(n) : undefined),
+  fromScanned(negative, digits, scale) {
+    const n = Number(`${digits === "" ? "0" : digits}e${scale - digits.length}`);
+    return Number.isFinite(n) ? wrap(negative ? -n : n) : undefined;
+  },
   parseText(text) {
     const trimmed = text.trim();
     if (!NUMBER_TEXT.test(trimmed)) return undefined;

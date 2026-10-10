@@ -1,8 +1,14 @@
-import type { BoundNode, CoercionTarget, ConformPlan } from "@powerfx-ts/core";
+import {
+  resolveNumberCulture,
+  type BoundNode,
+  type CoercionTarget,
+  type ConformPlan,
+} from "@powerfx-ts/core";
 import { BUILTIN_IMPLEMENTATIONS } from "../functions/builtins.js";
 import type { NumericBackend, NumericResult, NumericValue, Numerics } from "../numeric/backend.js";
 import {
   EvaluationBudgetExceeded,
+  RuntimeUnsupportedError,
   type EvaluationContext,
   type EvaluationOptions,
   type FunctionImplementation,
@@ -70,7 +76,19 @@ class Evaluator implements EvaluationContext {
         return coerceValue(operand, node.to, numerics);
       }
       case "ConvertNumber": {
-        return convertNumber(this.evaluate(node.operand), node.to, numerics);
+        const operand = this.evaluate(node.operand);
+        if (node.locale === undefined) return convertNumber(operand, node.to, numerics);
+        // Both arguments are evaluated; errors and Blank propagate before the locale is used.
+        const locale = this.evaluate(node.locale);
+        if (operand.kind === "Error") return operand;
+        if (locale.kind === "Error") return locale;
+        if (operand.kind === "Blank" || locale.kind === "Blank") return blank;
+        if (locale.kind !== "Text") throw new Error("The locale argument must be text.");
+        const culture = resolveNumberCulture(locale.value);
+        if (culture === undefined) {
+          throw new RuntimeUnsupportedError(`locale '${locale.value}'`, node.locale);
+        }
+        return convertNumber(operand, node.to, numerics, culture);
       }
       case "Conform":
         return this.conform(this.evaluate(node.operand), node.plan);

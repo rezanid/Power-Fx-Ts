@@ -4,10 +4,10 @@
 - Runner: engine
 - Setup: `PowerFxV1,NumberIsFloat,DecimalSupport` (number mode: float, culture en-US, time zone UTC)
 - Cases: 22047 total, 7088 not applicable to this profile
-- Pass 1263, fail 233, skip 46, unsupported 13417
-- Unsupported by reason: feature 10254, setup 3163, profile 0
+- Pass 2146, fail 2, skip 46, unsupported 12765
+- Unsupported by reason: feature 9602, setup 3163, profile 0
 - Passing compile-error cases whose error set differs from upstream's (strict diagnostic, not a verdict): 34
-- Passing numeric cases accepted only by upstream's float tolerance (diagnostic, not a verdict): 6
+- Passing numeric cases accepted only by upstream's float tolerance (diagnostic, not a verdict): 12
 
 | File | Total | Pass | Fail | Skip | Unsupported |
 | ---- | ----: | ---: | ---: | ---: | ----------: |
@@ -67,12 +67,12 @@
 | Date_TimeZone_Seattle.txt | 17 | 0 | 0 | 0 | 17 |
 | Date_TimeZone_UTC.txt | 17 | 0 | 0 | 0 | 17 |
 | Dec2Hex.txt | 74 | 0 | 0 | 0 | 74 |
-| Decimal.txt | 254 | 123 | 114 | 0 | 17 |
+| Decimal.txt | 254 | 241 | 0 | 0 | 13 |
 | DecimalBoot.txt | 14 | 0 | 0 | 0 | 14 |
-| DecimalMathFuncs_NumberIsFloat.txt | 120 | 1 | 0 | 0 | 119 |
-| DecimalMathFuncs_NumberIsFloat_Constructors.txt | 86 | 1 | 0 | 0 | 85 |
-| DecimalMathFuncs_NumberIsFloat_Constructors_DecimalSupport.txt | 41 | 3 | 0 | 0 | 38 |
-| DecimalMathFuncs_NumberIsFloat_Constructors_DecimalSupport_PowerFxV1.txt | 8 | 3 | 0 | 0 | 5 |
+| DecimalMathFuncs_NumberIsFloat.txt | 120 | 5 | 0 | 0 | 115 |
+| DecimalMathFuncs_NumberIsFloat_Constructors.txt | 86 | 5 | 0 | 0 | 81 |
+| DecimalMathFuncs_NumberIsFloat_Constructors_DecimalSupport.txt | 41 | 4 | 0 | 0 | 37 |
+| DecimalMathFuncs_NumberIsFloat_Constructors_DecimalSupport_PowerFxV1.txt | 8 | 4 | 0 | 0 | 4 |
 | Distinct.txt | 29 | 0 | 0 | 0 | 29 |
 | Distinct_V1Compat.txt | 2 | 0 | 0 | 0 | 2 |
 | DropColumns_SupportColumnNamesAsIdentifiers.txt | 21 | 0 | 0 | 0 | 21 |
@@ -82,7 +82,7 @@
 | EndsWith.txt | 51 | 0 | 0 | 0 | 51 |
 | Equality.txt | 28 | 20 | 0 | 0 | 8 |
 | Error.txt | 87 | 5 | 0 | 0 | 82 |
-| ErrorKinds.txt | 206 | 11 | 0 | 0 | 195 |
+| ErrorKinds.txt | 206 | 12 | 0 | 0 | 194 |
 | ErrorKinds_ColumnNamesAsIdentifiers.txt | 1 | 0 | 0 | 0 | 1 |
 | Escaping.txt | 4 | 3 | 0 | 0 | 1 |
 | Exp.txt | 26 | 0 | 0 | 0 | 26 |
@@ -98,8 +98,8 @@
 | FirstLastN_RequiredSecondArgument.txt | 4 | 0 | 0 | 0 | 4 |
 | FirstLastN_V1Compat.txt | 2 | 0 | 0 | 0 | 2 |
 | FirstLast_V1Compat.txt | 6 | 3 | 0 | 0 | 3 |
-| Float.txt | 254 | 123 | 114 | 0 | 17 |
-| FloatLarge.txt | 35 | 3 | 0 | 0 | 32 |
+| Float.txt | 254 | 241 | 0 | 0 | 13 |
+| FloatLarge.txt | 35 | 4 | 0 | 0 | 31 |
 | ForAll.txt | 42 | 0 | 0 | 0 | 42 |
 | ForAll_V1Compat.txt | 1 | 0 | 0 | 0 | 1 |
 | GUID.txt | 13 | 0 | 0 | 0 | 13 |
@@ -156,40 +156,40 @@
 | ModT.txt | 15 | 0 | 0 | 0 | 15 |
 | ModT_Float.txt | 16 | 1 | 0 | 0 | 15 |
 | Mod_Float.txt | 14 | 1 | 0 | 0 | 13 |
-| OpMatrix_Div_Float.txt | 106 | 15 | 0 | 0 | 91 |
-| OpMatrix_Div_Float_DecimalSupport.txt | 23 | 10 | 0 | 0 | 13 |
+| OpMatrix_Div_Float.txt | 106 | 29 | 0 | 0 | 77 |
+| OpMatrix_Div_Float_DecimalSupport.txt | 23 | 13 | 0 | 0 | 10 |
 | OpMatrix_Eq_DifferentTypes_V1Compat.txt | 20 | 6 | 0 | 0 | 14 |
-| OpMatrix_Eq_Float.txt | 185 | 30 | 0 | 0 | 155 |
-| OpMatrix_Eq_Float_DecimalSupport.txt | 32 | 7 | 0 | 0 | 25 |
-| OpMatrix_Eq_Float_V1Compat.txt | 50 | 8 | 0 | 0 | 42 |
+| OpMatrix_Eq_Float.txt | 185 | 41 | 0 | 0 | 144 |
+| OpMatrix_Eq_Float_DecimalSupport.txt | 32 | 11 | 0 | 0 | 21 |
+| OpMatrix_Eq_Float_V1Compat.txt | 50 | 32 | 0 | 0 | 18 |
 | OpMatrix_Eq_Float_V1Compat_DecimalSupport.txt | 10 | 10 | 0 | 0 | 0 |
-| OpMatrix_Exp_Float.txt | 136 | 26 | 0 | 0 | 110 |
-| OpMatrix_Exp_Float_DecimalSupport.txt | 33 | 11 | 0 | 0 | 22 |
-| OpMatrix_Geq_Float.txt | 245 | 38 | 0 | 0 | 207 |
-| OpMatrix_Geq_Float_DecimalSupport.txt | 55 | 18 | 0 | 0 | 37 |
+| OpMatrix_Exp_Float.txt | 136 | 53 | 0 | 0 | 83 |
+| OpMatrix_Exp_Float_DecimalSupport.txt | 33 | 17 | 0 | 0 | 16 |
+| OpMatrix_Geq_Float.txt | 245 | 73 | 0 | 0 | 172 |
+| OpMatrix_Geq_Float_DecimalSupport.txt | 55 | 27 | 0 | 0 | 28 |
 | OpMatrix_Geq_Float_V1Compat.txt | 2 | 0 | 0 | 0 | 2 |
-| OpMatrix_Gt_Float.txt | 245 | 38 | 0 | 0 | 207 |
-| OpMatrix_Gt_Float_DecimalSupport.txt | 55 | 18 | 0 | 0 | 37 |
+| OpMatrix_Gt_Float.txt | 245 | 73 | 0 | 0 | 172 |
+| OpMatrix_Gt_Float_DecimalSupport.txt | 55 | 27 | 0 | 0 | 28 |
 | OpMatrix_Gt_Float_V1Compat.txt | 2 | 0 | 0 | 0 | 2 |
-| OpMatrix_Leq_Float.txt | 245 | 38 | 0 | 0 | 207 |
-| OpMatrix_Leq_Float_DecimalSupport.txt | 55 | 18 | 0 | 0 | 37 |
+| OpMatrix_Leq_Float.txt | 245 | 73 | 0 | 0 | 172 |
+| OpMatrix_Leq_Float_DecimalSupport.txt | 55 | 27 | 0 | 0 | 28 |
 | OpMatrix_Leq_Float_V1Compat.txt | 2 | 0 | 0 | 0 | 2 |
-| OpMatrix_Lt_Float.txt | 245 | 38 | 0 | 0 | 207 |
-| OpMatrix_Lt_Float_DecimalSupport.txt | 55 | 18 | 0 | 0 | 37 |
+| OpMatrix_Lt_Float.txt | 245 | 73 | 0 | 0 | 172 |
+| OpMatrix_Lt_Float_DecimalSupport.txt | 55 | 27 | 0 | 0 | 28 |
 | OpMatrix_Lt_Float_V1Compat.txt | 2 | 0 | 0 | 0 | 2 |
-| OpMatrix_Minus_Float.txt | 93 | 12 | 0 | 0 | 81 |
-| OpMatrix_Minus_Float_DecimalSupport.txt | 21 | 8 | 0 | 0 | 13 |
+| OpMatrix_Minus_Float.txt | 93 | 24 | 0 | 0 | 69 |
+| OpMatrix_Minus_Float_DecimalSupport.txt | 21 | 11 | 0 | 0 | 10 |
 | OpMatrix_Mod_DecimalSupport.txt | 23 | 0 | 0 | 0 | 23 |
 | OpMatrix_Mod_Float.txt | 204 | 0 | 0 | 0 | 204 |
-| OpMatrix_Mul_Float.txt | 102 | 15 | 0 | 0 | 87 |
-| OpMatrix_Mul_Float_DecimalSupport.txt | 22 | 9 | 0 | 0 | 13 |
-| OpMatrix_Neq_Float.txt | 185 | 30 | 0 | 0 | 155 |
-| OpMatrix_Neq_Float_DecimalSupport.txt | 32 | 7 | 0 | 0 | 25 |
-| OpMatrix_Neq_Float_V1Compat.txt | 50 | 8 | 0 | 0 | 42 |
+| OpMatrix_Mul_Float.txt | 102 | 29 | 0 | 0 | 73 |
+| OpMatrix_Mul_Float_DecimalSupport.txt | 22 | 12 | 0 | 0 | 10 |
+| OpMatrix_Neq_Float.txt | 185 | 41 | 0 | 0 | 144 |
+| OpMatrix_Neq_Float_DecimalSupport.txt | 32 | 11 | 0 | 0 | 21 |
+| OpMatrix_Neq_Float_V1Compat.txt | 50 | 32 | 0 | 0 | 18 |
 | OpMatrix_Neq_Float_V1Compat_DecimalSupport.txt | 10 | 10 | 0 | 0 | 0 |
-| OpMatrix_Plus_Float.txt | 98 | 14 | 0 | 0 | 84 |
-| OpMatrix_Plus_Float_DecimalSupport.txt | 11 | 4 | 0 | 0 | 7 |
-| OpMatrix_Unary_Float.txt | 87 | 25 | 0 | 0 | 62 |
+| OpMatrix_Plus_Float.txt | 98 | 28 | 0 | 0 | 70 |
+| OpMatrix_Plus_Float_DecimalSupport.txt | 11 | 6 | 0 | 0 | 5 |
+| OpMatrix_Unary_Float.txt | 87 | 35 | 0 | 0 | 52 |
 | OpMatrix_Unary_Float_DecimalSupport.txt | 8 | 5 | 0 | 0 | 3 |
 | OptionSet.txt | 22 | 0 | 0 | 0 | 22 |
 | ParseJson.txt | 171 | 0 | 0 | 0 | 171 |
@@ -218,7 +218,7 @@
 | RoundUp.txt | 68 | 0 | 0 | 0 | 68 |
 | RoundUpT.txt | 16 | 0 | 0 | 0 | 16 |
 | RoundingOps.txt | 26 | 0 | 0 | 0 | 26 |
-| SQLCompiler.txt | 20 | 1 | 0 | 0 | 19 |
+| SQLCompiler.txt | 20 | 2 | 0 | 0 | 18 |
 | Search.txt | 18 | 0 | 0 | 0 | 18 |
 | Sequence.txt | 11 | 0 | 0 | 0 | 11 |
 | Sequence_Float.txt | 4 | 0 | 0 | 0 | 4 |
@@ -279,9 +279,9 @@
 | UntypedBlankAsTable.txt | 30 | 0 | 0 | 0 | 30 |
 | UntypedBlankAsTable_V1Compat.txt | 6 | 0 | 0 | 0 | 6 |
 | Upper.txt | 23 | 0 | 0 | 0 | 23 |
-| Value.txt | 253 | 0 | 0 | 0 | 253 |
-| ValueFuncs_NumberIsFloat.txt | 42 | 25 | 3 | 0 | 14 |
-| ValueFuncs_NumberIsFloat_NoDecimal.txt | 26 | 11 | 1 | 0 | 14 |
+| Value.txt | 253 | 241 | 0 | 0 | 12 |
+| ValueFuncs_NumberIsFloat.txt | 42 | 41 | 1 | 0 | 0 |
+| ValueFuncs_NumberIsFloat_NoDecimal.txt | 26 | 26 | 0 | 0 | 0 |
 | VarP.txt | 16 | 0 | 0 | 0 | 16 |
 | VoidToError.txt | 7 | 0 | 0 | 0 | 7 |
 | VoidToError_V1Compat.txt | 2 | 0 | 0 | 0 | 2 |

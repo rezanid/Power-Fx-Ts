@@ -1,5 +1,6 @@
-import type { CoercionTarget, NumericKind } from "@powerfx-ts/core";
+import { EN_US, type CoercionTarget, type NumberCulture, type NumericKind } from "@powerfx-ts/core";
 import type { Numerics } from "../numeric/backend.js";
+import { parseNumberText } from "../numeric/text-number.js";
 import {
   blank,
   boolean,
@@ -45,8 +46,9 @@ export function coerceValue(
         case "Boolean":
           return wrap(value.value ? target.one : target.zero);
         case "Text": {
-          if (value.value.trim() === "") return wrap(target.zero);
-          const parsed = target.parseText(value.value);
+          // Upstream converts "" to Blank (which arithmetic reads as zero); other white space is invalid.
+          if (value.value === "") return wrap(target.zero);
+          const parsed = parseNumberText(value.value, target, EN_US);
           return parsed === undefined ? error("InvalidArgument") : wrap(parsed);
         }
       }
@@ -87,18 +89,19 @@ export function coerceValue(
 }
 
 /**
- * `Decimal(x)` / `Float(x)`: like the implicit coercion, except that Blank and empty text stay
- * Blank (upstream returns Blank for both) and whitespace-only text is invalid.
+ * `Decimal(x[, locale])` / `Float(x[, locale])`/`Value`: text is parsed with the culture's number
+ * rules (ADR 0010); Blank and empty text stay Blank and whitespace-only text is invalid.
  */
 export function convertNumber(
   value: FormulaValue,
   to: NumericKind,
   numerics: Numerics,
+  culture: NumberCulture = EN_US,
 ): FormulaValue {
   if (value.kind === "Blank" || (value.kind === "Text" && value.value === "")) return blank;
   if (value.kind === "Text") {
     const target = to === "Decimal" ? numerics.decimal : numerics.float;
-    const parsed = target.parseText(value.value);
+    const parsed = parseNumberText(value.value, target, culture);
     if (parsed === undefined) return error("InvalidArgument");
     return to === "Decimal" ? decimal(parsed) : number(parsed);
   }

@@ -54,7 +54,7 @@ the left type) through explicit `Conform` nodes (see ADR 0008).
 Decimal: `new Engine({ numberMode: "decimal" })` evaluates with a 28-digit, 96-bit decimal
 backend (`0.1+0.2` is exactly `0.3`; `Decimal()`/`Float()` convert explicitly). The default is still
 float. Decimal host inputs are decimal strings, `bigint` or safe integers; imprecise JS numbers are
-rejected. Culture-aware text parsing (`"$1,000"`, `"12%"`) is not implemented (see ADR 0009).
+rejected. `Decimal()`, `Float()` and `Value()` parse culture-aware text (`"$1,000"`, `"(12)%"`, optional locale: en-US and fr-FR only; other locales are reported as unsupported, see ADR 0010).
 
 See `docs/adr/0004-typed-context.md`, `0005-record-literals-and-with.md` and
 `0006-tables-and-row-scopes.md` for rules and limitations.

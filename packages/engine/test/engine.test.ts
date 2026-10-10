@@ -198,7 +198,7 @@ describe("ordering operators check each operand independently", () => {
 describe("formatDouble", () => {
   it.each([
     [0, "0"],
-    [-0, "0"],
+    [-0, "-0"], // the reference prints negative zero as "-0"
     [1e15, "1E+15"],
     [123456789012345, "123456789012345"],
     [1e-5, "0.00001"],

@@ -461,15 +461,15 @@ class Binder {
   }
 
   /**
-   * `Decimal(x)` / `Float(x)` (upstream `DecimalFunction` / `FloatFunction`) for one argument. The
-   * optional locale argument is not supported. Blank and empty text stay Blank.
+   * `Decimal(x[, locale])` / `Float(x[, locale])` / `Value(x[, locale])` (upstream
+   * `DecimalFunction`, `FloatFunction`, `ValueFunction`). `Value` yields the formula's default
+   * numeric kind. The locale must be Text (or Blank), selecting the culture that parses text; a
+   * literal locale outside the supported cultures is reported as unsupported, a computed one is
+   * reported at run time. Blank and empty text stay Blank.
    */
-  private bindNumericConversion(node: CallNode, name: "Decimal" | "Float"): BoundNode {
+  private bindNumericConversion(node: CallNode, name: "Decimal" | "Float" | "Value"): BoundNode {
     const args = node.args.map((a) => this.bindExpression(a));
-    if (args.length === 2) {
-      return this.notSupported(`${name} with a locale argument`, node.span);
-    }
-    if (args.length !== 1) {
+    if (args.length < 1 || args.length > 2) {
       this.report(DiagnosticCodes.BadArity, node.span, [String(args.length), "1-2"]);
       return this.invalid(node.span);
     }
@@ -479,8 +479,18 @@ class Binder {
       this.report(DiagnosticCodes.InvalidArgumentType, operand.span, []);
       return this.invalid(node.span);
     }
-    const to: NumericKind = name === "Decimal" ? "Decimal" : "Number";
-    return { kind: "ConvertNumber", to, operand, span: node.span, type: TARGET_TYPES[to] };
+    const to: NumericKind =
+      name === "Value" ? this.defaultNumeric : name === "Decimal" ? "Decimal" : "Number";
+    const locale = args[1];
+    if (locale === undefined) {
+      return { kind: "ConvertNumber", to, operand, span: node.span, type: TARGET_TYPES[to] };
+    }
+    if (locale.type.kind === "Unknown") return this.invalid(node.span);
+    if (locale.type.kind !== "Text" && locale.type.kind !== "Blank") {
+      this.report(DiagnosticCodes.InvalidArgumentType, locale.span, []);
+      return this.invalid(node.span);
+    }
+    return { kind: "ConvertNumber", to, operand, locale, span: node.span, type: TARGET_TYPES[to] };
   }
 
   /** `First(table)`, upstream `FirstLastFunction`: the result is a row of the table's type. */
@@ -866,7 +876,9 @@ class Binder {
       if (name === "First") return this.bindFirst(node);
       if (name === "CountRows") return this.bindCountRows(node);
       if (name === "LookUp") return this.bindLookUp(node);
-      if (name === "Decimal" || name === "Float") return this.bindNumericConversion(node, name);
+      if (name === "Decimal" || name === "Float" || name === "Value") {
+        return this.bindNumericConversion(node, name);
+      }
     }
     const signature = this.functions.get(name);
     const args = node.args.map((a) => this.bindExpression(a));

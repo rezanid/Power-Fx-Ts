@@ -61,10 +61,7 @@ Supported: literals, `+ - * / ^ %`, unary minus, comparison/equality (incl. mixe
 
 Known deviations (reported as **failures**, not hidden):
 
-- **Culture-aware text parsing (≈231 cases in `Decimal.txt`, `Float.txt`, `ValueFuncs_*`).** Upstream
-  parses `"123,456.78"`, `"$ 12.34"`, `"12.34%"`, `"(123)"`, `"%10"`. Ours accepts only an invariant
-  `[+-]digits[.digits][e±n]` grammar (surrounding whitespace allowed) and returns InvalidArgument.
-  The two-argument locale form `Decimal(x, locale)` is reported as unsupported.
+- **Culture-aware text parsing: resolved in ADR 0010.**
 - **Cascaded diagnostics (30 cases).** For invalid decimal literals upstream also reports "has some
   invalid arguments" and type errors; we report the literal diagnostic only (same partial-binding
   limitation as before).

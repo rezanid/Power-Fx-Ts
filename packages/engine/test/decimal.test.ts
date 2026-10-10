@@ -144,8 +144,8 @@ describe("Decimal() and Float()", () => {
     expect(await d("Float(1.5)")).toBe("F1.5");
     expect(await d('Float("1e400")')).toBe("Error:InvalidArgument");
   });
-  it("reports the locale form and invalid arities explicitly", async () => {
-    expect(await d("Decimal(1,2)")).toMatch(/^unsupported/);
+  it("reports a non-Text locale and invalid arities as diagnostics", async () => {
+    expect(await d("Decimal(1,2)")).toMatch(/^invalid/);
     expect(await d("Decimal()")).toMatch(/^invalid/);
     expect(await d("Decimal({a:1})")).toMatch(/^invalid/);
   });

@@ -4,8 +4,8 @@
 - Runner: engine
 - Setup: `PowerFxV1,disable:NumberIsFloat,DecimalSupport` (number mode: decimal, culture en-US, time zone UTC)
 - Cases: 22047 total, 5874 not applicable to this profile
-- Pass 2121, fail 262, skip 56, unsupported 13734
-- Unsupported by reason: feature 10522, setup 3212, profile 0
+- Pass 2629, fail 37, skip 56, unsupported 13451
+- Unsupported by reason: feature 10239, setup 3212, profile 0
 - Passing compile-error cases whose error set differs from upstream's (strict diagnostic, not a verdict): 34
 - Passing numeric cases accepted only by upstream's float tolerance (diagnostic, not a verdict): 7
 
@@ -67,17 +67,17 @@
 | Date_TimeZone_Seattle.txt | 17 | 0 | 0 | 0 | 17 |
 | Date_TimeZone_UTC.txt | 17 | 0 | 0 | 0 | 17 |
 | Dec2Hex.txt | 74 | 0 | 0 | 0 | 74 |
-| Decimal.txt | 254 | 123 | 114 | 0 | 17 |
+| Decimal.txt | 254 | 241 | 0 | 0 | 13 |
 | DecimalDotnetRuntime.txt | 385 | 266 | 0 | 0 | 119 |
 | DecimalIntReturn.txt | 23 | 1 | 0 | 0 | 22 |
 | DecimalIntReturn_DVDecimal.txt | 24 | 1 | 0 | 1 | 22 |
-| DecimalMathFuncs_NumberIsFloatDisabled.txt | 147 | 4 | 2 | 0 | 141 |
-| DecimalMathFuncs_NumberIsFloatDisabled_DVDecimal.txt | 159 | 6 | 2 | 0 | 151 |
+| DecimalMathFuncs_NumberIsFloatDisabled.txt | 147 | 9 | 3 | 0 | 135 |
+| DecimalMathFuncs_NumberIsFloatDisabled_DVDecimal.txt | 159 | 11 | 3 | 0 | 145 |
 | DecimalNonMathFuncs.txt | 84 | 25 | 0 | 5 | 54 |
 | DecimalNonMathFuncs_DVDecimal.txt | 90 | 25 | 0 | 4 | 61 |
 | DecimalOps.txt | 226 | 83 | 0 | 0 | 143 |
 | DecimalOps_DVDecimal.txt | 219 | 83 | 0 | 0 | 136 |
-| DecimalOverflow.txt | 65 | 38 | 2 | 0 | 25 |
+| DecimalOverflow.txt | 65 | 42 | 2 | 0 | 21 |
 | Distinct.txt | 29 | 0 | 0 | 0 | 29 |
 | Distinct_V1Compat.txt | 2 | 0 | 0 | 0 | 2 |
 | DropColumns_SupportColumnNamesAsIdentifiers.txt | 21 | 0 | 0 | 0 | 21 |
@@ -87,7 +87,7 @@
 | EndsWith.txt | 51 | 0 | 0 | 0 | 51 |
 | Equality.txt | 28 | 20 | 0 | 0 | 8 |
 | Error.txt | 87 | 5 | 0 | 0 | 82 |
-| ErrorKinds.txt | 206 | 11 | 0 | 0 | 195 |
+| ErrorKinds.txt | 206 | 12 | 0 | 0 | 194 |
 | ErrorKinds_ColumnNamesAsIdentifiers.txt | 1 | 0 | 0 | 0 | 1 |
 | Escaping.txt | 4 | 3 | 0 | 0 | 1 |
 | Exp.txt | 26 | 0 | 0 | 0 | 26 |
@@ -103,7 +103,7 @@
 | FirstLastN_RequiredSecondArgument.txt | 4 | 0 | 0 | 0 | 4 |
 | FirstLastN_V1Compat.txt | 2 | 0 | 0 | 0 | 2 |
 | FirstLast_V1Compat.txt | 6 | 3 | 0 | 0 | 3 |
-| Float.txt | 254 | 123 | 114 | 0 | 17 |
+| Float.txt | 254 | 241 | 0 | 0 | 13 |
 | ForAll.txt | 42 | 0 | 0 | 0 | 42 |
 | ForAll_V1Compat.txt | 1 | 0 | 0 | 0 | 1 |
 | GUID.txt | 13 | 0 | 0 | 0 | 13 |
@@ -204,7 +204,7 @@
 | RoundUp.txt | 68 | 0 | 0 | 0 | 68 |
 | RoundUpT.txt | 16 | 0 | 0 | 0 | 16 |
 | RoundingOps.txt | 26 | 0 | 0 | 0 | 26 |
-| SQLCompiler.txt | 20 | 1 | 0 | 0 | 19 |
+| SQLCompiler.txt | 20 | 2 | 0 | 0 | 18 |
 | Search.txt | 18 | 0 | 0 | 0 | 18 |
 | Sequence.txt | 11 | 0 | 0 | 0 | 11 |
 | Sequence_Decimal.txt | 4 | 0 | 0 | 0 | 4 |
@@ -264,8 +264,8 @@
 | UntypedBlankAsTable.txt | 30 | 0 | 0 | 0 | 30 |
 | UntypedBlankAsTable_V1Compat.txt | 6 | 0 | 0 | 0 | 6 |
 | Upper.txt | 23 | 0 | 0 | 0 | 23 |
-| Value.txt | 253 | 0 | 0 | 0 | 253 |
-| ValueFuncs_NumberIsDecimal.txt | 45 | 20 | 9 | 0 | 16 |
+| Value.txt | 253 | 241 | 0 | 0 | 12 |
+| ValueFuncs_NumberIsDecimal.txt | 45 | 35 | 10 | 0 | 0 |
 | VarP.txt | 16 | 0 | 0 | 0 | 16 |
 | VoidToError.txt | 7 | 0 | 0 | 0 | 7 |
 | VoidToError_V1Compat.txt | 2 | 0 | 0 | 0 | 2 |

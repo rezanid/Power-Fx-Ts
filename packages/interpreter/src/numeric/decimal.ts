@@ -79,6 +79,12 @@ export const decimalBackend: NumericBackend = {
     const d = parseDecimalExact(text);
     return d === undefined ? undefined : wrap(d);
   },
+  fromScanned(negative, digits, scale) {
+    const fit = fitDecimal(BigInt(digits === "" ? "0" : digits), digits.length - scale);
+    return fit === undefined
+      ? undefined
+      : wrap({ ...fit, mantissa: negative ? -fit.mantissa : fit.mantissa });
+  },
   parseText(text) {
     return parse(text.trim());
   },

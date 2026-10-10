@@ -6,6 +6,7 @@ export * from "./syntax/nodes.js";
 export { parse, type ParseOptions, type ParseResult } from "./parser/parser.js";
 
 export * from "./numeric/decimal.js";
+export * from "./numeric/text-number.js";
 export * from "./types/formula-type.js";
 export * from "./types/union.js";
 export * from "./types/schema.js";
