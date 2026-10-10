@@ -6,7 +6,6 @@ import {
 } from "../diagnostics/diagnostic.js";
 import { KNOWN_UPSTREAM_ENUMS, KNOWN_UPSTREAM_FUNCTIONS } from "../functions/known-names.js";
 import { BUILTIN_FUNCTIONS, type FunctionRegistry } from "../functions/signature.js";
-import { resolveNumberCulture } from "../numeric/text-number.js";
 import { conformPlan, unionRecords, unionTypes } from "../types/union.js";
 import type {
   BoundBinaryOperator,
@@ -490,9 +489,6 @@ class Binder {
     if (locale.type.kind !== "Text" && locale.type.kind !== "Blank") {
       this.report(DiagnosticCodes.InvalidArgumentType, locale.span, []);
       return this.invalid(node.span);
-    }
-    if (locale.kind === "TextLiteral" && resolveNumberCulture(locale.value) === undefined) {
-      return this.notSupported(`${name} with locale '${locale.value}'`, locale.span);
     }
     return { kind: "ConvertNumber", to, operand, locale, span: node.span, type: TARGET_TYPES[to] };
   }

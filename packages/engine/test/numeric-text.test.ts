@@ -215,9 +215,9 @@ describe("locale argument", () => {
     expect(await d("Decimal({a:1})")).toMatch(/^invalid/);
   });
   it("reports locales outside en-US/fr-FR as unsupported, never as invalid or a formula error", async () => {
-    expect(await d('Decimal("1","de-DE")')).toBe("unsupported: Decimal with locale 'de-DE'");
-    expect(await f('Float("1","xx")')).toBe("unsupported: Float with locale 'xx'");
-    expect(await d('Value("1","")')).toBe("unsupported: Value with locale ''");
+    expect(await d('Decimal("1","de-DE")')).toBe("unsupported: locale 'de-DE'");
+    expect(await f('Float("1","xx")')).toBe("unsupported: locale 'xx'");
+    expect(await d('Value("1","")')).toBe("unsupported: locale ''");
     expect(await d('Decimal("1","en-US ")')).toMatch(/^unsupported/);
   });
   it("reports a computed unsupported locale at run time", async () => {
@@ -258,5 +258,29 @@ describe("boundaries between text parsing, formula source and host input", () =>
       expect(dec.validateValues(schema, { Amount: text }).ok, text).toBe(false);
     }
     expect(dec.validateValues(schema, { Amount: "12.5" }).ok).toBe(true);
+  });
+});
+
+describe("locale precedence is identical for literal and computed locales", () => {
+  const schema = defineSchema({ Loc: TextType });
+  const viaVariable = async (e: Engine, formula: string) => {
+    const checked = e.check(formula, { schema });
+    if (!checked.ok) return "invalid";
+    const v = e.validateValues(schema, { Loc: "de-DE" });
+    if (!v.ok) throw new Error("bad values");
+    const r = await e.evaluateChecked(checked, { values: v.values });
+    return r.kind === "value" ? show(e, r.value) : r.kind;
+  };
+  it.each(["Decimal", "Float", "Value"])("%s", async (fn) => {
+    for (const e of [dec, flt]) {
+      const k = e === dec ? "Blank()" : "Blank()";
+      expect(await run(e, `${fn}(Blank(),"de-DE")`)).toBe(k);
+      expect(await viaVariable(e, `${fn}(Blank(),Loc)`)).toBe(k);
+      expect(await run(e, `${fn}(1/0,"de-DE")`)).toBe("Error:Div0");
+      expect(await viaVariable(e, `${fn}(1/0,Loc)`)).toBe("Error:Div0");
+      expect(await run(e, `${fn}("1","de-DE")`)).toBe("unsupported: locale 'de-DE'");
+      expect(await viaVariable(e, `${fn}("1",Loc)`)).toBe("unsupported");
+      expect(await run(e, `${fn}("1",Blank())`)).toBe("Blank()");
+    }
   });
 });

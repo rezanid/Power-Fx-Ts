@@ -41,8 +41,9 @@ Culture data is dumped from the reference (.NET 10 / ICU) into the fixture and a
 The reference accepts almost any well-formed name (`xx`, `de-DE`) and returns BadLanguageCode for
 malformed ones (`-`, `en-`, whitespace); `x-klingon` throws a null reference in the reference. With no
 culture database, we report every non-listed name as `unsupported`: at check time for a Text literal
-(`<Fn> with locale '<x>'`), at run time for a computed locale (`evaluateChecked` returns
-`unsupported`, feature `locale '<x>'`). We never emit BadLanguageCode.
+for both literal and computed locales only when evaluation reaches the locale: `evaluateChecked` returns
+`unsupported`, feature `locale '<x>'`. A Blank or Error first argument wins, as in the reference
+(`Decimal(Blank(),"de-DE")` is Blank, `Decimal(1/0,"de-DE")` is Div0). The check result is `ok` for such formulas. We never emit BadLanguageCode.
 
 Locale argument rules: must be Text or Blank (else an argument-type diagnostic); arity 1-2; all
 arguments are evaluated; errors propagate (value first), then Blank in either gives Blank; an Error
@@ -56,6 +57,18 @@ or Blank value argument wins before an unsupported locale is reported.
   for custom backends. Decimal builds from a bigint mantissa (never `Number`); float uses the
   correctly rounded `Number("<digits>e<exp>")` and can produce negative zero.
 - `formatDouble(-0)` now prints `-0`, as the reference does (`Float("-0")&""` = `"-0"`).
+
+## Custom backend migration
+
+`NumericBackend` now requires `fromScanned(negative: boolean, digits: string, scale: number)`. The
+value is `0.<digits> x 10^scale` (`digits` has no leading zeros, may be empty for zero). To migrate:
+
+1. Add the method; build the number from `digits` and the exponent `scale - digits.length` without
+   going through a lossy intermediate (a bigint mantissa or `Number(`${digits}e${exp}`)` for floats).
+2. Return `undefined`/error per your backend's overflow convention for out-of-range values and round
+   to your precision.
+3. Preserve the sign of zero if your representation has one.
+4. Run `numeric-text-vectors.test.ts` against your backend.
 
 ## Verification
 
