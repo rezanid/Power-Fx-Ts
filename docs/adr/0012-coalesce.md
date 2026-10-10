@@ -1,12 +1,12 @@
 # ADR 0012: `Coalesce`
 
-Status: provisional (milestone review pending). Pinned upstream `df4ceba5`. Baseline `main` `820c9be`
-(implementation baseline `f2fa9d8`).
+Status: accepted (owner-accepted scope; independently reviewed; merged as PR #12, merge commit `f9df8bb`).
+Pinned upstream `df4ceba5`. Baseline `main` `820c9be` (implementation baseline `f2fa9d8`).
 
 ## Context
 
 `Coalesce.txt` (77 cases) and `Coalesce_V1Compat.txt` (5) were all `unsupported`. Scope and corpus
-classification: `docs/milestones/next.md`.
+classification: `docs/milestones/0012-coalesce-milestone-spec.md`.
 
 ## Decisions
 

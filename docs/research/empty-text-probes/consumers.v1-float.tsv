@@ -1,0 +1,9 @@
+If("",1,2)	Number	Number(2)
+!""	Boolean	true
+""||true	Boolean	true
+-""	Number	Number(-0)
+IsBlank(If(false,1,""))	Boolean	true
+If(false,1,"")+1	Number	Number(1)
+IsBlank(If(false,1,""))	Boolean	true
+If(false,1,"",2)	Number	Blank
+If(true,1,If(false,2,""))	Number	Number(1)
