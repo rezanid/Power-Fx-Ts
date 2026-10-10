@@ -58,11 +58,13 @@ export type BoundNode =
       /** Blank operands stay Blank instead of becoming the target's zero value. */
       readonly preserveBlank?: boolean;
     })
-  /** `Decimal(x)` / `Float(x)`: explicit conversion; Blank and empty text stay Blank. */
+  /** `Decimal(x[, locale])` / `Float(x[, locale])` / `Value`: explicit conversion; Blank and empty text stay Blank. */
   | (BoundBase & {
       readonly kind: "ConvertNumber";
       readonly to: NumericKind;
       readonly operand: BoundNode;
+      /** Optional locale (Text or Blank) selecting the culture used to parse text. */
+      readonly locale?: BoundNode;
     })
   /**
    * Rebuilds a record or table value as the union type of `If` results and table rows: fields

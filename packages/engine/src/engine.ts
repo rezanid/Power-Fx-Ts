@@ -24,6 +24,7 @@ import {
   type ValidatedValues,
   type ValidationResult,
   validateValues,
+  RuntimeUnsupportedError,
 } from "@powerfx-ts/interpreter";
 
 export interface EngineOptions {
@@ -194,12 +195,18 @@ export class Engine {
       return { kind: "unsupported", features: checked.unsupported };
     }
     if (checked.bound === undefined) return { kind: "invalid", diagnostics: checked.diagnostics };
-    const value = evaluate(checked.bound, {
-      numerics: this.numerics,
-      ...(values === undefined ? {} : { variables: values.values }),
-      ...(signal === undefined ? {} : { signal }),
-      ...(this.options.maxSteps === undefined ? {} : { maxSteps: this.options.maxSteps }),
-    });
-    return { kind: "value", value };
+    try {
+      const value = evaluate(checked.bound, {
+        numerics: this.numerics,
+        ...(values === undefined ? {} : { variables: values.values }),
+        ...(signal === undefined ? {} : { signal }),
+        ...(this.options.maxSteps === undefined ? {} : { maxSteps: this.options.maxSteps }),
+      });
+      return { kind: "value", value };
+    } catch (e) {
+      if (!(e instanceof RuntimeUnsupportedError)) throw e;
+      const feature = { category: "construct" as const, feature: e.feature, span: e.node.span };
+      return { kind: "unsupported", features: [feature] };
+    }
   }
 }

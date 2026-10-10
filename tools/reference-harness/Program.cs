@@ -152,8 +152,130 @@ static class P
         }
     }
 
+
+    // ---- Culture-aware numeric text parsing (Decimal/Float/Value with text and a locale) ----
+
+    static readonly string[] TextInputs = BuildTextInputs();
+
+    static string[] BuildTextInputs()
+    {
+        var l = new List<string>();
+        void A(params string[] xs) => l.AddRange(xs);
+        // plain and signs
+        A("0", "1", "-1", "+1", "00012", "-0", "+0", "-0.0", "0.0", "1.5", "-1.5", "+1.5", ".5", "5.", "-.5", "+.5", ".", "-", "+", "--1", "+-1", "-+1", "++1", "- 1", "+ 1", "1 -", "1-", "1+", "1--", "-1-", "+1+", "1-1");
+        // whitespace (ASCII, control, Unicode)
+        A(" 12", "12 ", "  12  ", "\t12\t", "\u000b12", "12\u000c", "\r12", "12\n", "\u00a012", "12\u00a0", "\u200312\u2003", "\u2009 12", "12\u202f", "\u3000" + "12" + "\u3000", "\u200b12", "\ufeff12", "1 2", "1\u00a02", "1\u202f2", "1\u20092", " ", "\t", "\u00a0", "", "- 12", "-\t12", "12 -", "( 12 )", "(\u00a012\u00a0)");
+        // exponents
+        A("1e3", "1E3", "1e+3", "1e-3", "1e", "1e+", "1e-", "e3", "1e3.5", "1e 3", "1 e3", "1.5e3", "1.5e-3", "-1.5E+3", "1e0", "0e5", "0e-5", "1e1000", "1e-1000", "1e9999", "1e99999999999", "1e-99999999999", "0e99999999999", "1e28", "1e29", "7.9e28", "1e-28", "1e-29", "1e308", "1e309", "1e-323", "1e-324", "1e-400", "5e-324", "2e-324", "1.7976931348623157e308", "1.7976931348623159e308", "1.7976931348623158e308", "1e+0003", "1e3e3", "1e3%", "12e2 %", "(1e3)", "1e3-", "$1e3", "1e3$");
+        // grouping and decimal point (en-US shaped)
+        A("1,000", "1,000.5", "1,00", "1,0,0", "1,,000", ",1", "1,", ",", ",,", "1,000,000", "1,00,000", "1,0000", "12,34,56", "1,000.5.5", "1.000,5", "1.000", "1,5", "1.5,5", "1,000e3", "1,000.e3", ".,5", ",.5", "1.,5", "1.5,", "0,001", "0,0", "1 000", "1 000.5", "1\u00a0000.5", "1\u202f000.5", "1\u2009000.5", "1'000", "1_000", "1٬000", "1٫5");
+        // parentheses
+        A("(12)", "(12", "12)", "((12))", "(-12)", "-(12)", "(12)-", "-(12)-", "(+12)", "+(12)", "()", "(", ")", "(1,000)", "(1.5)", "( 1 )", "(12)%", "%(12)", "(12%)", "(%12)", "12()", "(1)(2)", "(\u00a012)", "$(12)", "($12)", "($ 12)", "(12 $)", "(12$)", "-($12)", "($12)-");
+        // currency (en-US $, fr-FR €, others)
+        A("$12", "12$", "$ 12", "12 $", "$-12", "-$12", "$+12", "+$12", "$12-", "-$12-", "$12+", "$$12", "12$$", "$12$", "$", "$.", "$.5", "$5.", "$1,000.50", "1,000.50$", "$ 1,000", "-$1,000", "$-1,000", "$(12)", "($12)", "€12", "12€", "12 €", "€ 12", "12\u00a0€", "12\u202f€", "€12,5", "12,5 €", "12,5€", "1 000,5 €", "1\u00a0000,5\u00a0€", "1\u202f000,5\u202f€", "-12 €", "- 12 €", "12 €-", "-€12", "€-12", "£12", "¥12", "¤12", "USD12", "US$12", "12 USD", "R$12", "$12 €", "€12 $", "$€12", "12$€", "$$", "$ $", "$12%", "%$12", "$12 %", "12%$", "$%12", "-$12%", "$-12%", "($12%)");
+        // percent
+        A("12%", "%12", "12 %", "% 12", " 12% ", "-12%", "%-12", "-%12", "12%-", "+12%", "%+12", "12%%", "%12%", "%%12", "%", "% ", "%%", "12%1", "1%2", "1 % 2", "1,000%", "1.5%", "%1.5", "1e2%", "%1e2", "-0%", "0%", "100%", "50%", "33.333333333333333333333333333333%", "79228162514264337593543950335%", "79228162514264337593543950336%", "7.9228162514264337593543950335e30%", "1e-27%", "1e-29%", "5e-29%", "(12)%", "12%)", "12%(", "12\u00a0%", "\u00a0%12", "12\u202f%", "12 ‰", "12‰", "‰12", "12٪", "1,5%", "1.000,5%", "-12 %", "- 12%", "-12% ", "+ 12%", "12 % ", "12%\t", "12\u2003%");
+        // digits and exotic characters
+        A("١٢", "１２", "12٫5", "①", "1²", "½", "١٢٣", "1.2.3", "1..2", "0x10", "0b1", "1_0", "1f", "1d", "1L", "NaN", "nan", "Infinity", "-Infinity", "+Infinity", "∞", "-∞", "infinity", "1/2", "1:2", "1;2", "abc", "12abc", "abc12", "12 abc", "true", "false", "--", "−12", "–12", "12−", "+", "−", "1\u0000", "\u000012");
+        // 28/29-digit and rounding behavior
+        A("79228162514264337593543950335", "79228162514264337593543950336", "-79228162514264337593543950335", "-79228162514264337593543950336", "79228162514264337593543950335.4", "79228162514264337593543950335.5", "79228162514264337593543950334.5", "7922816251426433759354395033.5", "7922816251426433759354395033.55", "0.0000000000000000000000000001", "0.00000000000000000000000000005", "0.00000000000000000000000000015", "0.00000000000000000000000000025", "0.000000000000000000000000000050001", "-0.00000000000000000000000000005", "-0.00000000000000000000000000015", "0.1234567890123456789012345678901234567890", "1.2345678901234567890123456789", "1.23456789012345678901234567895", "1.23456789012345678901234567885", "12345678901234567890123456789.5", "0.99999999999999999999999999995", "0.99999999999999999999999999994", "9999999999999999999999999999.5", "1234567890123456789012345678901234567890", "-1234567890123456789012345678901234567890", "0.30000000000000004", "0.1", "0.3333333333333333333333333333", "0.33333333333333333333333333335", "9007199254740993", "9007199254740993.5", "123456789012345678", "1.00000000000000000000000000000000000001", "1,000,000,000,000,000,000,000,000,000.5", "0.0000000000000000000000000000000000001", "0.000000000000000000000000000000000000000000000000000000000000001", "00000000000000000000000000000000001", "1" + new string('0', 40), "0." + new string('0', 40) + "1", new string('9', 60), "1,"+string.Join(",", Enumerable.Repeat("000", 12)));
+        // whitespace after a sign or parenthesis, with and without a currency symbol
+        A("€- 12", "€-  12", "$- 12", "$-  12", "($ 12)", "($  12)", "( $12)", "( $ 12)", "(€ 12)", "(€  12)", "( €12)", "(12 $)", "(12 €)", "($ 12 )", "(\t$\t12\t)", "$ (12)", "€ (12)", "$ - 12", "€ + 12", "$+ 12", "(- 12)", "( 12)", "(12 )", "(\u00a0$12)", "($\u00a012)", "(€\u00a012)", "(€\u202f12)", "(\u202f€12)", "$ 12 -", "$12 -", "$12- ", "12 - $", "12 $ -", "12- $", "(12) $", "(12)$", "(12 $)", "$ (12) ");
+        // trim and Unicode white space
+        A("\u008512", "12\u0085", "\u168012", "\u200012", "\u200a12", "\u202812", "\u202912", "\u205f12", "\u001c12", "\u001f12", "\u180e12", "\u200b 12", "\u0085%12", "12%\u0085", "-\u008512", "12\u0085-");
+        // fr-FR shaped
+        A("1,5", "1,", ",5", "-1,5", "1 000,5", "1\u00a0000,5", "1\u202f000,5", "1.000,5", "1,000.5", "1 000", "1\u00a0000", "1\u202f000", "1\u202f000\u202f000", "1\u00a0000\u202f000", "1 000 000,25", "1  000", "1\u00a0\u00a0000", " 1 000,5 ", "1 00", "1 0000", "1 000,5,5", "1,5 000", "1 000,5 000", "12,5%", "%12,5", "12,5 %", "-12,5 %", "1 000,5%", "(12,5)", "(1 000,5)", "12,5-", "-12,5", "−12,5", "12,5e3", "1,5E-3", "1,5e", "1.5", "1.500", "1.5.5", "1,5,5");
+        return l.ToArray();
+    }
+
+    static string Q(string s) => "\"" + s.Replace("\"", "\"\"") + "\"";
+
+    static IEnumerable<(string group, string mode, string expr)> TextVectors()
+    {
+        foreach (var mode in new[] { "decimal", "float" })
+        {
+            foreach (var t in TextInputs)
+            {
+                var q = Q(t);
+                yield return ("text-decimal", mode, $"Decimal({q})");
+                yield return ("text-float", mode, $"Float({q})");
+                yield return ("text-value", mode, $"Value({q})");
+                yield return ("text-implicit", mode, $"{q}+1");
+                foreach (var loc in new[] { "en-US", "fr-FR" })
+                {
+                    yield return ($"text-decimal-{loc}", mode, $"Decimal({q},\"{loc}\")");
+                    yield return ($"text-float-{loc}", mode, $"Float({q},\"{loc}\")");
+                }
+                yield return ("text-value-fr-FR", mode, $"Value({q},\"fr-FR\")");
+            }
+            // locale argument: names (case, separators, neutral, invariant, unknown)
+            foreach (var name in new[] { "en-US", "en-us", "EN-US", "fr-FR", "fr-fr", "FR-FR", "en", "fr", "", " ", "en-US ", " fr-FR", "en_US", "fr_FR", "de-DE", "es-ES", "ja-JP", "ar-SA", "xx", "xx-YY", "en-XX", "123", "-", "en-", "fr-CA", "en-GB", "en-CA", "pt-BR", "ru-RU", "sv-SE", "de-CH", "invariant", "iv", "x-klingon", "en-US-x-twain", "fr-FR_u_nu" })
+            {
+                yield return ("locale-name", mode, $"Decimal(\"1234,5\",{Q(name)})");
+                yield return ("locale-name-float", mode, $"Float(\"1234.5\",{Q(name)})");
+            }
+            // blank / error / type behavior of the optional argument
+            foreach (var e in new[] {
+                "Decimal(Blank())", "Float(Blank())", "Decimal(\"\")", "Float(\"\")", "Decimal(\"\",\"fr-FR\")", "Decimal(\"\",\"xx\")", "Float(\"\",\"xx\")",
+                "Decimal(\"1\",Blank())", "Float(\"1\",Blank())", "Decimal(Blank(),\"fr-FR\")", "Decimal(Blank(),\"xx\")", "Decimal(Blank(),Blank())",
+                "Decimal(\"1,5\",Blank())", "Decimal(\"x\",\"xx\")", "Decimal(\"x\",\"fr-FR\")", "Decimal(1,\"xx\")", "Float(1,\"xx\")", "Decimal(true,\"xx\")", "Decimal(2.5,\"fr-FR\")", "Float(2.5,\"fr-FR\")", "Decimal(true,\"fr-FR\")", "Float(false,\"en-US\")",
+                "Decimal(1/0)", "Decimal(1/0,\"fr-FR\")", "Decimal(\"1\",1/0)", "Decimal(1/0,1/0)", "Float(1/0,\"xx\")", "Decimal(\"1\",If(true,1/0,\"fr-FR\"))", "Decimal(\"1,5\",If(true,\"fr-FR\",1/0))",
+                "Decimal(\"1\",1)", "Decimal(\"1\",true)", "Decimal(1,2)", "Float(\"1\",\"en-US\",\"x\")", "Decimal()", "Float()", "Value()", "Value(\"1\",\"fr-FR\",\"x\")",
+                "Decimal({a:1})", "Float(Table({a:1}))", "Decimal(\"1\",{a:1})",
+                "Decimal(If(false,\"1\"))", "Decimal(\"1\",If(false,\"fr-FR\"))", "Decimal(If(true,\"1,5\"),If(true,\"fr-FR\"))",
+                "If(false,1/0,Decimal(\"1,5\",\"fr-FR\"))", "Decimal(\"1,5\",\"fr-FR\")+1", "Decimal(\"1,5\",\"fr-FR\")*2", "Float(\"1,5\",\"fr-FR\")*2", "Decimal(\"1,5\",\"fr-FR\")=1.5", "Float(\"1,5\",\"fr-FR\")=1.5",
+                "Decimal(Decimal(\"1,5\",\"fr-FR\"),\"xx\")", "Decimal(Decimal(\"1,5\",\"fr-FR\"))",
+                "\"1,5\"+\"2,5\"", "\"$1,000\"*2", "-\"1,000\"", "\"12%\"+1", "\"1,000\"=1000", "\"1,000\">999", "If(\"1,5\">1,1,2)",
+                "\" \"+1", "\"\"+1", "-\"\"", "\"\"=0", "\"\"=Blank()", "IsBlank(Decimal(\"\"))", "IsBlank(\"\"+1)",
+            })
+                yield return ("text-misc", mode, e);
+        }
+    }
+
+    static int GenerateText(string outPath)
+    {
+        var engines = new Dictionary<string, RecalcEngine> { ["float"] = Engine("float"), ["decimal"] = Engine("decimal") };
+        var entries = new List<object>();
+        foreach (var (group, mode, expr) in TextVectors())
+        {
+            var (kind, value) = Run(engines[mode], mode, expr);
+            entries.Add(new { group, mode, expr, kind, value });
+        }
+        var cultures = new List<object>();
+        foreach (var name in new[] { "en-US", "fr-FR", "" })
+        {
+            var c = CultureInfo.GetCultureInfo(name);
+            var n = c.NumberFormat;
+            cultures.Add(new
+            {
+                name,
+                decimalSeparator = n.NumberDecimalSeparator,
+                groupSeparator = n.NumberGroupSeparator,
+                currencySymbol = n.CurrencySymbol,
+                currencyDecimalSeparator = n.CurrencyDecimalSeparator,
+                currencyGroupSeparator = n.CurrencyGroupSeparator,
+                positiveSign = n.PositiveSign,
+                negativeSign = n.NegativeSign,
+                numberNegativePattern = n.NumberNegativePattern,
+                currencyNegativePattern = n.CurrencyNegativePattern,
+                currencyPositivePattern = n.CurrencyPositivePattern,
+                nanSymbol = n.NaNSymbol,
+                positiveInfinitySymbol = n.PositiveInfinitySymbol,
+            });
+        }
+        var opts = new JsonSerializerOptions { Encoder = System.Text.Encodings.Web.JavaScriptEncoder.Default };
+        var sb = new StringBuilder();
+        sb.Append("{\"upstream\":\"df4ceba5e08220db670c25afead342ce699c50b5\",\"generator\":\"tools/reference-harness generate-text\",\"runtime\":\"" + System.Runtime.InteropServices.RuntimeInformation.FrameworkDescription + "\",\"cultures\":" + JsonSerializer.Serialize(cultures, opts) + ",\"entries\":[\n");
+        sb.Append(string.Join(",\n", entries.Select(x => JsonSerializer.Serialize(x, opts))));
+        sb.Append("\n]}\n");
+        File.WriteAllText(outPath, sb.ToString());
+        Console.Error.WriteLine($"{entries.Count} text vectors");
+        return 0;
+    }
+
     static int Main(string[] args)
     {
+        if (args.Length >= 2 && args[0] == "generate-text") return GenerateText(args[1]);
         if (args.Length >= 3 && args[0] == "eval")
         {
             var e = Engine(args[1]);

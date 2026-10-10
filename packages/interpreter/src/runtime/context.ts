@@ -26,6 +26,21 @@ export class EvaluationBudgetExceeded extends Error {
   }
 }
 
+/**
+ * Raised when evaluation reaches a construct whose behavior depends on something this engine does
+ * not implement and that is only known at run time (a locale name held in a variable). The engine
+ * reports it as `unsupported`, never as a formula error.
+ */
+export class RuntimeUnsupportedError extends Error {
+  constructor(
+    readonly feature: string,
+    readonly node: BoundNode,
+  ) {
+    super(`Unsupported at run time: ${feature}`);
+    this.name = "RuntimeUnsupportedError";
+  }
+}
+
 /** Services a function implementation may use. Arguments are passed unevaluated. */
 export interface EvaluationContext {
   readonly numerics: Numerics;
