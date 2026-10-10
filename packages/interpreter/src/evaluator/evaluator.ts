@@ -74,6 +74,9 @@ class Evaluator implements EvaluationContext {
       case "Coerce": {
         const operand = this.evaluate(node.operand);
         if (node.preserveBlank && operand.kind === "Blank") return operand;
+        if (node.emptyTextAsBlank && operand.kind === "Text" && operand.value === "") {
+          return node.to === "Text" ? operand : blank;
+        }
         return coerceValue(operand, node.to, numerics);
       }
       case "ConvertNumber": {
@@ -92,7 +95,7 @@ class Evaluator implements EvaluationContext {
         return convertNumber(operand, node.to, numerics, culture);
       }
       case "Conform":
-        return this.conform(this.evaluate(node.operand), node.plan);
+        return this.conform(this.evaluate(node.operand), node.plan, node.emptyTextAsBlank === true);
       case "Unary":
         return this.unary(node);
       case "Binary":
@@ -258,10 +261,13 @@ class Evaluator implements EvaluationContext {
   }
 
   /** Applies a binder-produced union plan; errors and Blank pass through untouched. */
-  private conform(value: FormulaValue, plan: ConformPlan): FormulaValue {
+  private conform(value: FormulaValue, plan: ConformPlan, emptyTextAsBlank: boolean): FormulaValue {
     if (value.kind === "Error" || value.kind === "Blank") return value;
     switch (plan.kind) {
       case "Scalar":
+        if (emptyTextAsBlank && value.kind === "Text" && value.value === "") {
+          return plan.to === "Text" ? value : blank;
+        }
         return coerceValue(value, plan.to, this.numerics);
       case "Record": {
         if (value.kind !== "Record") throw new Error("Conform expects a record.");
@@ -271,7 +277,8 @@ class Evaluator implements EvaluationContext {
             const current = f.missing === true ? blank : (byName.get(f.name) ?? blank);
             return {
               name: f.name,
-              value: f.plan === undefined ? current : this.conform(current, f.plan),
+              value:
+                f.plan === undefined ? current : this.conform(current, f.plan, emptyTextAsBlank),
             };
           }),
         );
@@ -281,7 +288,11 @@ class Evaluator implements EvaluationContext {
         const rows: TableRow[] = [];
         for (const row of value.rows) {
           this.tick();
-          rows.push(row.kind === "Record" ? (this.conform(row, plan.row) as TableRow) : row);
+          rows.push(
+            row.kind === "Record"
+              ? (this.conform(row, plan.row, emptyTextAsBlank) as TableRow)
+              : row,
+          );
         }
         return table(rows);
       }

@@ -5,7 +5,7 @@ import {
   type DiagnosticCode,
 } from "../diagnostics/diagnostic.js";
 import { KNOWN_UPSTREAM_ENUMS, KNOWN_UPSTREAM_FUNCTIONS } from "../functions/known-names.js";
-import { BUILTIN_FUNCTIONS, type FunctionRegistry } from "../functions/signature.js";
+import { BUILTIN_FUNCTIONS, foldCoalesce, type FunctionRegistry } from "../functions/signature.js";
 import { conformPlan, unionRecords, unionTypes } from "../types/union.js";
 import type {
   BoundBinaryOperator,
@@ -238,6 +238,7 @@ class Binder {
     node: BoundNode,
     to: CoercionTarget | undefined,
     preserveBlank = false,
+    emptyTextAsBlank = false,
   ): BoundNode {
     if (to === undefined || node.type.kind === to || node.type.kind === "Unknown") return node;
     if (node.type.kind === "Record" || node.type.kind === "Table") {
@@ -246,7 +247,10 @@ class Binder {
     }
     const type = TARGET_TYPES[to];
     const coerced: BoundNode = { kind: "Coerce", to, operand: node, span: node.span, type };
-    return preserveBlank ? { ...coerced, preserveBlank } : coerced;
+    if (!preserveBlank) return coerced;
+    return emptyTextAsBlank
+      ? { ...coerced, preserveBlank, emptyTextAsBlank }
+      : { ...coerced, preserveBlank };
   }
 
   bindExpression(node: ExpressionNode): BoundNode {
@@ -631,11 +635,58 @@ class Binder {
   }
 
   /** Wraps `node` in an explicit `Conform` when its type differs from the union `target`. */
-  private conformTo(node: BoundNode, target: FormulaType): BoundNode {
+  private conformTo(node: BoundNode, target: FormulaType, emptyTextAsBlank = false): BoundNode {
     const plan = conformPlan(node.type, target);
-    return plan === undefined
-      ? node
-      : { kind: "Conform", operand: node, plan, span: node.span, type: target };
+    if (plan === undefined) return node;
+    const conform = {
+      kind: "Conform" as const,
+      operand: node,
+      plan,
+      span: node.span,
+      type: target,
+    };
+    return emptyTextAsBlank ? { ...conform, emptyTextAsBlank } : conform;
+  }
+
+  /**
+   * `Coalesce(arg, ...)`, upstream `CoalesceFunction` under PowerFxV1 rules. `foldCoalesce` types
+   * the call and decides each scalar argument's coercion; record and table arguments are then
+   * adjusted to the final union (`MaybeAdjustToCompileTimeType`), which equals the fold-time
+   * unions because the left type always wins. Every coercion keeps Blank and turns empty text into
+   * Blank, so the evaluator can decide on the coerced value.
+   */
+  private bindCoalesce(node: CallNode, args: readonly BoundNode[]): BoundNode {
+    const fold = foldCoalesce(args.map((a) => a.type));
+    if (fold.issues.length > 0) {
+      for (const issue of fold.issues) {
+        const arg = args[issue.index]!;
+        const span = this.textSpan(node.args[issue.index]!);
+        if (issue.kind === "ErrorTyped") {
+          if (this.isErrorTyped(arg)) this.report(DiagnosticCodes.TypeError, span);
+        } else {
+          this.report(DiagnosticCodes.BadTypeExpected, span, [
+            issue.expected === "Error" ? "Error" : typeName(issue.expected),
+            typeName(issue.provided),
+          ]);
+        }
+      }
+      this.report(DiagnosticCodes.InvalidFunctionArguments, node.callee.span, ["Coalesce"]);
+      return fold.type === "Error" || fold.type.kind === "Blank"
+        ? this.invalid(node.span)
+        : this.recovered(node.span, fold.type);
+    }
+    const type = fold.type as FormulaType;
+    return {
+      kind: "Call",
+      fn: "Coalesce",
+      args: args.map((a, i) =>
+        a.type.kind === "Record" || a.type.kind === "Table"
+          ? this.conformTo(a, type, true)
+          : this.coerce(a, fold.coercions[i], true, true),
+      ),
+      span: node.span,
+      type,
+    };
   }
 
   /**
@@ -1039,6 +1090,8 @@ class Binder {
       }
       return this.invalid(node.span);
     }
+
+    if (name === "Coalesce") return this.bindCoalesce(node, args);
 
     if (args.some((a) => a.type.kind === "Unknown")) {
       this.report(DiagnosticCodes.InvalidFunctionArguments, node.callee.span, [name]);

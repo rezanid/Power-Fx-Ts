@@ -57,6 +57,8 @@ export type BoundNode =
       readonly operand: BoundNode;
       /** Blank operands stay Blank instead of becoming the target's zero value. */
       readonly preserveBlank?: boolean;
+      /** Empty text becomes Blank (not the target's zero value) for a non-Text target; `Coalesce`. */
+      readonly emptyTextAsBlank?: boolean;
     })
   /** `Decimal(x[, locale])` / `Float(x[, locale])` / `Value`: explicit conversion; Blank and empty text stay Blank. */
   | (BoundBase & {
@@ -75,6 +77,8 @@ export type BoundNode =
       readonly kind: "Conform";
       readonly operand: BoundNode;
       readonly plan: ConformPlan;
+      /** Empty text in a coerced scalar field becomes Blank instead of the target's zero value. */
+      readonly emptyTextAsBlank?: boolean;
     })
   | (BoundBase & {
       readonly kind: "Call";

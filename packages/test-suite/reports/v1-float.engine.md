@@ -4,8 +4,8 @@
 - Runner: engine
 - Setup: `PowerFxV1,NumberIsFloat,DecimalSupport` (number mode: float, culture en-US, time zone UTC)
 - Cases: 22047 total, 7088 not applicable to this profile
-- Pass 2147, fail 1, skip 46, unsupported 12765
-- Unsupported by reason: feature 9602, setup 3163, profile 0
+- Pass 2207, fail 1, skip 46, unsupported 12705
+- Unsupported by reason: feature 9542, setup 3163, profile 0
 - Passing compile-error cases whose error set differs from upstream's (strict diagnostic, not a verdict): 34
 - Passing numeric cases accepted only by upstream's float tolerance (diagnostic, not a verdict): 12
 
@@ -13,7 +13,7 @@
 | ---- | ----: | ---: | ---: | ---: | ----------: |
 | Abs.txt | 22 | 0 | 0 | 0 | 22 |
 | AbsT.txt | 7 | 0 | 0 | 0 | 7 |
-| Acumatica.txt | 13 | 2 | 0 | 0 | 11 |
+| Acumatica.txt | 13 | 4 | 0 | 0 | 9 |
 | AddColumns_SupportColumnNamesAsIdentifiers.txt | 32 | 0 | 0 | 0 | 32 |
 | AndOrCases.txt | 127 | 28 | 0 | 0 | 99 |
 | ArgCoercion.txt | 17 | 0 | 0 | 0 | 17 |
@@ -31,8 +31,8 @@
 | CharT.txt | 5 | 0 | 0 | 0 | 5 |
 | Clear.txt | 4 | 0 | 0 | 0 | 4 |
 | Clear_V1Compat.txt | 9 | 0 | 0 | 0 | 9 |
-| Coalesce.txt | 77 | 0 | 0 | 0 | 77 |
-| Coalesce_V1Compat.txt | 5 | 0 | 0 | 0 | 5 |
+| Coalesce.txt | 77 | 42 | 0 | 0 | 35 |
+| Coalesce_V1Compat.txt | 5 | 5 | 0 | 0 | 0 |
 | Collect_V1Compat.txt | 27 | 0 | 0 | 0 | 27 |
 | Color.txt | 21 | 0 | 0 | 0 | 21 |
 | ColorFade.txt | 24 | 0 | 0 | 0 | 24 |
@@ -126,7 +126,7 @@
 | JSON_V1Compat.txt | 2 | 0 | 0 | 0 | 2 |
 | Join.txt | 24 | 0 | 0 | 0 | 24 |
 | Language.txt | 1 | 0 | 0 | 0 | 1 |
-| LazyEvaluation_ShortCircuit.txt | 77 | 38 | 0 | 0 | 39 |
+| LazyEvaluation_ShortCircuit.txt | 77 | 49 | 0 | 0 | 28 |
 | Left.txt | 34 | 0 | 0 | 0 | 34 |
 | LeftRightT.txt | 30 | 0 | 0 | 0 | 30 |
 | Len.txt | 20 | 0 | 0 | 0 | 20 |

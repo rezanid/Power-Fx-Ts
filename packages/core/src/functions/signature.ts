@@ -1,5 +1,6 @@
 import { BlankType, BooleanType, type FormulaType } from "../types/formula-type.js";
 import type { CoercionTarget } from "../ir/bound-tree.js";
+import { unionTypes } from "../types/union.js";
 
 export interface FunctionCheck {
   readonly returnType: FormulaType;
@@ -78,6 +79,76 @@ function isResultArgument(index: number, count: number): boolean {
   return index % 2 === 1 || (count % 2 === 1 && index === count - 1);
 }
 
+/** One argument rejected by the `Coalesce` type fold (indexes refer to the call's arguments). */
+export type CoalesceIssue =
+  | { readonly index: number; readonly kind: "ErrorTyped" }
+  | {
+      readonly index: number;
+      readonly kind: "Mismatch";
+      /** The running type the argument had to match, as upstream names it (`"Error"` after an Error first argument). */
+      readonly expected: FormulaType | "Error";
+      readonly provided: FormulaType;
+    };
+
+export interface CoalesceFold {
+  /** The running type after the fold; `"Error"` when the first argument is Error-typed. */
+  readonly type: FormulaType | "Error";
+  /** Scalar arguments that are coerced to the running type at their position in the fold. */
+  readonly coercions: readonly (CoercionTarget | undefined)[];
+  readonly issues: readonly CoalesceIssue[];
+}
+
+/**
+ * Upstream `CoalesceFunction.CheckTypesLatest` (PowerFxV1 rules): fold left to right. An Unknown
+ * argument stands for upstream's Error type. A Blank argument is skipped, a Blank running type
+ * takes the next argument's type, otherwise the running type becomes
+ * `TryUnionWithCoerce(running, arg, coerceToLeftTypeOnly)` and an argument of a different scalar
+ * type is coerced to it. Records and tables are adjusted to the final union by the binder.
+ */
+export function foldCoalesce(argTypes: readonly FormulaType[]): CoalesceFold {
+  const first = argTypes[0];
+  let type: FormulaType | "Error" =
+    first === undefined || first.kind === "Unknown" ? "Error" : BlankType;
+  const issues: CoalesceIssue[] = [];
+  const coercions: (CoercionTarget | undefined)[] = [];
+  argTypes.forEach((arg, index) => {
+    coercions.push(undefined);
+    if (arg.kind === "Unknown") {
+      issues.push({ index, kind: "ErrorTyped" });
+      return;
+    }
+    if (arg.kind === "Blank") return;
+    if (type === "Error") {
+      issues.push({ index, kind: "Mismatch", expected: "Error", provided: arg });
+      return;
+    }
+    const union = unionTypes(type, arg);
+    if (union === undefined) {
+      issues.push({ index, kind: "Mismatch", expected: type, provided: arg });
+      return;
+    }
+    if (type.kind !== "Blank") coercions[index] = coercionTo(arg, union);
+    type = union;
+  });
+  return { type, coercions, issues };
+}
+
+/** `Coalesce(arg, ...)`: the first argument that is neither Blank nor empty text; later arguments are lazy. */
+const COALESCE: FunctionSignature = {
+  name: "Coalesce",
+  minArgs: 1,
+  maxArgs: Infinity,
+  lazy: true,
+  check(argTypes) {
+    const fold = foldCoalesce(argTypes);
+    return {
+      returnType: fold.type === "Error" ? BlankType : fold.type,
+      coercions: fold.coercions,
+      preserveBlank: argTypes.map(() => true),
+    };
+  },
+};
+
 const BLANK: FunctionSignature = {
   name: "Blank",
   minArgs: 0,
@@ -94,5 +165,5 @@ const IS_BLANK: FunctionSignature = {
   check: () => ({ returnType: BooleanType, coercions: [undefined] }),
 };
 
-export const BUILTIN_SIGNATURES: readonly FunctionSignature[] = [IF, BLANK, IS_BLANK];
+export const BUILTIN_SIGNATURES: readonly FunctionSignature[] = [IF, COALESCE, BLANK, IS_BLANK];
 export const BUILTIN_FUNCTIONS: FunctionRegistry = createFunctionRegistry(BUILTIN_SIGNATURES);

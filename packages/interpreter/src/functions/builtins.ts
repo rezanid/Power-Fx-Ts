@@ -15,11 +15,26 @@ const ifFunction: FunctionImplementation = (args, context) => {
   return i < count ? context.evaluate(args[i]!) : blank;
 };
 
+/**
+ * `Coalesce(arg, ...)`: the first argument that is neither Blank nor empty text, evaluated left to
+ * right (the binder already coerced each argument, mapping empty text to Blank). A reached Error
+ * is returned unchanged; arguments after the result are never evaluated.
+ */
+const coalesceFunction: FunctionImplementation = (args, context) => {
+  for (const arg of args) {
+    const value = context.evaluate(arg);
+    if (value.kind === "Error") return value;
+    if (!isBlank(value)) return value;
+  }
+  return blank;
+};
+
 const isBlank = (value: FormulaValue): boolean =>
   value.kind === "Blank" || (value.kind === "Text" && value.value === "");
 
 export const BUILTIN_IMPLEMENTATIONS: ReadonlyMap<string, FunctionImplementation> = new Map([
   ["If", ifFunction],
+  ["Coalesce", coalesceFunction],
   ["Blank", () => blank],
   [
     "IsBlank",

@@ -4,8 +4,8 @@
 - Runner: engine
 - Setup: `PowerFxV1,disable:NumberIsFloat,DecimalSupport` (number mode: decimal, culture en-US, time zone UTC)
 - Cases: 22047 total, 5874 not applicable to this profile
-- Pass 2665, fail 1, skip 56, unsupported 13451
-- Unsupported by reason: feature 10239, setup 3212, profile 0
+- Pass 2737, fail 1, skip 56, unsupported 13379
+- Unsupported by reason: feature 10167, setup 3212, profile 0
 - Passing compile-error cases whose error set differs from upstream's (strict diagnostic, not a verdict): 36
 - Passing numeric cases accepted only by upstream's float tolerance (diagnostic, not a verdict): 7
 
@@ -13,7 +13,7 @@
 | ---- | ----: | ---: | ---: | ---: | ----------: |
 | Abs.txt | 22 | 0 | 0 | 0 | 22 |
 | AbsT.txt | 7 | 0 | 0 | 0 | 7 |
-| Acumatica.txt | 13 | 2 | 0 | 0 | 11 |
+| Acumatica.txt | 13 | 4 | 0 | 0 | 9 |
 | AddColumns_SupportColumnNamesAsIdentifiers.txt | 32 | 0 | 0 | 0 | 32 |
 | AddColumns_SupportColumnNamesAsIdentifiers_NumberIsFloatDisabled.txt | 4 | 0 | 0 | 0 | 4 |
 | AndOrCases.txt | 127 | 28 | 0 | 0 | 99 |
@@ -31,8 +31,8 @@
 | CharT.txt | 5 | 0 | 0 | 0 | 5 |
 | Clear.txt | 4 | 0 | 0 | 0 | 4 |
 | Clear_V1Compat.txt | 9 | 0 | 0 | 0 | 9 |
-| Coalesce.txt | 77 | 0 | 0 | 0 | 77 |
-| Coalesce_V1Compat.txt | 5 | 0 | 0 | 0 | 5 |
+| Coalesce.txt | 77 | 42 | 0 | 0 | 35 |
+| Coalesce_V1Compat.txt | 5 | 5 | 0 | 0 | 0 |
 | Collect_V1Compat.txt | 27 | 0 | 0 | 0 | 27 |
 | Color.txt | 21 | 0 | 0 | 0 | 21 |
 | ColorFade.txt | 24 | 0 | 0 | 0 | 24 |
@@ -73,8 +73,8 @@
 | DecimalIntReturn_DVDecimal.txt | 24 | 1 | 0 | 1 | 22 |
 | DecimalMathFuncs_NumberIsFloatDisabled.txt | 147 | 12 | 0 | 0 | 135 |
 | DecimalMathFuncs_NumberIsFloatDisabled_DVDecimal.txt | 159 | 14 | 0 | 0 | 145 |
-| DecimalNonMathFuncs.txt | 84 | 25 | 0 | 5 | 54 |
-| DecimalNonMathFuncs_DVDecimal.txt | 90 | 25 | 0 | 4 | 61 |
+| DecimalNonMathFuncs.txt | 84 | 31 | 0 | 5 | 48 |
+| DecimalNonMathFuncs_DVDecimal.txt | 90 | 31 | 0 | 4 | 55 |
 | DecimalOps.txt | 226 | 83 | 0 | 0 | 143 |
 | DecimalOps_DVDecimal.txt | 219 | 83 | 0 | 0 | 136 |
 | DecimalOverflow.txt | 65 | 44 | 0 | 0 | 21 |
@@ -130,7 +130,7 @@
 | JSON_V1Compat.txt | 2 | 0 | 0 | 0 | 2 |
 | Join.txt | 24 | 0 | 0 | 0 | 24 |
 | Language.txt | 1 | 0 | 0 | 0 | 1 |
-| LazyEvaluation_ShortCircuit.txt | 77 | 38 | 0 | 0 | 39 |
+| LazyEvaluation_ShortCircuit.txt | 77 | 49 | 0 | 0 | 28 |
 | Left.txt | 34 | 0 | 0 | 0 | 34 |
 | LeftRightT.txt | 30 | 0 | 0 | 0 | 30 |
 | Len.txt | 20 | 0 | 0 | 0 | 20 |

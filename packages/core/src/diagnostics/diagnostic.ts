@@ -39,6 +39,7 @@ export const DiagnosticCodes = {
   InvalidArgumentTypeOneOf: "PFX2020",
   TextOrNumberExpected: "PFX2021",
   TextExpected: "PFX2022",
+  TypeError: "PFX2023",
 } as const;
 
 export type DiagnosticCode = (typeof DiagnosticCodes)[keyof typeof DiagnosticCodes];
@@ -91,6 +92,7 @@ const TEMPLATES: Record<DiagnosticCode, string> = {
   PFX2018: "Use the And operator to combine multiple predicates into the second argument.",
   PFX2020: "Invalid argument type. Expecting one of the following: {0}.",
   PFX2021: "Expected text or number. We expect text or a number at this point in the formula.",
+  PFX2023: "Incompatible type. We can't evaluate your formula because of a type error.",
   PFX2022: "Expected text. We expect text at this point in the formula.",
   PFX2006:
     "Invalid argument type. Expecting one of the following: Number, Decimal, Date, Time, DateTime, Dynamic.",

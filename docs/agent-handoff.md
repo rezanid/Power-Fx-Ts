@@ -1,6 +1,7 @@
 # Agent handoff: current state
 
-Implementation baseline: `f2fa9d848db797a0868d45e4897bf7527379d884` (`main` after PR #10).
+Implementation baseline: `820c9be` (`main` after PR #11; code identical to `f2fa9d8`, PR #10). The `Coalesce`
+milestone (ADR 0012) is implemented on branch `rezanid-continue-handoff-milestone`, pending review.
 Upstream pin: `df4ceba5e08220db670c25afead342ce699c50b5` (`docs/provenance.md`).
 Profiles: `v1-float` (default, PowerFxV1 + NumberIsFloat) and `v1-decimal` (opt-in
 `new Engine({ numberMode: "decimal" })`), culture en-US, UTC.
@@ -11,7 +12,7 @@ Vertical slice (lexer/parser/binder/evaluator, compat runner) → parser parity 
 schema separation → record literals and `With` → tables, row scopes, `Filter`, `ThisRecord`/`As` →
 `T.Field`, `First`, `CountRows`, `LookUp` → record/table type unions → Decimal backend →
 culture-aware numeric text parsing (en-US, fr-FR) → compat cleanup (cascaded out-of-range-literal
-diagnostics, merged operand errors, recovered result types).
+diagnostics, merged operand errors, recovered result types) → `Coalesce` (PR pending review).
 
 ## Source and test map
 
@@ -32,7 +33,7 @@ diagnostics, merged operand errors, recovered result types).
 | Engine facade (`check`, `evaluate`)            | `packages/engine/src/engine.ts` (`dependencies/`, `recalc/` are empty placeholders)                       |
 | Compat runner, profiles, reports               | `packages/test-suite/src/*.ts`; committed `packages/test-suite/reports/*.engine.md`                       |
 | Behavior tests and reference fixtures          | `packages/engine/test/*.test.ts`, `packages/engine/test/fixtures/*.json`                                  |
-| Executable C# reference                        | `tools/reference-harness/Program.cs` (`eval`, `check`, `generate`, `parse`)                               |
+| Executable C# reference                        | `tools/reference-harness/Program.cs` (`eval`, `check`, `generate`, `parse`, `probe`)                      |
 | Language service, serialization, test-runner   | `packages/language-service`, `packages/serialization`, `packages/test-runner`: skeletal, not yet in scope |
 
 ## Accepted decisions (details in ADRs)
@@ -42,16 +43,18 @@ diagnostics, merged operand errors, recovered result types).
   including Error rows); 0007 `First`/`CountRows`/`LookUp`; 0008 record/table unions (explicit
   `Conform` nodes; `If` lazy); 0009 Decimal (opt-in, float default retained); 0010 numeric text
   parsing (en-US/fr-FR; unsupported locales are a run-time `unsupported` after Blank/error
-  precedence); 0011 literal diagnostics and merged errors.
+  precedence); 0011 literal diagnostics and merged errors; 0012 `Coalesce` (`emptyTextAsBlank` coercion flag;
+  fold-time coercions; record/table conformance).
 - Custom numeric backends must implement `fromScanned` (ADR 0010 migration notes).
 - Evaluation-budget accounting is per evaluated node; exact upstream step counts are not required.
 
 ## Known gaps
 
-- Compat (committed reports): `v1-float` 2147 pass / 1 fail / 46 skip / 12765 unsupported;
-  `v1-decimal` 2665 / 1 / 56 / 13451. The one failure in each is `Text_ExcelCompat_PowerFxV1Compat.txt:13`
-  (`Text()` formatting). Most unsupported cases are unimplemented builtins (e.g. `Coalesce`,
-  `IfError`, `IsEmpty`, math/text/date functions, `Text`).
+- Compat (committed reports): `v1-float` 2207 pass / 1 fail / 46 skip / 12705 unsupported;
+  `v1-decimal` 2737 / 1 / 56 / 13379 (with `Coalesce`; previously 2147/…/12765 and 2665/…/13451). The one failure in each is `Text_ExcelCompat_PowerFxV1Compat.txt:13`
+  (`Text()` formatting). Most unsupported cases are unimplemented builtins (e.g. `IfError`, `IsEmpty`, math/text/date functions, `Text`).
+- `If(false,1,"")`, `If(false,{a:1},{a:""})` and `[{a:1},{a:""}]` give 0/false where upstream gives Blank
+  (ADR 0012); `Coalesce` is correct via `emptyTextAsBlank`.
 - Float `^` last-ulp differences; `If(1E100, …)` condition diagnostic; aggregate (record/table)
   equality; locales beyond en-US/fr-FR; culture-specific formatting; option sets, untyped objects,
   dates/times, behavior functions, delegation, connectors, editor UI.
@@ -84,4 +87,5 @@ the labels separately.
 
 ## Next
 
-Proposal: `docs/milestones/next.md` (PROPOSED, awaiting owner acceptance).
+Proposal only (not started): `docs/milestones/next.md` lists `IfError` or `IsEmpty`; owner decides.
+Verification evidence for `Coalesce`: `docs/research/coalesce-before-after.md`.

@@ -1,0 +1,240 @@
+Coalesce(Blank())	Blank	Blank
+Coalesce("")	Text	Blank
+Coalesce(Blank(), Blank())	Blank	Blank
+Coalesce(Blank(), 1)	Decimal	Decimal(1)
+Coalesce(Blank(), "", Blank(), "")	Text	Blank
+Coalesce(Blank(), "", true)	Text	"true"
+Coalesce(If(false,false),"",true)	Boolean	true
+Coalesce(If(false,1),"",2)	Decimal	Decimal(2)
+Coalesce(If(false,1),"bad",2)	Decimal	Error(InvalidArgument)
+Coalesce(If(false,1),"",Blank())	Decimal	Blank
+Coalesce(If(false,"a"),"")	Text	Blank
+Coalesce(If(false,"a"),If(false,"b"))	Text	Blank
+Coalesce(If(false,1),If(false,2))	Decimal	Blank
+Coalesce(If(false,1),If(false,"b"))	Decimal	Blank
+Coalesce(If(false,true),If(false,"b"))	Boolean	Blank
+Coalesce(" ", "a")	Text	" "
+Coalesce(0, 1)	Decimal	Decimal(0)
+Coalesce(false, true)	Boolean	false
+Coalesce(0, "x")	Decimal	Decimal(0)
+Coalesce(false, "x")	Boolean	false
+Coalesce(true, 5)	Boolean	true
+Coalesce("", 5)	Text	"5"
+Coalesce("", true)	Text	"true"
+Coalesce("", Float(2))	Text	"2"
+Coalesce("", Decimal(2))	Text	"2"
+Coalesce(Float(1), Decimal(2))	Number	Number(1)
+Coalesce(Decimal(1), Float(2))	Decimal	Decimal(1)
+Coalesce(Blank(), Float(1), Decimal(2))	Number	Number(1)
+Coalesce(Blank(), Decimal(1), Float(2))	Decimal	Decimal(1)
+Coalesce(If(false,1), Decimal(2))	Decimal	Decimal(2)
+Coalesce(If(false,Decimal(1)), Float(2))	Decimal	Decimal(2)
+Coalesce(If(false,Float(1)), Decimal(2))	Number	Number(2)
+Coalesce(If(false,Decimal(1)), 2)	Decimal	Decimal(2)
+Coalesce(If(false,Decimal(1)), 0.5)	Decimal	Decimal(0.5)
+Coalesce(If(false,Float(1)), 0.5)	Number	Number(0.5)
+Coalesce(If(false,Float(1)), 1E100)		ERRORS:Error 29-34: Numeric value is too large.|Error 29-34: Incompatible type. We can't evaluate your formula because of a type error.|Error 0-8: The function 'Coalesce' has some invalid arguments.
+Coalesce(If(false,Decimal(1)), Float(1E100))		ERRORS:Error 37-42: Numeric value is too large.|Error 31-36: The function 'Float' has some invalid arguments.|Error 37-42: Expected text or number. We expect text or a number at this point in the formula.
+Coalesce(If(false,Decimal(1)), "bad")	Decimal	Error(InvalidArgument)
+Coalesce(If(false,Decimal(1)), "")	Decimal	Blank
+Coalesce(If(false,Decimal(1)), "2.5")	Decimal	Decimal(2.5)
+Coalesce(If(false,1), "bad")	Decimal	Error(InvalidArgument)
+Coalesce(If(false,1), "")	Decimal	Blank
+Coalesce(If(false,1), " ")	Decimal	Error(InvalidArgument)
+Coalesce(If(false,1), "2")	Decimal	Decimal(2)
+Coalesce(If(false,true), "bad")	Boolean	Error(InvalidArgument)
+Coalesce(If(false,true), "")	Boolean	Blank
+Coalesce(If(false,true), "TRUE")	Boolean	true
+Coalesce(If(false,"t"), 1/0)	Text	Error(Div0)
+Coalesce(If(false,1), 1/0)	Decimal	Error(Div0)
+Coalesce(1/0, 1)	Decimal	Error(Div0)
+Coalesce(Blank(), 1/0, 10)	Decimal	Error(Div0)
+Coalesce("", 1/0)	Text	Error(Div0)
+Coalesce(5, 1/0)	Decimal	Decimal(5)
+Coalesce(1/0)	Decimal	Error(Div0)
+Coalesce(Blank(), 1/0)	Decimal	Error(Div0)
+Coalesce(If(false,1), "bad", 3)	Decimal	Error(InvalidArgument)
+Coalesce(Blank(), Blank(), "bad")	Text	"bad"
+Coalesce(1, "bad")	Decimal	Decimal(1)
+Coalesce(If(true,Blank()), 1)	Decimal	Decimal(1)
+Coalesce({a:1}, 1)		ERRORS:Error 16-17: Invalid argument type (Number). Expecting a Record value instead.|Error 0-8: The function 'Coalesce' has some invalid arguments.
+Coalesce(1, {a:1})		ERRORS:Error 12-17: Invalid argument type (Record). Expecting a Number value instead.|Error 0-8: The function 'Coalesce' has some invalid arguments.
+Coalesce({a:1}, [1])		ERRORS:Error 16-19: Invalid argument type (Table). Expecting a Record value instead.|Error 0-8: The function 'Coalesce' has some invalid arguments.
+Coalesce([1], {a:1})		ERRORS:Error 14-19: Invalid argument type (Record). Expecting a Table value instead.|Error 0-8: The function 'Coalesce' has some invalid arguments.
+Coalesce([1], 1)		ERRORS:Error 14-15: Invalid argument type (Number). Expecting a Table value instead.|Error 0-8: The function 'Coalesce' has some invalid arguments.
+Coalesce(Blank(), {a:1})	{a:Decimal}	{a:Decimal(1)}
+Coalesce({a:1}, Blank())	{a:Decimal}	{a:Decimal(1)}
+Coalesce(If(false,{a:1}), Blank())	{a:Decimal}	Blank
+Coalesce({a:1,b:2}, {b:3,c:4})	{a:Decimal,b:Decimal,c:Decimal}	{a:Decimal(1),b:Decimal(2),c:Blank}
+Coalesce(If(1<0,{a:1,b:2}), {b:3,c:4})	{a:Decimal,b:Decimal,c:Decimal}	{a:Blank,b:Decimal(3),c:Decimal(4)}
+Coalesce({a:1,b:2}, {b:"3",c:"4"})	{a:Decimal,b:Decimal,c:Text}	{a:Decimal(1),b:Decimal(2),c:Blank}
+Coalesce({a:1}, {a:"x"}, {a:true})	{a:Decimal}	{a:Decimal(1)}
+Coalesce(If(false,{a:1}), {a:"x"})	{a:Decimal}	{a:Error(InvalidArgument)}
+Coalesce(If(false,{a:1}), {a:If(false,"x")})	{a:Decimal}	{a:Blank}
+Coalesce(If(false,{a:1}), {a:1/0})	{a:Decimal}	{a:Error(Div0)}
+Coalesce({a:1/0}, {a:2})	{a:Decimal}	{a:Error(Div0)}
+Coalesce(If(false,{a:{x:1}}), {a:{y:2}})	{a:{x:Decimal,y:Decimal}}	{a:{x:Blank,y:Decimal(2)}}
+Coalesce({a:{x:1}}, {a:{y:2}})	{a:{x:Decimal,y:Decimal}}	{a:{x:Decimal(1),y:Blank}}
+Coalesce({a:{x:1}}, {a:1})		ERRORS:Error 20-25: Invalid argument type (Record). Expecting a Record value instead.|Error 0-8: The function 'Coalesce' has some invalid arguments.
+Coalesce({a:[1]}, {a:{x:1}})		ERRORS:Error 18-27: Invalid argument type (Record). Expecting a Record value instead.|Error 0-8: The function 'Coalesce' has some invalid arguments.
+Coalesce(If(false,{a:1}), If(false,{b:2}), {c:3})	{a:Decimal,b:Decimal,c:Decimal}	{a:Blank,b:Blank,c:Decimal(3)}
+Coalesce(If(false,{a:1}), If(false,{b:2}))	{a:Decimal,b:Decimal}	Blank
+Coalesce(If(false,[{a:1}]), [{b:2}])	Table{a:Decimal,b:Decimal}	Table[{a:Blank,b:Decimal(2)}]
+Coalesce([{a:1}], [{a:2,b:3}])	Table{a:Decimal,b:Decimal}	Table[{a:Decimal(1),b:Blank}]
+Coalesce(If(false,[{a:1}]), [{a:"x"}])	Table{a:Decimal}	Table[{a:Error(InvalidArgument)}]
+Coalesce([], [{a:1}])	Table{a:Decimal}	Table[]
+Coalesce([{a:1}], [])	Table{a:Decimal}	Table[{a:Decimal(1)}]
+Coalesce(If(false,[{a:1}]), If(false,[{b:2}]))	Table{a:Decimal,b:Decimal}	Blank
+Coalesce(Blank(), [{a:1}], [{b:2}])	Table{a:Decimal,b:Decimal}	Table[{a:Decimal(1),b:Blank}]
+Coalesce(1, 2, 3, 4)	Decimal	Decimal(1)
+Coalesce(If(1<0,false), If(1<0,true), false, true)	Boolean	false
+Coalesce(Float(1), "x", true)	Number	Number(1)
+Coalesce("", "", 3)	Text	"3"
+Coalesce("", 1, 2)	Text	"1"
+Coalesce("", Blank(), 3)	Text	"3"
+Coalesce("", Blank(), If(false,3))	Text	Blank
+Coalesce(Blank(), 0)	Decimal	Decimal(0)
+Coalesce(Blank(), "")	Text	Blank
+Coalesce(Blank(), false)	Boolean	false
+Coalesce(1E400)		ERRORS:Error 9-14: Numeric value is too large.|Error 9-14: Incompatible type. We can't evaluate your formula because of a type error.|Error 0-8: The function 'Coalesce' has some invalid arguments.
+Coalesce(1E400, 1)		ERRORS:Error 9-14: Numeric value is too large.|Error 9-14: Incompatible type. We can't evaluate your formula because of a type error.|Error 16-17: Invalid argument type (Number). Expecting a Error value instead.|Error 0-8: The function 'Coalesce' has some invalid arguments.
+Coalesce(If(false,1), 1E400)		ERRORS:Error 22-27: Numeric value is too large.|Error 22-27: Incompatible type. We can't evaluate your formula because of a type error.|Error 0-8: The function 'Coalesce' has some invalid arguments.
+Coalesce(Blank(), 1E400)		ERRORS:Error 18-23: Numeric value is too large.|Error 18-23: Incompatible type. We can't evaluate your formula because of a type error.|Error 0-8: The function 'Coalesce' has some invalid arguments.
+Coalesce(1, 1E400)		ERRORS:Error 12-17: Numeric value is too large.|Error 12-17: Incompatible type. We can't evaluate your formula because of a type error.|Error 0-8: The function 'Coalesce' has some invalid arguments.
+Coalesce(If(false,"a"), 1E400)		ERRORS:Error 24-29: Numeric value is too large.|Error 24-29: Incompatible type. We can't evaluate your formula because of a type error.|Error 0-8: The function 'Coalesce' has some invalid arguments.
+Coalesce(Decimal(1), 99999999999999999999999999999999)		ERRORS:Error 21-53: Numeric value is too large.|Error 21-53: Incompatible type. We can't evaluate your formula because of a type error.|Error 0-8: The function 'Coalesce' has some invalid arguments.
+Coalesce(Blank(), Decimal(1))	Decimal	Decimal(1)
+Coalesce(Blank(), Decimal("1.5"))	Decimal	Decimal(1.5)
+Coalesce(Decimal(0), 1)	Decimal	Decimal(0)
+Coalesce(Float(0), 1)	Number	Number(0)
+Coalesce(Float(0), Decimal(1))	Number	Number(0)
+Coalesce(Decimal(0), Float(1))	Decimal	Decimal(0)
+Coalesce("", Decimal("1.5"))	Text	"1.5"
+Coalesce("", Float("1.5"))	Text	"1.5"
+Coalesce(If(false,Decimal(1)), Float(0.1))	Decimal	Decimal(0.1)
+Coalesce(If(false,Decimal(1)), Float(1E30))		ERRORS:Error 37-41: Numeric value is too large.|Error 31-36: The function 'Float' has some invalid arguments.|Error 37-41: Expected text or number. We expect text or a number at this point in the formula.
+Coalesce(If(false,Float(1)), Decimal("0.1234567890123456789"))	Number	Number(0.12345678901234568)
+Coalesce(If(false,Decimal(1)), true)	Decimal	Decimal(1)
+Coalesce(If(false,Float(1)), true)	Number	Number(1)
+Coalesce(If(false,Float(1)), false)	Number	Number(0)
+Coalesce(If(false,1), 0)	Decimal	Decimal(0)
+Coalesce(0)	Decimal	Decimal(0)
+Coalesce("a", 1/0)	Text	"a"
+Coalesce(If(false,1), "1E400")	Decimal	Error(InvalidArgument)
+Coalesce(If(false,Decimal(1)), "1E400")	Decimal	Error(InvalidArgument)
+Coalesce(If(false,Decimal(1)), "1E30")	Decimal	Error(InvalidArgument)
+Coalesce(If(false,Decimal(1)), "1.5")	Decimal	Decimal(1.5)
+Coalesce(Blank(), Blank(), 1/0)	Decimal	Error(Div0)
+Coalesce(1/0, 1/0)	Decimal	Error(Div0)
+Coalesce(Blank(), 1/0, 1/0)	Decimal	Error(Div0)
+Coalesce({a:1}, 1/0)		ERRORS:Error 17-18: Invalid argument type (Number). Expecting a Record value instead.|Error 0-8: The function 'Coalesce' has some invalid arguments.
+Coalesce(If(false,{a:1}), 1/0)		ERRORS:Error 27-28: Invalid argument type (Number). Expecting a Record value instead.|Error 0-8: The function 'Coalesce' has some invalid arguments.
+Coalesce(If(false,[{a:1}]), 1/0)		ERRORS:Error 29-30: Invalid argument type (Number). Expecting a Table value instead.|Error 0-8: The function 'Coalesce' has some invalid arguments.
+Coalesce(1/0, {a:1})		ERRORS:Error 14-19: Invalid argument type (Record). Expecting a Number value instead.|Error 0-8: The function 'Coalesce' has some invalid arguments.
+Coalesce(If(false,{a:1}), {a:1}, 1/0)		ERRORS:Error 34-35: Invalid argument type (Number). Expecting a Record value instead.|Error 0-8: The function 'Coalesce' has some invalid arguments.
+Coalesce(If(false,{a:1}), 1/0, {b:2})		ERRORS:Error 27-28: Invalid argument type (Number). Expecting a Record value instead.|Error 0-8: The function 'Coalesce' has some invalid arguments.
+Coalesce(First(Filter([{a:1}], a>5)), {b:2})	{a:Decimal,b:Decimal}	{a:Blank,b:Decimal(2)}
+Coalesce(First([{a:1,b:2}]), {c:3})	{a:Decimal,b:Decimal,c:Decimal}	{a:Decimal(1),b:Decimal(2),c:Blank}
+Coalesce(Filter([{a:1}], a>5), [{b:2}])	Table{a:Decimal,b:Decimal}	Table[]
+Coalesce(Filter([{a:1}], a>0), [{b:2}])	Table{a:Decimal,b:Decimal}	Table[{a:Decimal(1),b:Blank}]
+Coalesce(If(false,Blank()), If(false,Blank()))	Blank	Blank
+Coalesce(Blank(), If(false,Blank()))	Blank	Blank
+Coalesce(Blank(), 1+"x")	Decimal	Error(InvalidArgument)
+Coalesce(1+"x", 1)	Decimal	Error(InvalidArgument)
+Coalesce(1+"x", 1/0)	Decimal	Error(InvalidArgument)
+Coalesce(Blank(), 1+"x", 1/0)	Decimal	Error(InvalidArgument)
+Coalesce(Table({a:1}, {a:2}), [{a:3}])	Table{a:Decimal}	Table[{a:Decimal(1)},{a:Decimal(2)}]
+Coalesce(Blank(), Blank(), Blank())	Blank	Blank
+Coalesce(If(false,{a:1}), {a:Blank()})	{a:Decimal}	{a:Blank}
+Coalesce(If(false,{a:Blank()}), {a:1})	{a:Decimal}	{a:Decimal(1)}
+Coalesce({a:Blank()}, {a:"x"})	{a:Text}	{a:Blank}
+Coalesce(If(false,{a:1}), {a:"x", b:1}, {a:true})	{a:Decimal,b:Decimal}	{a:Error(InvalidArgument),b:Decimal(1)}
+If(true, Coalesce(Blank(), 1), 2)	Decimal	Decimal(1)
+Coalesce(1, 2) + Coalesce(Blank(), 3)	Decimal	Decimal(4)
+Coalesce(If(false,1), If(false,2)) + 1	Decimal	Decimal(1)
+Coalesce(Blank(),"")="" 	Boolean	false
+IsBlank(Coalesce("", Blank()))	Boolean	true
+Coalesce(If(false,"")) 	Text	Blank
+Coalesce(If(false,""), "")	Text	Blank
+Coalesce((1/0)+(1+"x"), 1)	Decimal	Error(Div0+InvalidArgument)
+Coalesce(Blank(), (1/0)+(1+"x"), 1)	Decimal	Error(Div0+InvalidArgument)
+Coalesce(If(false,1), (1/0)+(1+"x"))	Decimal	Error(Div0+InvalidArgument)
+Coalesce(If(false,{a:1}), {a:""})	{a:Decimal}	{a:Blank}
+Coalesce(If(false,{a:1}), {a:" "})	{a:Decimal}	{a:Error(InvalidArgument)}
+Coalesce(If(false,{a:true}), {a:""})	{a:Boolean}	{a:Blank}
+Coalesce(If(false,{a:""}), {a:1})	{a:Text}	{a:"1"}
+Coalesce(If(false,{a:"z"}), {a:1})	{a:Text}	{a:"1"}
+Coalesce(If(false,{a:"z"}), {a:If(false,1)})	{a:Text}	{a:Blank}
+Coalesce(If(false,{a:1}), {a:If(false,"q")})	{a:Decimal}	{a:Blank}
+Coalesce(If(false,{a:1}), {a:Blank()}, {a:"x"})	{a:Decimal}	{a:Blank}
+Coalesce(If(false,[{a:1}]), [{a:""}])	Table{a:Decimal}	Table[{a:Blank}]
+Coalesce(If(false,[{a:1}]), [{a:"x"},{b:2}])	Table{a:Decimal,b:Decimal}	Table[{a:Error(InvalidArgument),b:Blank},{a:Blank,b:Decimal(2)}]
+Coalesce(If(false,[{a:1}]), [{a:2},{b:2}])	Table{a:Decimal,b:Decimal}	Table[{a:Decimal(2),b:Blank},{a:Blank,b:Decimal(2)}]
+Coalesce([{a:1}], [{a:true}])	Table{a:Decimal}	Table[{a:Decimal(1)}]
+Coalesce(If(false,[{a:1}]), [{a:true}])	Table{a:Decimal}	Table[{a:Decimal(1)}]
+Coalesce(If(false,[{a:1}]), [{a:2}], [{b:3}])	Table{a:Decimal,b:Decimal}	Table[{a:Decimal(2),b:Blank}]
+Coalesce(If(false,[{a:1}]), If(false,[{a:2}]), [{b:3}])	Table{a:Decimal,b:Decimal}	Table[{a:Blank,b:Decimal(3)}]
+Coalesce(If(false,[{a:1}]), Blank(), [{b:3}])	Table{a:Decimal,b:Decimal}	Table[{a:Blank,b:Decimal(3)}]
+Coalesce(If(false,[{a:1}]), [{a:1/0}])	Table{a:Decimal}	Table[{a:Error(Div0)}]
+Coalesce(If(false,{a:1}), {a:If(false,1,1/0)})	{a:Decimal}	{a:Error(Div0)}
+Coalesce(If(false,{a:1,b:{c:2}}), {b:{d:"x"}})	{a:Decimal,b:{c:Decimal,d:Text}}	{a:Blank,b:{c:Blank,d:"x"}}
+Coalesce(If(false,{a:1}), {a:Decimal(2)})	{a:Decimal}	{a:Decimal(2)}
+Coalesce(If(false,{a:Decimal(1)}), {a:Float(2)})	{a:Decimal}	{a:Decimal(2)}
+Coalesce(If(false,{a:Float(1)}), {a:Decimal(2)})	{a:Number}	{a:Number(2)}
+Coalesce(If(false,{a:Decimal(1)}), {a:Float(1E100)})		ERRORS:Error 44-49: Numeric value is too large.|Error 38-43: The function 'Float' has some invalid arguments.|Error 44-49: Expected text or number. We expect text or a number at this point in the formula.
+Coalesce(If(false,{a:Decimal(1)}), {a:"1E100"})	{a:Decimal}	{a:Error(InvalidArgument)}
+Coalesce(If(false,{a:1}), {a:2}, {a:3})	{a:Decimal}	{a:Decimal(2)}
+Coalesce({a:1}, {b:2}, {c:3})	{a:Decimal,b:Decimal,c:Decimal}	{a:Decimal(1),b:Blank,c:Blank}
+Coalesce(Blank(), Blank(), {c:3})	{c:Decimal}	{c:Decimal(3)}
+Coalesce(Blank(), {c:3}, Blank())	{c:Decimal}	{c:Decimal(3)}
+Coalesce({}, {a:1})	{a:Decimal}	{a:Blank}
+Coalesce({a:1}, {})	{a:Decimal}	{a:Decimal(1)}
+Coalesce(1, 1E400, 2)		ERRORS:Error 12-17: Numeric value is too large.|Error 12-17: Incompatible type. We can't evaluate your formula because of a type error.|Error 0-8: The function 'Coalesce' has some invalid arguments.
+Coalesce(Blank(), 1E400, 2)		ERRORS:Error 18-23: Numeric value is too large.|Error 18-23: Incompatible type. We can't evaluate your formula because of a type error.|Error 0-8: The function 'Coalesce' has some invalid arguments.
+Coalesce("", 1E400)		ERRORS:Error 13-18: Numeric value is too large.|Error 13-18: Incompatible type. We can't evaluate your formula because of a type error.|Error 0-8: The function 'Coalesce' has some invalid arguments.
+Coalesce(1E400, 1E400)		ERRORS:Error 9-14: Numeric value is too large.|Error 16-21: Numeric value is too large.|Error 9-14: Incompatible type. We can't evaluate your formula because of a type error.|Error 16-21: Incompatible type. We can't evaluate your formula because of a type error.|Error 0-8: The function 'Coalesce' has some invalid arguments.
+Coalesce(1E400, "a")		ERRORS:Error 9-14: Numeric value is too large.|Error 9-14: Incompatible type. We can't evaluate your formula because of a type error.|Error 16-19: Invalid argument type (Text). Expecting a Error value instead.|Error 0-8: The function 'Coalesce' has some invalid arguments.
+Coalesce(1E400, Blank())		ERRORS:Error 9-14: Numeric value is too large.|Error 9-14: Incompatible type. We can't evaluate your formula because of a type error.|Error 0-8: The function 'Coalesce' has some invalid arguments.
+Coalesce(Blank(), 1E400, Blank())		ERRORS:Error 18-23: Numeric value is too large.|Error 18-23: Incompatible type. We can't evaluate your formula because of a type error.|Error 0-8: The function 'Coalesce' has some invalid arguments.
+Coalesce(1E400, {a:1})		ERRORS:Error 9-14: Numeric value is too large.|Error 9-14: Incompatible type. We can't evaluate your formula because of a type error.|Error 16-21: Invalid argument type (Record). Expecting a Error value instead.|Error 0-8: The function 'Coalesce' has some invalid arguments.
+Coalesce({a:1}, 1E400)		ERRORS:Error 16-21: Numeric value is too large.|Error 16-21: Incompatible type. We can't evaluate your formula because of a type error.|Error 0-8: The function 'Coalesce' has some invalid arguments.
+Coalesce(If(false,{a:1}), 1E400)		ERRORS:Error 26-31: Numeric value is too large.|Error 26-31: Incompatible type. We can't evaluate your formula because of a type error.|Error 0-8: The function 'Coalesce' has some invalid arguments.
+Coalesce()		ERRORS:Error 0-10: Invalid number of arguments: received 0, expected 1 or more.
+Coalesce(Blank(), Blank(), 1E400, "a")		ERRORS:Error 27-32: Numeric value is too large.|Error 27-32: Incompatible type. We can't evaluate your formula because of a type error.|Error 0-8: The function 'Coalesce' has some invalid arguments.
+Coalesce(1, 2, 1E400, "a")		ERRORS:Error 15-20: Numeric value is too large.|Error 15-20: Incompatible type. We can't evaluate your formula because of a type error.|Error 0-8: The function 'Coalesce' has some invalid arguments.
+Coalesce(Foo)		ERRORS:Error 9-12: Name isn't valid. 'Foo' isn't recognized.|Error 0-8: The function 'Coalesce' has some invalid arguments.
+Coalesce(Foo, 1)		ERRORS:Error 9-12: Name isn't valid. 'Foo' isn't recognized.|Error 14-15: Invalid argument type (Number). Expecting a Error value instead.|Error 0-8: The function 'Coalesce' has some invalid arguments.
+Coalesce(1, Foo)		ERRORS:Error 12-15: Name isn't valid. 'Foo' isn't recognized.|Error 0-8: The function 'Coalesce' has some invalid arguments.
+Coalesce(1, Foo(), 2)		ERRORS:Error 12-17: 'Foo' is an unknown or unsupported function.|Error 0-8: The function 'Coalesce' has some invalid arguments.
+Coalesce(If(false,1,Foo), 1)		ERRORS:Error 20-23: Name isn't valid. 'Foo' isn't recognized.|Error 9-11: The function 'If' has some invalid arguments.
+Coalesce(1E400, Foo)		ERRORS:Error 9-14: Numeric value is too large.|Error 16-19: Name isn't valid. 'Foo' isn't recognized.|Error 9-14: Incompatible type. We can't evaluate your formula because of a type error.|Error 0-8: The function 'Coalesce' has some invalid arguments.
+Coalesce(If(false,1), "", If(false,2), "x")	Decimal	Error(InvalidArgument)
+Coalesce("a", "", "b")	Text	"a"
+Coalesce("", "", "")	Text	Blank
+Coalesce(1, "", 3)	Decimal	Decimal(1)
+Coalesce(false, "", 3)	Boolean	false
+Coalesce(If(false,true), 0.5)	Boolean	true
+Coalesce(If(false,true), "false")	Boolean	false
+Coalesce(If(false,true), "TrUe")	Boolean	true
+Coalesce(If(false,1), true)	Decimal	Decimal(1)
+Coalesce(If(false,1), false)	Decimal	Decimal(0)
+Coalesce(If(false,"t"), 0)	Text	"0"
+Coalesce(If(false,"t"), 12.5)	Text	"12.5"
+Coalesce(If(false,"t"), false)	Text	"false"
+Coalesce(If(false,Decimal(1)), false)	Decimal	Decimal(0)
+Coalesce(If(false,Decimal(1)), Float(2.5))	Decimal	Decimal(2.5)
+Coalesce(If(false,Float(1)), 0.1+0.2)	Number	Number(0.3)
+Coalesce(If(false,"t"), 0.1+0.2)	Text	"0.3"
+Coalesce(If(false,"t"), Decimal(0.1)+Decimal(0.2))	Text	"0.3"
+Coalesce(Blank(), If(false,"t"), 5)	Text	"5"
+Coalesce(Blank(), If(false,"t"), "")	Text	Blank
+Coalesce(If(false,{a:1}), If(false,{a:"x"}), {a:true})	{a:Decimal}	{a:Decimal(1)}
+Coalesce({a:If(false,1)}, {a:2})	{a:Decimal}	{a:Blank}
+Coalesce(If(false,{a:"t"}), {a:true})	{a:Text}	{a:"true"}
+Coalesce(If(false,{a:true}), {a:0.5})	{a:Boolean}	{a:true}
+Coalesce(If(false,{a:true}), {a:"false"})	{a:Boolean}	{a:false}
+Coalesce(If(false,{a:true}), {a:"maybe"})	{a:Boolean}	{a:Error(InvalidArgument)}
+Coalesce(If(false,[{a:1}]), [{a:"7"},{a:" "},{a:""}])	Table{a:Decimal}	Table[{a:Decimal(7)},{a:Error(InvalidArgument)},{a:Blank}]
+Coalesce(If(false,[{a:1}]), Filter([{a:2}], a>5))	Table{a:Decimal}	Table[]
+Coalesce(If(false,[{a:1}]), Filter([{a:2}], a>1))	Table{a:Decimal}	Table[{a:Decimal(2)}]
+Coalesce(If(false,[{a:1}]), Filter([{a:2,b:3}], a>1))	Table{a:Decimal,b:Decimal}	Table[{a:Decimal(2),b:Decimal(3)}]
