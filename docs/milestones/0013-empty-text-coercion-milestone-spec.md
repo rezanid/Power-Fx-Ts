@@ -1,6 +1,8 @@
-# Next milestone (proposal): empty text becomes Blank when coerced into `If` results and table literals
+# Milestone 0013: empty text becomes Blank when coerced into `If` results and table literals
 
-Status: **PROPOSED**, awaiting owner acceptance. Do not implement until accepted. Research only so far.
+Status: **ACCEPTED** by the owner with **option B** (keep `emptyTextAsBlank`, enable it explicitly at verified
+sites; `Conform` is not universally empty-text-as-Blank) and **IMPLEMENTED** (ADR 0013,
+`docs/research/empty-text-before-after.md`), pending independent review. This is the archived spec.
 
 Upstream pin: `df4ceba5e08220db670c25afead342ce699c50b5`. Baseline: `main` `f9df8bb` (after PR #12). Profiles:
 `v1-float` (default) and `v1-decimal`, PowerFxV1, en-US. Prior art: ADR 0012 (`emptyTextAsBlank`).
@@ -40,20 +42,37 @@ Already matching and must stay so (regression guards): `If(true,"",1)` → `""`,
 ## Why this is a small slice, not a coercion redesign
 
 `coerceValue` (`packages/interpreter/src/evaluator/coercion.ts`) also serves operands and conditions
-(`1+""`, `-""`, `!""`, `""||true`, `If("",1,2)`). Probes (`consumers.*.tsv`) show these already match the
-reference, because upstream's Blank reads as zero/false there; making that function return Blank would
-change nothing observable but would touch every operator. So **do not change `coerceValue` or the
-operand path**. The difference appears only where the coerced value is kept as data: the binder sites that
-build a result from coercions. Exactly four sites:
+(`1+""`, `-""`, `!""`, `""||true`, `If("",1,2)`). The nine consumer probes (`consumers.*.tsv`) show those
+operators already match the reference. **Correction to the earlier draft:** that does _not_ show that
+changing `coerceValue` would have no observable effect. Returning Blank from it would be observable
+wherever the coerced value is retained or inspected, and nine probes are not an exhaustive proof. The
+decision to leave `coerceValue`, operators and conditions untouched is a scope decision (smallest change
+that fixes the documented difference; owner-accepted), not a claim of equivalence.
 
-1. `If` scalar results: `bindCall` → `coerce(a, check.coercions[i], preserveBlank)` (`binder.ts`, near `If` handling).
-2. `If` aggregate results: `bindCall` → `conformTo(a, union)`.
-3. Table literal rows: `bindTableLiteral` → `conformTo(value, target)`.
-4. Table literal arguments (`Table(...)`/mixed items): the `conformTo(value, shape === "row" …)` site.
+The deviation appears where the coerced value is kept as data. Four binder sites are **proposed to
+change**. They are a subset of the sites that produce explicit `Conform`/`Coerce` nodes:
 
-The evaluator already implements the behavior (`Coerce` and `Conform` with `emptyTextAsBlank`; Text target
-unchanged; typed Blank and Errors pass through). Downstream effects (`Filter`, `CountRows`, `IsBlank`,
-`LookUp`) then follow without changes.
+| Site (`binder.ts`)                                     | Producer of | Change                                       |
+| ------------------------------------------------------ | ----------- | -------------------------------------------- |
+| `bindCall` `If` scalar result arguments (`coerce`)     | `Coerce`    | flag on (results only; conditions unchanged) |
+| `bindCall` `If` aggregate results (`conformTo`)        | `Conform`   | flag on                                      |
+| `bindTableLiteral` rows, incl. scalar `Value` wrapping | `Conform`   | flag on                                      |
+| `bindTableCall` (`Table(...)`)                         | `Conform`   | flag on, **only after evidence** (below)     |
+
+Current `Conform` producers (all of them): the three sites above that conform (`If`, table literal,
+`Table(...)`) and `bindCoalesce` (already flagged, ADR 0012, unchanged). Option B keeps the flag
+explicit: `conformTo` still defaults to `false`, so a future producer opts in deliberately.
+
+### `Table(...)` evidence
+
+Focused pinned-reference probes (`docs/research/empty-text-probes/table-*`; 28 expressions, both profiles)
+show `Table(...)` follows the same rule as table literals: `Table({a:1},{a:""})` → `{a:Blank}`;
+spliced tables `Table([{a:1}],[{a:""}])`, `Table({a:1},[{a:""}])`, `Table([{a:1}],{a:""})`; mixed
+`Table([{a:1},{a:2}],{a:""},[{a:""},{a:3}])`; a `Blank()` argument stays Blank; Text targets keep `""`
+(`Table({a:""},{a:1})` → `"1"`); invalid text still `Error(InvalidArgument)`; reached errors preserved;
+Decimal and Float field kinds; nested record fields and **nested table fields**
+(`Table({a:[{b:1}]},{a:[{b:""}]})` → inner `{b:Blank}`), also through `If`. Therefore enabling the flag in
+`bindTableCall` is justified.
 
 ## Scope
 
@@ -65,18 +84,14 @@ Excluded (unchanged): `coerceValue`, operators, conditions, `Value`/`Decimal`/`F
 types, other record/table constructors not listed, `Patch`/`Collect`, aggregate equality, any new coercion
 kind.
 
-## Unresolved architectural decision (owner)
+## Decision (resolved)
 
-All current `Conform` producers are selection or construction contexts (`Coalesce`, both `If` paths,
-both table sites), so either: **(A, recommended)** make `Conform` always empty-text-as-Blank and drop its
-optional flag (keep the flag only on `Coerce`, where operand-style coercions might later be added), or
-**(B)** keep the flag and pass `true` at the four sites. (A) removes a way to forget the flag; (B) keeps
-`Conform` neutral if a future non-selection producer appears. Also decide whether to keep
-`If`'s scalar path on `Coerce` with the flag (needed either way). No other decision is open.
+Owner chose **option B**: keep the optional `emptyTextAsBlank` flag on `Coerce` and `Conform` and enable it
+explicitly at the four sites. `Conform` is not universally empty-text-as-Blank.
 
 ## Reference-backed tests (both profiles)
 
-- Replay `docs/research/empty-text-probes/expressions.txt` against the committed reference TSVs in a new
+- Replay the committed probes (`expressions.txt`, `table-expressions.txt`, `consumer-expressions.txt`) against the committed reference TSVs in a new
   `empty-text.test.ts` (same canonical rendering and numeric normalization as `coalesce.test.ts`); copy
   fixtures into `packages/engine/test/fixtures/`. Extend probes where gaps appear, regenerating via the
   harness (`dotnet run --no-build -- probe <float|decimal> <file>`); never hand-write expectations.
@@ -95,7 +110,10 @@ must be explained. Never weaken a verdict; the strict-diagnostic comparison stay
 - Results stay recursively frozen (records, tables, error arrays, Decimal payloads); Conform builds new
   values and never mutates inputs or shares mutable state between nodes.
 - Per-row evaluation-budget ticks in table conformance and cancellation checks are unchanged; add tests
-  that abort (structural `CancellationSignal`) during conformance and exhaust `maxSteps` in both profiles.
+  that abort (structural `CancellationSignal`) after evaluation begins (scalar `If` coercion, aggregate
+  `If`, table literal, `Table(...)`, nested table fields) and exhaust `maxSteps` in both profiles.
+- Laziness: skipped `If` branches, skipped errors and skipped conformance (including behind `Coalesce`)
+  must not execute or consume budget; test with minimal-budget equality.
 - Decimal text and values never pass through JS `Number`; backend-instance and numeric-mode rejection are
   unchanged.
 - Typed Blank stays Blank; reached Errors pass through; invalid text still yields `InvalidArgument`.

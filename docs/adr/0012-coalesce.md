@@ -40,10 +40,8 @@ classification: `docs/milestones/0012-coalesce-milestone-spec.md`.
 
 ## Known deviations and limits
 
-- Pre-existing, not changed (out of scope): `If(false,{a:1},{a:""})`, `If(false,1,"")`,
-  `If(false,true,"")` and `[{a:1},{a:""}]` yield Blank upstream; we yield `0`/`false` because
-  `coerceValue`/`Conform` map `""` to zero. A future milestone could route them through
-  `emptyTextAsBlank` semantics.
+- Not changed here: `If(false,{a:1},{a:""})`, `If(false,1,"")`, `If(false,true,"")` and `[{a:1},{a:""}]`
+  yielded `0`/`false` where upstream gives Blank. Corrected afterwards by ADR 0013 (option B).
 - Excluded and still `unsupported`: 35 corpus cases (Left ×4, IfError ×2, Date/Time/DateTime ×29),
   legacy `CheckTypesLegacy`, new value kinds.
 - Probes for Error-typed argument cascades are compared by containment, like the compat runner.
