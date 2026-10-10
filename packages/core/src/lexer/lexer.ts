@@ -179,7 +179,13 @@ export function lex(text: string, options: LexOptions = {}): LexResult {
         ? parseDecimalText(literal) === undefined
         : Math.abs(Number(literal)) > MAX_NUMBER;
       if (tooLarge) {
-        fail(start, pos, DiagnosticCodes.NumberTooLarge);
+        diagnostics.push(createDiagnostic(DiagnosticCodes.NumberTooLarge, { start, end: pos }));
+        tokens.push({
+          kind: "Error",
+          span: { start, end: pos },
+          text: literal,
+          numberTooLarge: true,
+        });
         continue;
       }
       push("Number", start, pos);

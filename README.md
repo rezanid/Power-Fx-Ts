@@ -56,5 +56,10 @@ backend (`0.1+0.2` is exactly `0.3`; `Decimal()`/`Float()` convert explicitly). 
 float. Decimal host inputs are decimal strings, `bigint` or safe integers; imprecise JS numbers are
 rejected. `Decimal()`, `Float()` and `Value()` parse culture-aware text (`"$1,000"`, `"(12)%"`, optional locale: en-US and fr-FR only; other locales are reported as unsupported, see ADR 0010).
 
+Diagnostics: an out-of-range numeric literal (`1E400` float, `1E100` decimal) keeps the type Error, so
+its operator, conversion call or comparison reports upstream's cascaded "invalid argument type"
+diagnostics. Eager binary operators evaluate both operands and merge the errors of both (a two-error
+result serializes as `Error(Table(...))`); see ADR 0011.
+
 See `docs/adr/0004-typed-context.md`, `0005-record-literals-and-with.md` and
 `0006-tables-and-row-scopes.md` for rules and limitations.

@@ -394,7 +394,9 @@ class Parser {
       case "Error": {
         this.next();
         if (t.value !== undefined) this.report(DiagnosticCodes.ReservedWord, t.span);
-        return { kind: "Error", tokens: [t], span: t.span };
+        return t.numberTooLarge === true
+          ? { kind: "Error", tokens: [t], span: t.span, numberTooLarge: true }
+          : { kind: "Error", tokens: [t], span: t.span };
       }
       case "Eof":
       case "Semicolon":

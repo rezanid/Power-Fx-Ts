@@ -58,8 +58,12 @@ export function serializeValue(value: FormulaValue, engine: Engine): string {
         .join(",")}}`;
     case "Table":
       return `Table(${value.rows.map((r) => serializeValue(r, engine)).join(",")})`;
-    case "Error":
-      return `Error({Kind:ErrorKind.${value.errors[0]?.kind ?? "Unknown"}})`;
+    case "Error": {
+      // Mirrors upstream ErrorValue.ToExpression (compact form): several errors become a Table.
+      const kinds = value.errors.map((x) => `{Kind:ErrorKind.${x.kind}}`);
+      if (kinds.length === 0) return "Error({Kind:ErrorKind.Unknown})";
+      return kinds.length > 1 ? `Error(Table(${kinds.join(",")}))` : `Error(${kinds[0]})`;
+    }
   }
 }
 

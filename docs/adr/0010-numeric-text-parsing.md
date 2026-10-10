@@ -83,5 +83,5 @@ value is `0.<digits> x 10^scale` (`digits` has no leading zeros, may be empty fo
 
 - Locales other than en-US/fr-FR; locale-name validation (BadLanguageCode).
 - Culture-specific formatting (`Text(n, ..., locale)`); only parsing is covered.
-- Remaining compat failures are unrelated to text parsing (cascaded out-of-range-literal diagnostics,
-  one error-table serialization case, `^` last-ulp, `Text_ExcelCompat_PowerFxV1Compat.txt:13`).
+- Remaining compat failures are unrelated to text parsing (`Text_ExcelCompat_PowerFxV1Compat.txt:13`;
+  the cascaded-literal and error-table gaps were closed by ADR 0011).

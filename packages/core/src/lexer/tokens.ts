@@ -47,6 +47,8 @@ export interface Token {
   readonly text: string;
   /** For Ident (quoted or not) and String tokens: the unescaped value. */
   readonly value?: string;
+  /** On an Error token: a numeric literal outside the numeric kind's range. */
+  readonly numberTooLarge?: true;
 }
 
 const UPSTREAM_KIND_NAMES: Partial<Record<TokenKind, string>> = {

@@ -276,6 +276,18 @@ static class P
     static int Main(string[] args)
     {
         if (args.Length >= 2 && args[0] == "generate-text") return GenerateText(args[1]);
+        if (args.Length >= 3 && args[0] == "check")
+        {
+            // Full compile-error list, as the corpus `Errors:` expectation prints it.
+            var e = Engine(args[1]);
+            foreach (var line in File.ReadAllLines(args[2]).Where(l => l.Trim() != ""))
+            {
+                var c = e.Check(line, new ParserOptions { Culture = new CultureInfo("en-US"), NumberIsFloat = args[1] == "float" });
+                var errs = c.Errors.Where(x => !x.IsWarning).Select(x => x.ToString());
+                Console.WriteLine($"{line}\n   => {(c.IsSuccess ? "OK" : string.Join("|", errs))}");
+            }
+            return 0;
+        }
         if (args.Length >= 3 && args[0] == "eval")
         {
             var e = Engine(args[1]);

@@ -4,9 +4,9 @@
 - Runner: engine
 - Setup: `PowerFxV1,disable:NumberIsFloat,DecimalSupport` (number mode: decimal, culture en-US, time zone UTC)
 - Cases: 22047 total, 5874 not applicable to this profile
-- Pass 2629, fail 37, skip 56, unsupported 13451
+- Pass 2665, fail 1, skip 56, unsupported 13451
 - Unsupported by reason: feature 10239, setup 3212, profile 0
-- Passing compile-error cases whose error set differs from upstream's (strict diagnostic, not a verdict): 34
+- Passing compile-error cases whose error set differs from upstream's (strict diagnostic, not a verdict): 36
 - Passing numeric cases accepted only by upstream's float tolerance (diagnostic, not a verdict): 7
 
 | File | Total | Pass | Fail | Skip | Unsupported |
@@ -71,13 +71,13 @@
 | DecimalDotnetRuntime.txt | 385 | 266 | 0 | 0 | 119 |
 | DecimalIntReturn.txt | 23 | 1 | 0 | 0 | 22 |
 | DecimalIntReturn_DVDecimal.txt | 24 | 1 | 0 | 1 | 22 |
-| DecimalMathFuncs_NumberIsFloatDisabled.txt | 147 | 9 | 3 | 0 | 135 |
-| DecimalMathFuncs_NumberIsFloatDisabled_DVDecimal.txt | 159 | 11 | 3 | 0 | 145 |
+| DecimalMathFuncs_NumberIsFloatDisabled.txt | 147 | 12 | 0 | 0 | 135 |
+| DecimalMathFuncs_NumberIsFloatDisabled_DVDecimal.txt | 159 | 14 | 0 | 0 | 145 |
 | DecimalNonMathFuncs.txt | 84 | 25 | 0 | 5 | 54 |
 | DecimalNonMathFuncs_DVDecimal.txt | 90 | 25 | 0 | 4 | 61 |
 | DecimalOps.txt | 226 | 83 | 0 | 0 | 143 |
 | DecimalOps_DVDecimal.txt | 219 | 83 | 0 | 0 | 136 |
-| DecimalOverflow.txt | 65 | 42 | 2 | 0 | 21 |
+| DecimalOverflow.txt | 65 | 44 | 0 | 0 | 21 |
 | Distinct.txt | 29 | 0 | 0 | 0 | 29 |
 | Distinct_V1Compat.txt | 2 | 0 | 0 | 0 | 2 |
 | DropColumns_SupportColumnNamesAsIdentifiers.txt | 21 | 0 | 0 | 0 | 21 |
@@ -160,18 +160,18 @@
 | ModT_Decimal.txt | 18 | 0 | 0 | 0 | 18 |
 | Mod_Decimal.txt | 26 | 1 | 0 | 0 | 25 |
 | OpMatrix_Div_Decimal.txt | 131 | 42 | 0 | 0 | 89 |
-| OpMatrix_Eq_Decimal.txt | 219 | 49 | 3 | 0 | 167 |
+| OpMatrix_Eq_Decimal.txt | 219 | 52 | 0 | 0 | 167 |
 | OpMatrix_Eq_Decimal_V1Compat.txt | 60 | 42 | 0 | 0 | 18 |
 | OpMatrix_Eq_DifferentTypes_V1Compat.txt | 20 | 6 | 0 | 0 | 14 |
 | OpMatrix_Exp_Decimal.txt | 169 | 70 | 0 | 0 | 99 |
-| OpMatrix_Geq_Decimal.txt | 302 | 97 | 3 | 0 | 202 |
-| OpMatrix_Gt_Decimal.txt | 302 | 97 | 3 | 0 | 202 |
-| OpMatrix_Leq_Decimal.txt | 302 | 97 | 3 | 0 | 202 |
-| OpMatrix_Lt_Decimal.txt | 302 | 97 | 3 | 0 | 202 |
+| OpMatrix_Geq_Decimal.txt | 302 | 100 | 0 | 0 | 202 |
+| OpMatrix_Gt_Decimal.txt | 302 | 100 | 0 | 0 | 202 |
+| OpMatrix_Leq_Decimal.txt | 302 | 100 | 0 | 0 | 202 |
+| OpMatrix_Lt_Decimal.txt | 302 | 100 | 0 | 0 | 202 |
 | OpMatrix_Minus_Decimal.txt | 122 | 39 | 0 | 0 | 83 |
 | OpMatrix_Mod_Decimal.txt | 219 | 0 | 0 | 0 | 219 |
 | OpMatrix_Mul_Decimal.txt | 125 | 41 | 0 | 0 | 84 |
-| OpMatrix_Neq_Decimal.txt | 216 | 49 | 3 | 0 | 164 |
+| OpMatrix_Neq_Decimal.txt | 216 | 52 | 0 | 0 | 164 |
 | OpMatrix_Neq_Decimal_V1Compat.txt | 61 | 42 | 0 | 0 | 19 |
 | OpMatrix_Plus_Decimal.txt | 119 | 39 | 0 | 0 | 80 |
 | OpMatrix_Unary_Decimal.txt | 98 | 40 | 0 | 0 | 58 |
@@ -265,7 +265,7 @@
 | UntypedBlankAsTable_V1Compat.txt | 6 | 0 | 0 | 0 | 6 |
 | Upper.txt | 23 | 0 | 0 | 0 | 23 |
 | Value.txt | 253 | 241 | 0 | 0 | 12 |
-| ValueFuncs_NumberIsDecimal.txt | 45 | 35 | 10 | 0 | 0 |
+| ValueFuncs_NumberIsDecimal.txt | 45 | 45 | 0 | 0 | 0 |
 | VarP.txt | 16 | 0 | 0 | 0 | 16 |
 | VoidToError.txt | 7 | 0 | 0 | 0 | 7 |
 | VoidToError_V1Compat.txt | 2 | 0 | 0 | 0 | 2 |

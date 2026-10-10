@@ -85,6 +85,34 @@ const ORDERING: Readonly<Record<string, BoundBinaryOperator>> = {
   GtEq: "GtEq",
 };
 
+// Accepted-type lists of upstream's operand checks (BinderUtils.CheckBinaryOpCore/CheckUnaryOpCore),
+// as printed by the pinned reference. Number and Decimal fold into "Number".
+const ARITHMETIC_TYPES = "Number, Text, Boolean, Date, Time, DateTimeNoTimeZone, DateTime, Dynamic";
+const NUMERIC_TYPES = "Number, Text, Boolean, Dynamic";
+const BOOLEAN_TYPES = "Boolean, Number, Text, Dynamic";
+const CONCAT_TYPES =
+  "Text, GUID, Number, Date, Time, DateTimeNoTimeZone, DateTime, Boolean, ViewValue, Dynamic";
+const UNARY_ACCEPTED: Readonly<Record<UnaryNode["op"], string>> = {
+  Negate: NUMERIC_TYPES,
+  Not: BOOLEAN_TYPES,
+  Percent: "Number, Date, DateTime, DateTimeNoTimeZone, Time, Text, Boolean, Dynamic",
+};
+/** Left and right operand lists; ordering operators use their own (shared) message. */
+const BINARY_ACCEPTED: Readonly<Record<string, readonly [string, string]>> = {
+  Add: [ARITHMETIC_TYPES, ARITHMETIC_TYPES],
+  Sub: [ARITHMETIC_TYPES, NUMERIC_TYPES],
+  Mul: [ARITHMETIC_TYPES, ARITHMETIC_TYPES],
+  Div: [ARITHMETIC_TYPES, ARITHMETIC_TYPES],
+  Power: [NUMERIC_TYPES, NUMERIC_TYPES],
+  Concat: [CONCAT_TYPES, CONCAT_TYPES],
+  And: [BOOLEAN_TYPES, BOOLEAN_TYPES],
+  Or: [BOOLEAN_TYPES, BOOLEAN_TYPES],
+  Lt: ["", ""],
+  LtEq: ["", ""],
+  Gt: ["", ""],
+  GtEq: ["", ""],
+};
+
 const TARGET_TYPES: Readonly<Record<CoercionTarget, FormulaType>> = {
   Number: NumberType,
   Decimal: DecimalType,
@@ -159,6 +187,25 @@ class Binder {
 
   private report(code: DiagnosticCode, span: Span, args: string[] = []): void {
     this.diagnostics.push(createDiagnostic(code, span, args));
+  }
+
+  private isErrorTyped(node: BoundNode): boolean {
+    return node.kind === "Invalid" && node.errorTyped === true;
+  }
+
+  /**
+   * Upstream gives an out-of-range literal the type Error and every consumer then rejects it with
+   * its own message (`CheckTypeCore`: "Expecting one of the following: ..." with the operator's
+   * accepted types, listed here as verified against the reference). Errors do not propagate
+   * further: the enclosing operator or call yields a well-typed result.
+   */
+  private reportErrorOperand(operand: BoundNode, accepted: string): void {
+    this.report(DiagnosticCodes.InvalidArgumentTypeOneOf, operand.span, [accepted]);
+  }
+
+  /** Upstream keeps the operator's or function's result type after an operand error. */
+  private recovered(span: Span, type: FormulaType): BoundNode {
+    return { kind: "Invalid", span, type };
   }
 
   private invalid(span: Span): BoundNode {
@@ -248,9 +295,13 @@ class Binder {
       case "Chain":
         return this.notSupported("Expression chaining", node.span);
       case "Missing":
-      case "Error":
-        // Already reported by the parser.
         return this.invalid(node.span);
+      case "Error":
+        // Already reported by the parser. An out-of-range numeric literal still has the type
+        // Error, so the construct around it reports its own cascaded diagnostics.
+        return node.numberTooLarge === true
+          ? { kind: "Invalid", span: node.span, type: UnknownType, errorTyped: true }
+          : this.invalid(node.span);
     }
   }
 
@@ -474,14 +525,27 @@ class Binder {
       return this.invalid(node.span);
     }
     const operand = args[0]!;
+    const to: NumericKind =
+      name === "Value" ? this.defaultNumeric : name === "Decimal" ? "Decimal" : "Number";
+    const locale = args[1];
+    if (this.isErrorTyped(operand) || (locale !== undefined && this.isErrorTyped(locale))) {
+      // Upstream reports each Error-typed argument, then the call itself; the call keeps its type.
+      const errors: Diagnostic[] = [];
+      if (this.isErrorTyped(operand)) {
+        errors.push(createDiagnostic(DiagnosticCodes.TextOrNumberExpected, operand.span));
+      }
+      if (locale !== undefined && this.isErrorTyped(locale)) {
+        errors.push(createDiagnostic(DiagnosticCodes.TextExpected, locale.span));
+      }
+      this.report(DiagnosticCodes.InvalidFunctionArguments, node.callee.span, [name]);
+      this.diagnostics.push(...errors);
+      return this.recovered(node.span, TARGET_TYPES[to]);
+    }
     if (operand.type.kind === "Unknown") return this.invalid(node.span);
     if (operand.type.kind === "Record" || operand.type.kind === "Table") {
       this.report(DiagnosticCodes.InvalidArgumentType, operand.span, []);
       return this.invalid(node.span);
     }
-    const to: NumericKind =
-      name === "Value" ? this.defaultNumeric : name === "Decimal" ? "Decimal" : "Number";
-    const locale = args[1];
     if (locale === undefined) {
       return { kind: "ConvertNumber", to, operand, span: node.span, type: TARGET_TYPES[to] };
     }
@@ -719,6 +783,13 @@ class Binder {
 
   private bindUnary(node: UnaryNode): BoundNode {
     const operand = this.bindExpression(node.operand);
+    if (
+      this.isErrorTyped(operand) ||
+      (node.op !== "Percent" && (operand.type.kind === "Record" || operand.type.kind === "Table"))
+    ) {
+      this.reportErrorOperand(operand, UNARY_ACCEPTED[node.op]);
+      return this.recovered(node.span, node.op === "Not" ? BooleanType : NumberType);
+    }
     if (operand.type.kind === "Unknown") return this.invalid(node.span);
     const target: CoercionTarget = node.op === "Not" ? "Boolean" : this.unaryKind(operand.type);
     return {
@@ -734,6 +805,15 @@ class Binder {
     const left = this.bindExpression(node.left);
     const right = this.bindExpression(node.right);
     const op = node.op;
+    const aggregate = (n: BoundNode): boolean =>
+      n.type.kind === "Record" || n.type.kind === "Table";
+    if (
+      this.isErrorTyped(left) ||
+      this.isErrorTyped(right) ||
+      (BINARY_ACCEPTED[op] !== undefined && (aggregate(left) || aggregate(right)))
+    ) {
+      return this.bindErrorOperands(node, left, right);
+    }
     if (left.type.kind === "Unknown" || right.type.kind === "Unknown") {
       return this.invalid(node.span);
     }
@@ -799,6 +879,17 @@ class Binder {
       case "Neq": {
         const lk = left.type.kind;
         const rk = right.type.kind;
+        const aggregate = (k: string): boolean => k === "Record" || k === "Table";
+        const scalar = (k: string): boolean =>
+          k === "Number" || k === "Decimal" || k === "Text" || k === "Boolean";
+        if ((aggregate(lk) && scalar(rk)) || (scalar(lk) && aggregate(rk))) {
+          // A scalar never compares with an aggregate upstream (CheckEqualArgTypesCore).
+          this.report(DiagnosticCodes.IncompatibleTypesForComparison, this.operatorSpan(node), [
+            typeName(left.type),
+            typeName(right.type),
+          ]);
+          return this.recovered(node.span, BooleanType);
+        }
         if (lk === "Record" || rk === "Record" || lk === "Table" || rk === "Table") {
           // Upstream aggregate equality has its own rules, not yet traced or implemented.
           return this.notSupported("Record or table comparison", node.span);
@@ -827,6 +918,48 @@ class Binder {
       default:
         return this.notSupported(`Operator ${op}`, node.span);
     }
+  }
+
+  /**
+   * Diagnostics for a binary operator with an out-of-range literal operand. The other operand is
+   * still checked, and the node keeps the operator's result type so the enclosing expression is
+   * checked normally (verified against the reference).
+   */
+  private bindErrorOperands(node: BinaryNode, left: BoundNode, right: BoundNode): BoundNode {
+    const op = node.op;
+    const resultType: FormulaType =
+      op === "Concat"
+        ? TextType
+        : op === "And" || op === "Or" || ORDERING[op] !== undefined || op === "Eq" || op === "Neq"
+          ? BooleanType
+          : NumberType;
+    if (op === "Eq" || op === "Neq") {
+      // Upstream CheckEqualArgTypesCore reports one comparison error at the operator.
+      this.report(DiagnosticCodes.IncompatibleTypesForComparison, this.operatorSpan(node), [
+        this.isErrorTyped(left) ? "Error" : typeName(left.type),
+        this.isErrorTyped(right) ? "Error" : typeName(right.type),
+      ]);
+      return this.recovered(node.span, resultType);
+    }
+    const accepted = BINARY_ACCEPTED[op];
+    if (accepted === undefined) return this.recovered(node.span, resultType);
+    const operands: [BoundNode, string][] = [
+      [left, accepted[0]],
+      [right, accepted[1]],
+    ];
+    for (const [operand, list] of operands) {
+      const bad =
+        this.isErrorTyped(operand) ||
+        operand.type.kind === "Record" ||
+        operand.type.kind === "Table";
+      if (!bad) continue;
+      if (ORDERING[op] !== undefined) {
+        this.report(DiagnosticCodes.InvalidArgumentType, operand.span, []);
+      } else {
+        this.reportErrorOperand(operand, list);
+      }
+    }
+    return this.recovered(node.span, resultType);
   }
 
   private binary(
