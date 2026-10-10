@@ -4,7 +4,7 @@
 - Runner: engine
 - Setup: `PowerFxV1,NumberIsFloat,DecimalSupport` (number mode: float, culture en-US, time zone UTC)
 - Cases: 22047 total, 7088 not applicable to this profile
-- Pass 2146, fail 2, skip 46, unsupported 12765
+- Pass 2147, fail 1, skip 46, unsupported 12765
 - Unsupported by reason: feature 9602, setup 3163, profile 0
 - Passing compile-error cases whose error set differs from upstream's (strict diagnostic, not a verdict): 34
 - Passing numeric cases accepted only by upstream's float tolerance (diagnostic, not a verdict): 12
@@ -280,7 +280,7 @@
 | UntypedBlankAsTable_V1Compat.txt | 6 | 0 | 0 | 0 | 6 |
 | Upper.txt | 23 | 0 | 0 | 0 | 23 |
 | Value.txt | 253 | 241 | 0 | 0 | 12 |
-| ValueFuncs_NumberIsFloat.txt | 42 | 41 | 1 | 0 | 0 |
+| ValueFuncs_NumberIsFloat.txt | 42 | 42 | 0 | 0 | 0 |
 | ValueFuncs_NumberIsFloat_NoDecimal.txt | 26 | 26 | 0 | 0 | 0 |
 | VarP.txt | 16 | 0 | 0 | 0 | 16 |
 | VoidToError.txt | 7 | 0 | 0 | 0 | 7 |

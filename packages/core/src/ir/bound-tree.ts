@@ -143,4 +143,8 @@ export type BoundNode =
       readonly projection: BoundNode | undefined;
     })
   /** Placeholder for an expression that failed to bind; never evaluated. */
-  | (BoundBase & { readonly kind: "Invalid" });
+  | (BoundBase & {
+      readonly kind: "Invalid";
+      /** An out-of-range numeric literal: the only node that carries the type Error (see the binder). */
+      readonly errorTyped?: true;
+    });

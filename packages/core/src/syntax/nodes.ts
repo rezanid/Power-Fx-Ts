@@ -123,6 +123,8 @@ export interface MissingNode extends NodeBase {
 export interface ErrorNode extends NodeBase {
   readonly kind: "Error";
   readonly tokens: readonly Token[];
+  /** Set for a numeric literal that is out of range; it still has the type Error when bound. */
+  readonly numberTooLarge?: true;
   /** Operands parsed around a misplaced token, kept so tooling can still see them. */
   readonly operands?: readonly ExpressionNode[];
 }

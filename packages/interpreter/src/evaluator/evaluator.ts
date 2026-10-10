@@ -17,6 +17,7 @@ import {
   blank,
   boolean,
   decimal,
+  deepFreeze,
   error,
   number,
   record,
@@ -319,16 +320,15 @@ class Evaluator implements EvaluationContext {
       }
       case "Concat": {
         const left = this.operand(node.left, "Text");
-        if (left.kind !== "Text") return left;
         const right = this.operand(node.right, "Text");
-        return right.kind === "Text" ? text(left.value + right.value) : right;
+        if (left.kind !== "Text" || right.kind !== "Text") return combineErrors(left, right);
+        return text(left.value + right.value);
       }
       case "Eq":
       case "Neq": {
         const left = this.evaluate(node.left);
-        if (left.kind === "Error") return left;
         const right = this.evaluate(node.right);
-        if (right.kind === "Error") return right;
+        if (left.kind === "Error" || right.kind === "Error") return combineErrors(left, right);
         const equal = valuesEqual(left, right, this.numerics);
         return boolean(node.op === "Eq" ? equal : !equal);
       }
@@ -336,14 +336,24 @@ class Evaluator implements EvaluationContext {
         const kind = node.numeric;
         if (kind === undefined) throw new Error(`Binary ${node.op} has no numeric kind.`);
         const left = this.operand(node.left, kind);
-        if (left.kind !== kind) return left;
         const right = this.operand(node.right, kind);
-        if (right.kind !== kind) return right;
+        if (left.kind !== kind || right.kind !== kind) return combineErrors(left, right);
         const backend = kind === "Decimal" ? this.numerics.decimal : this.numerics.float;
         return numberOperation(node.op, kind, left.value, right.value, backend);
       }
     }
   }
+}
+
+/**
+ * Upstream evaluates both operands of an eager operator, then StandardErrorHandling returns
+ * `ErrorValue.Combine` of every Error operand, in operand order. Blank/other non-error operands
+ * that failed the kind check (a Blank is coerced earlier) never reach here without an error.
+ */
+function combineErrors(left: FormulaValue, right: FormulaValue): FormulaValue {
+  const errors = [left, right].flatMap((v) => (v.kind === "Error" ? v.errors : []));
+  if (errors.length <= 1) return left.kind === "Error" ? left : right;
+  return deepFreeze({ kind: "Error", errors });
 }
 
 const wrapNumeric = (kind: "Number" | "Decimal", value: NumericValue): FormulaValue =>
