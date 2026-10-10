@@ -6,13 +6,16 @@ Upstream pin: `df4ceba5e08220db670c25afead342ce699c50b5` (`docs/provenance.md`).
 Profiles: `v1-float` (default, PowerFxV1 + NumberIsFloat) and `v1-decimal` (opt-in
 `new Engine({ numberMode: "decimal" })`), culture en-US, UTC.
 
-## Completed milestones (all merged; PRs #2–#10)
+## Completed milestones (merged; PRs #2–#10)
 
 Vertical slice (lexer/parser/binder/evaluator, compat runner) → parser parity → typed context and
 schema separation → record literals and `With` → tables, row scopes, `Filter`, `ThisRecord`/`As` →
 `T.Field`, `First`, `CountRows`, `LookUp` → record/table type unions → Decimal backend →
 culture-aware numeric text parsing (en-US, fr-FR) → compat cleanup (cascaded out-of-range-literal
-diagnostics, merged operand errors, recovered result types) → `Coalesce` (PR pending review).
+diagnostics, merged operand errors, recovered result types).
+
+Pending review, **not merged**: `Coalesce` (PR #12, ADR 0012, branch
+`rezanid-continue-handoff-milestone`).
 
 ## Source and test map
 
@@ -43,8 +46,9 @@ diagnostics, merged operand errors, recovered result types) → `Coalesce` (PR p
   including Error rows); 0007 `First`/`CountRows`/`LookUp`; 0008 record/table unions (explicit
   `Conform` nodes; `If` lazy); 0009 Decimal (opt-in, float default retained); 0010 numeric text
   parsing (en-US/fr-FR; unsupported locales are a run-time `unsupported` after Blank/error
-  precedence); 0011 literal diagnostics and merged errors; 0012 `Coalesce` (`emptyTextAsBlank` coercion flag;
-  fold-time coercions; record/table conformance).
+  precedence); 0011 literal diagnostics and merged errors.
+- **Provisional, pending PR #12 review (not accepted):** ADR 0012 `Coalesce` (`emptyTextAsBlank`
+  coercion flag; fold-time coercions; record/table conformance).
 - Custom numeric backends must implement `fromScanned` (ADR 0010 migration notes).
 - Evaluation-budget accounting is per evaluated node; exact upstream step counts are not required.
 

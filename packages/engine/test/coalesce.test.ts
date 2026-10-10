@@ -124,13 +124,50 @@ describe("Coalesce evaluation contract", () => {
     expect(await steps("Coalesce(1/0, 1/0, 1/0)", 4)).toBe("value");
   });
 
-  it("observes cancellation before evaluating each argument", async () => {
-    const controller = new AbortController();
-    controller.abort(new Error("stop"));
-    await expect(
-      engine.evaluate("Coalesce(Blank(), 1)", { signal: controller.signal }),
-    ).rejects.toThrow("stop");
-  });
+  describe.each(["float", "decimal"] as const)(
+    "cancellation after evaluation begins (%s)",
+    (mode) => {
+      const eng = new Engine({ numberMode: mode });
+      const reason = new Error("stop-now");
+      // Structural signal that becomes aborted at the n-th check; counts every check made.
+      const signalAbortingAt = (n: number) => {
+        const state = { checks: 0 };
+        return {
+          state,
+          signal: {
+            get aborted() {
+              return state.checks >= n;
+            },
+            throwIfAborted() {
+              state.checks++;
+              if (state.checks >= n) throw reason;
+            },
+          },
+        };
+      };
+      const totalChecks = async (formula: string) => {
+        const probe = signalAbortingAt(Number.MAX_SAFE_INTEGER);
+        const r = await eng.evaluate(formula, { signal: probe.signal });
+        expect(r.kind).toBe("value");
+        return probe.state.checks;
+      };
+
+      for (const [label, formula] of [
+        ["between arguments", "Coalesce(Blank(), Blank(), 1, 2)"],
+        ["during table conformance", "Coalesce(If(false,[{a:1}]), [{b:2},{b:3},{b:4}])"],
+      ] as const) {
+        it(`propagates the reason and stops ${label}`, async () => {
+          const total = await totalChecks(formula);
+          expect(total).toBeGreaterThan(2);
+          for (let n = 2; n <= total; n++) {
+            const run = signalAbortingAt(n);
+            await expect(eng.evaluate(formula, { signal: run.signal })).rejects.toBe(reason);
+            expect(run.state.checks).toBe(n); // no check or evaluation after the abort
+          }
+        });
+      }
+    },
+  );
 
   it("observes budget exhaustion while conforming table rows", async () => {
     const formula = "Coalesce(If(false,[{a:1}]), [{b:2},{b:3},{b:4}])";
@@ -164,10 +201,13 @@ describe("Coalesce evaluation contract", () => {
     expect(Object.isFrozen(merged.value.errors)).toBe(true);
     expect(merged.value.errors.every((e) => Object.isFrozen(e))).toBe(true);
 
-    const decimal = await new Engine({ numberMode: "decimal" }).evaluate(
-      'Coalesce("", Decimal("1.5"), 1)',
-    );
-    if (decimal.kind !== "value") throw new Error("decimal");
-    expect(Object.isFrozen(decimal.value)).toBe(true);
+    for (const mode of ["float", "decimal"] as const) {
+      const decimal = await new Engine({ numberMode: mode }).evaluate(
+        'Coalesce(Blank(), Decimal("1.5"), 1)',
+      );
+      if (decimal.kind !== "value" || decimal.value.kind !== "Decimal") throw new Error(mode);
+      expect(Object.isFrozen(decimal.value)).toBe(true);
+      expect(Object.isFrozen(decimal.value.value)).toBe(true);
+    }
   });
 });
