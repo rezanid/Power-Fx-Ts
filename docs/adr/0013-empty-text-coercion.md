@@ -1,10 +1,10 @@
 # ADR 0013: Empty text is Blank in `If` results, table literals and `Table(...)`
 
-Status: **merged, owner acceptance of the ADR itself not recorded**. The owner approved the scope and option B
-before implementation, and PR #13 was merged by the owner (merge commit `5cf1d25`, 2026-10-10T22:36:25Z; CI on
-the merge commit: run 38092058232, success). GitHub holds no review, approval or comment on PR #13 and the repo
-has no independent-review record, so neither an explicit acceptance statement nor a review outcome is evidenced.
-The owner should confirm and change this to `accepted` (or amend) in a later PR. Pinned upstream
+Status: **merged; ADR acceptance not recorded**. The owner approved the scope and option B before
+implementation, and merged PR #13 (merge commit `5cf1d25`, 2026-10-10T22:36:25Z; main CI run 38092058232 passed).
+No GitHub review or comment exists on PR #13, and no independent-review outcome is recorded in the repository
+(an independent review was done in a separate session). The owner should confirm and set `accepted` (or amend)
+in a later PR. Pinned upstream
 `df4ceba5`. Baseline `main` `f9df8bb`. Spec: `docs/milestones/0013-empty-text-coercion-milestone-spec.md`.
 
 ## Context
