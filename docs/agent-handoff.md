@@ -46,12 +46,15 @@ diagnostics, merged operand errors, recovered result types) → `Coalesce` (PR #
   `Conform` nodes; `If` lazy); 0009 Decimal (opt-in, float default retained); 0010 numeric text
   parsing (en-US/fr-FR; unsupported locales are a run-time `unsupported` after Blank/error
   precedence); 0011 literal diagnostics and merged errors.
-- ADR 0013 (merged in PR #13; the ADR's own acceptance is **not recorded**, see its status): keep `emptyTextAsBlank` and enable it explicitly at
-  `If` results, table literals and `Table(...)`; `Conform` stays non-universal.
 - ADR 0012 `Coalesce` (accepted; `emptyTextAsBlank` coercion flag, fold-time coercions, record/table
   conformance).
 - Custom numeric backends must implement `fromScanned` (ADR 0010 migration notes).
 - Evaluation-budget accounting is per evaluated node; exact upstream step counts are not required.
+
+## Merged, acceptance not recorded
+
+- ADR 0013 (merged in PR #13; the ADR's own acceptance is **not recorded**, see its status): keep `emptyTextAsBlank` and enable it explicitly at
+  `If` results, table literals and `Table(...)`; `Conform` stays non-universal.
 
 ## Known gaps
 
@@ -68,7 +71,8 @@ diagnostics, merged operand errors, recovered result types) → `Coalesce` (PR #
 
 Historical semantic evidence (recorded in PR #10, **not re-run** for this documentation PR): at
 `59e68db`, whose tree is identical to baseline `f2fa9d8`, build, lint, format and 438 tests passed;
-both compat profiles produced the counts above with 0 per-case pass-to-non-pass regressions against
+both compat profiles produced v1-float 2147 / 1 / 46 / 12765 and v1-decimal 2665 / 1 / 56 / 13451 (pass / fail /
+skip / unsupported; pre-`Coalesce`) with 0 per-case pass-to-non-pass regressions against
 the PR #9 baseline (`docs/research/compat-cleanup-before-after.md`). Baseline CI: GitHub Actions
 run for `f2fa9d8` on `main` reported success when this handoff was prepared
 (`gh run list --branch main`); no durable run URL was recorded, so treat it as previously
