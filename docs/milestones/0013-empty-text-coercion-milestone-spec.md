@@ -1,8 +1,8 @@
 # Milestone 0013: empty text becomes Blank when coerced into `If` results and table literals
 
 Status: **ACCEPTED** by the owner with **option B** (keep `emptyTextAsBlank`, enable it explicitly at verified
-sites; `Conform` is not universally empty-text-as-Blank) and **IMPLEMENTED** (ADR 0013,
-`docs/research/empty-text-before-after.md`), pending independent review. This is the archived spec.
+sites; `Conform` is not universally empty-text-as-Blank) and **IMPLEMENTED and merged** (PR #13, merge commit `5cf1d25`; ADR 0013,
+`docs/research/empty-text-before-after.md`). This is the archived spec.
 
 Upstream pin: `df4ceba5e08220db670c25afead342ce699c50b5`. Baseline: `main` `f9df8bb` (after PR #12). Profiles:
 `v1-float` (default) and `v1-decimal`, PowerFxV1, en-US. Prior art: ADR 0012 (`emptyTextAsBlank`).
