@@ -1,0 +1,6 @@
+IsEmpty(If(1/0, [], [1]))
+With({t: If(1/0, [], [1])}, IsEmpty(t))
+If(IsEmpty(0), 1, 2)
+IsEmpty([1234])
+IsEmpty(Table({a:Blank()}))
+IsEmpty(Filter([1,2,3], Value > 10))

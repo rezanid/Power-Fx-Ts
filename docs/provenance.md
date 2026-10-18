@@ -11,5 +11,6 @@ informed by corpus behavior and `BaseRunner.cs`. The test-suite reader (`package
 `profile.ts`, `runner.ts`) is an original implementation of the upstream `.txt` format and applicability
 rules, informed by `TestRunner.cs` and `BaseRunner.cs`.
 
-| Our path | Upstream path | Upstream commit | Reuse kind (algorithm / test / data) | Notes |
-| -------- | ------------- | --------------- | ------------------------------------ | ----- |
+| Our path                                                                             | Upstream path                                                                                              | Upstream commit                            | Reuse kind (algorithm / test / data) | Notes                                                                                                                              |
+| ------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------- | ------------------------------------------ | ------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------- |
+| `docs/research/isempty-probes/`, `packages/engine/test/fixtures/isempty-probe.*.tsv` | `src/tests/Microsoft.PowerFx.Core.Tests.Shared/ExpressionTestCases/IsEmpty.txt`; reference harness `probe` | `df4ceba5e08220db670c25afead342ce699c50b5` | data                                 | Reference-produced IsEmpty behavior probes and corpus cases; all-Blank table literal rows are excluded from required-pass fixtures |

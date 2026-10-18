@@ -1,0 +1,31 @@
+IsEmpty([])	Boolean	true
+IsEmpty(Blank())	Boolean	true
+IsEmpty(If(1<0,[1,2,3]))	Boolean	true
+IsEmpty(Table(Blank()))	Boolean	false
+IsEmpty(Table({a:Blank()}))	Boolean	false
+IsEmpty([1234])	Boolean	false
+IsEmpty([1/0])	Boolean	false
+IsEmpty(1/0)		ERRORS:Error 9-10: Invalid argument type (Number). Expecting a Table value instead.
+IsEmpty(Table({a:1/0}))	Boolean	false
+IsEmpty(If(true,[1],[]))	Boolean	false
+IsEmpty(If(false,[1],[]))	Boolean	true
+IsEmpty(Filter([1,2,3], Value > 10))	Boolean	true
+IsEmpty(Table())	Boolean	true
+IsEmpty(Coalesce(Blank(),[]))	Boolean	true
+IsEmpty(Coalesce(Blank(),[1]))	Boolean	false
+IsEmpty([""])	Boolean	false
+IsEmpty("")		ERRORS:Error 8-10: Invalid argument type (Text). Expecting a Table value instead.
+IsEmpty({})		ERRORS:Error 8-10: Invalid argument type (Record). Expecting a Table value instead.
+IsEmpty(0)		ERRORS:Error 8-9: Invalid argument type (Number). Expecting a Table value instead.
+IsEmpty(false)		ERRORS:Error 8-13: Invalid argument type (Boolean). Expecting a Table value instead.
+IsEmpty()		ERRORS:Error 0-9: Invalid number of arguments: received 0, expected 1.
+IsEmpty([1],[2])		ERRORS:Error 0-16: Invalid number of arguments: received 2, expected 1.
+IsEmpty(If(true,Blank(),[1]))	Boolean	true
+IsEmpty(Table({a:1},Blank()))	Boolean	false
+If(IsEmpty([]),1,2)	Number	Number(1)
+IsEmpty([]) && IsEmpty([1])	Boolean	false
+IsEmpty(If(false,[1], If(true, Blank())))	Boolean	true
+IsEmpty(Blank)		ERRORS:Error 8-13: Name isn't valid. 'Blank' isn't recognized.
+IsEmpty(If(1/0, [], [1]))	Boolean	Error(Div0)
+With({t: If(1/0, [], [1])}, IsEmpty(t))	Boolean	Error(Div0)
+If(IsEmpty(0), 1, 2)		ERRORS:Error 11-12: Invalid argument type (Number). Expecting a Table value instead.

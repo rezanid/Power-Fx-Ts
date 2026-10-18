@@ -1,7 +1,8 @@
 # Agent handoff: current state
 
-Implementation baseline: `5cf1d25` (`main` after PR #13, empty-text coercion; verified as remote `main` HEAD on
-2026-10-18). Previous baselines: `f9df8bb` (PR #12, `Coalesce`), `820c9be` (PR #11, docs only), `f2fa9d8` (PR #10).
+Implementation baseline: `984a61b` (`main` after PR #15; verified as remote `main` HEAD on
+2026-10-18). Previous baselines: `5cf1d25` (PR #13, empty-text coercion), `f9df8bb` (PR #12, `Coalesce`),
+`820c9be` (PR #11, docs only), `f2fa9d8` (PR #10).
 Upstream pin: `df4ceba5e08220db670c25afead342ce699c50b5` (`docs/provenance.md`).
 Profiles: `v1-float` (default, PowerFxV1 + NumberIsFloat) and `v1-decimal` (opt-in
 `new Engine({ numberMode: "decimal" })`), culture en-US, UTC.
@@ -56,11 +57,23 @@ diagnostics, merged operand errors, recovered result types) → `Coalesce` (PR #
 - ADR 0013 (merged in PR #13; the ADR's own acceptance is **not recorded**, see its status): keep `emptyTextAsBlank` and enable it explicitly at
   `If` results, table literals and `Table(...)`; `Conform` stays non-universal.
 
+## Current accepted milestone
+
+- `IsEmpty` Option A is owner-accepted and implemented on the current branch. Independent review is pending;
+  the implementation is not merged. See ADR 0014, `docs/milestones/next.md`, and the per-case evidence
+  in `docs/research/isempty-before-after.md`.
+- The implementation adds reusable function-signature argument-type diagnostics after generic arity checks.
+  `IsEmpty` accepts Blank/Table, propagates Error, and checks table row emptiness without visiting rows.
+- Verification on the current branch: 18 `IsEmpty.txt` cases transition from unsupported to pass in both
+  profiles; all 16 reviewed exclusions remain unsupported; zero pass-to-non-pass regressions.
+
 ## Known gaps
 
-- Compat (committed reports): `v1-float` 2207 pass / 1 fail / 46 skip / 12705 unsupported;
-  `v1-decimal` 2737 / 1 / 56 / 13379 (with `Coalesce`; previously 2147/…/12765 and 2665/…/13451). The one failure in each is `Text_ExcelCompat_PowerFxV1Compat.txt:13`
-  (`Text()` formatting). Most unsupported cases are unimplemented builtins (e.g. `IfError`, `IsEmpty`, math/text/date functions, `Text`).
+- Compat on this branch: `v1-float` 2225 pass / 1 fail / 46 skip / 12687 unsupported;
+  `v1-decimal` 2755 / 1 / 56 / 13361. The one failure in each is
+  `Text_ExcelCompat_PowerFxV1Compat.txt:13` (`Text()` formatting). Remaining unsupported cases are mostly
+  unimplemented builtins (e.g. `IfError`, math/text/date functions, `Text`); 16 `IsEmpty` cases remain
+  excluded by the accepted milestone scope.
 - Empty text in `If` results, table literals and `Table(...)` is Blank (ADR 0013, option B, merged);
   other future retention sites must be probed before enabling `emptyTextAsBlank`.
 - Float `^` last-ulp differences; `If(1E100, …)` condition diagnostic; aggregate (record/table)
@@ -102,8 +115,10 @@ owner's behalf by documentation PRs; the owner may update the labels separately.
 ## Reports and research
 
 `docs/research/` (`upstream-inventory.md`, `decimal-before-after.md`, `numeric-text-before-after.md`,
-`compat-cleanup-before-after.md`, `coalesce-before-after.md`, `empty-text-before-after.md`, `empty-text-probes/`, `isempty-probes/`); `packages/test-suite/reports/`.
+`compat-cleanup-before-after.md`, `coalesce-before-after.md`, `empty-text-before-after.md`,
+`isempty-before-after.md`, `empty-text-probes/`, `isempty-probes/`); `packages/test-suite/reports/`.
 
 ## Next
 
-Proposal only (not started, owner decides): `IsEmpty`, specified in `docs/milestones/next.md`.
+Stop for independent review of the `IsEmpty` draft implementation PR. Do not merge or start another
+milestone until the owner accepts the review outcome.

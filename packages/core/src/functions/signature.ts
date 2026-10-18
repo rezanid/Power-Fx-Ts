@@ -1,4 +1,4 @@
-import { BlankType, BooleanType, type FormulaType } from "../types/formula-type.js";
+import { BlankType, BooleanType, tableType, type FormulaType } from "../types/formula-type.js";
 import type { CoercionTarget } from "../ir/bound-tree.js";
 import { unionTypes } from "../types/union.js";
 
@@ -8,6 +8,11 @@ export interface FunctionCheck {
   readonly coercions: readonly (CoercionTarget | undefined)[];
   /** Arguments whose Blank values stay Blank when coerced (e.g. `If` results). */
   readonly preserveBlank?: readonly boolean[];
+  /** Arguments rejected by the function's signature, with the type each argument must provide. */
+  readonly argumentTypeErrors?: readonly {
+    readonly index: number;
+    readonly expected: FormulaType;
+  }[];
 }
 
 /**
@@ -165,5 +170,29 @@ const IS_BLANK: FunctionSignature = {
   check: () => ({ returnType: BooleanType, coercions: [undefined] }),
 };
 
-export const BUILTIN_SIGNATURES: readonly FunctionSignature[] = [IF, COALESCE, BLANK, IS_BLANK];
+const IS_EMPTY: FunctionSignature = {
+  name: "IsEmpty",
+  minArgs: 1,
+  maxArgs: 1,
+  lazy: false,
+  check(argTypes) {
+    const type = argTypes[0]!;
+    return {
+      returnType: BooleanType,
+      coercions: [undefined],
+      argumentTypeErrors:
+        type.kind === "Blank" || type.kind === "Table"
+          ? []
+          : [{ index: 0, expected: tableType([]) }],
+    };
+  },
+};
+
+export const BUILTIN_SIGNATURES: readonly FunctionSignature[] = [
+  IF,
+  COALESCE,
+  BLANK,
+  IS_BLANK,
+  IS_EMPTY,
+];
 export const BUILTIN_FUNCTIONS: FunctionRegistry = createFunctionRegistry(BUILTIN_SIGNATURES);

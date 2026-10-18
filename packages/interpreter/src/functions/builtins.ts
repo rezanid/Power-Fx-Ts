@@ -29,6 +29,15 @@ const coalesceFunction: FunctionImplementation = (args, context) => {
   return blank;
 };
 
+/** `IsEmpty(table)`: Blank is treated as an empty table; rows are counted regardless of value. */
+const isEmptyFunction: FunctionImplementation = (args, context) => {
+  const value = context.evaluate(args[0]!);
+  if (value.kind === "Error") return value;
+  if (value.kind === "Blank") return boolean(true);
+  if (value.kind === "Table") return boolean(value.rows.length === 0);
+  throw new Error("IsEmpty argument is neither a table, Blank, nor Error.");
+};
+
 const isBlank = (value: FormulaValue): boolean =>
   value.kind === "Blank" || (value.kind === "Text" && value.value === "");
 
@@ -36,6 +45,7 @@ export const BUILTIN_IMPLEMENTATIONS: ReadonlyMap<string, FunctionImplementation
   ["If", ifFunction],
   ["Coalesce", coalesceFunction],
   ["Blank", () => blank],
+  ["IsEmpty", isEmptyFunction],
   [
     "IsBlank",
     (args, context) => {

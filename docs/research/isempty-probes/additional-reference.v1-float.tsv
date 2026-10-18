@@ -1,0 +1,6 @@
+IsEmpty(If(1/0, [], [1]))	Boolean	Error(Div0)
+With({t: If(1/0, [], [1])}, IsEmpty(t))	Boolean	Error(Div0)
+If(IsEmpty(0), 1, 2)		ERRORS:Error 11-12: Invalid argument type (Number). Expecting a Table value instead.
+IsEmpty([1234])	Boolean	false
+IsEmpty(Table({a:Blank()}))	Boolean	false
+IsEmpty(Filter([1,2,3], Value > 10))	Boolean	true
