@@ -1109,6 +1109,16 @@ class Binder {
       union = result?.union;
     }
     const check = signature.check(args.map((a) => a.type));
+    if (check.argumentTypeErrors !== undefined && check.argumentTypeErrors.length > 0) {
+      for (const issue of check.argumentTypeErrors) {
+        const arg = args[issue.index]!;
+        this.report(DiagnosticCodes.BadTypeExpected, this.textSpan(node.args[issue.index]!), [
+          typeName(issue.expected),
+          typeName(arg.type),
+        ]);
+      }
+      return this.recovered(node.span, check.returnType);
+    }
     const isResult = (i: number): boolean =>
       i % 2 === 1 || (args.length % 2 === 1 && i === args.length - 1);
     return {

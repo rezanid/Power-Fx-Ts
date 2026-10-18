@@ -1,9 +1,8 @@
-# Next milestone (proposal): `IsEmpty`
+# `IsEmpty` milestone
 
-Status: **PROPOSED** (corrected after review of PR #14). Not accepted, not implemented. Do not implement until the
-owner accepts the scope and the decision below.
+Status: **IMPLEMENTED**; scope accepted by the owner (Option A); independent review pending; not merged.
 
-Upstream pin `df4ceba5e08220db670c25afead342ce699c50b5`. Baseline: `main` `5cf1d25`. Profiles: `v1-float`,
+Upstream pin `df4ceba5e08220db670c25afead342ce699c50b5`. Baseline: `main` `984a61b`. Profiles: `v1-float`,
 `v1-decimal` (PowerFxV1, en-US). Prior art: ADR 0012/0013, `Filter`/`With` binder special forms.
 
 ## Upstream behavior (evidence)
@@ -49,23 +48,17 @@ Expecting a Table value instead.`; arity → `Invalid number of arguments: recei
 - Legacy (non-restricted) `IsEmpty` accepting any type; `IsEmpty_UO`; other table functions (`Count*`,
   `LastN`, `Sort`…); `IsBlank` semantics (unchanged); coercion changes; backend or host-validation changes.
 
-## Dependency and architectural issue (decide before implementation)
+## Accepted decision: Option A
 
 `FunctionCheck` (`packages/core/src/functions/signature.ts`) returns only a return type and coercions; the
 binder does validate arguments for existing special paths (`With`, `Filter`, operators, `Coalesce` arity/typing
 in the binder), but ordinary registry functions have no argument-type validation result. `IsEmpty` needs one.
-Options:
 
-- **A (recommended, kept minimal):** add an optional argument-validation result to `FunctionCheck` that the
-  binder turns into `BadTypeExpected` after the existing generic arity check; reusable by later functions; no
-  change to existing functions.
-- **B:** a targeted binder validation hook for `IsEmpty` (as `Coalesce` has binder-side handling); it can also
-  reuse the generic arity checks, so duplication is not inherent, but it is less reusable.
-
-Owner decision requested: A or B. Either must reproduce the upstream diagnostics: the error span is the
-argument; no extra generic "invalid arguments" diagnostic (`HasPreciseErrors`); the call's result type stays
-Boolean so enclosing expressions recover without cascading errors (probe `If(IsEmpty(0),1,2)` before
-implementing to confirm the reference's recovery).
+The owner accepted **Option A**: add optional argument-type errors to `FunctionCheck`; after the existing
+generic arity check the binder reports `BadTypeExpected` at each indicated argument and returns the declared
+Boolean type for recovery. This is reusable by later functions and does not change existing signatures.
+Option B was not selected. The reference probe `If(IsEmpty(0),1,2)` confirms the argument-only diagnostic
+and recovery without a cascading diagnostic.
 
 Settled by evidence (documentation only, no decision needed): the diagnostic names the actual type `Number` in
 both profiles, including `IsEmpty(0)` in decimal mode (`isempty-probes/reference.v1-decimal.tsv`); the existing
@@ -95,8 +88,9 @@ normalization.
 
 ## Final verification gates
 
-Baseline per-case artifacts generated in an isolated worktree at the baseline commit; then
-`pnpm build && pnpm test && pnpm lint && pnpm format:check` and `pnpm --filter @powerfx-ts/test-suite compat
-v1-float|v1-decimal`. Expect up to 18 `unsupported` → `pass` per profile in `IsEmpty.txt`; require zero
-pass-to-non-pass regressions and explain every transition; ADR 0014, before/after note, handoff update, draft
-PR, CI green on the final commit, independent review.
+Baseline per-case artifacts were generated in an isolated worktree at `984a61b` (main after PR #15).
+`pnpm build`, `pnpm test`, `pnpm lint`, `pnpm format:check`, and both compatibility profiles passed.
+Each profile has exactly 18 `unsupported` → `pass` transitions in `IsEmpty.txt`, 16 excluded cases remain
+`unsupported`, and there are zero pass-to-non-pass regressions. The per-case transition list and reasons are
+recorded in `docs/research/isempty-before-after.md`. The implementation is owner-accepted and awaiting
+independent review in a draft PR; it has not been merged. See ADR 0014 for the decision and evidence.

@@ -4,8 +4,8 @@
 - Runner: engine
 - Setup: `PowerFxV1,NumberIsFloat,DecimalSupport` (number mode: float, culture en-US, time zone UTC)
 - Cases: 22047 total, 7088 not applicable to this profile
-- Pass 2207, fail 1, skip 46, unsupported 12705
-- Unsupported by reason: feature 9542, setup 3163, profile 0
+- Pass 2225, fail 1, skip 46, unsupported 12687
+- Unsupported by reason: feature 9524, setup 3163, profile 0
 - Passing compile-error cases whose error set differs from upstream's (strict diagnostic, not a verdict): 34
 - Passing numeric cases accepted only by upstream's float tolerance (diagnostic, not a verdict): 12
 
@@ -113,7 +113,7 @@
 | Int.txt | 19 | 0 | 0 | 0 | 19 |
 | IntT.txt | 4 | 0 | 0 | 0 | 4 |
 | IsBlankOrError.txt | 3 | 0 | 0 | 0 | 3 |
-| IsEmpty.txt | 34 | 0 | 0 | 0 | 34 |
+| IsEmpty.txt | 34 | 18 | 0 | 0 | 16 |
 | IsMatch.txt | 52 | 0 | 0 | 0 | 52 |
 | IsMatch_V1Enabled.txt | 16 | 0 | 0 | 0 | 16 |
 | IsNumeric.txt | 16 | 0 | 0 | 0 | 16 |
