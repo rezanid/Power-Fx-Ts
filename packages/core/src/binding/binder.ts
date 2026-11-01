@@ -113,6 +113,63 @@ const BINARY_ACCEPTED: Readonly<Record<string, readonly [string, string]>> = {
   GtEq: ["", ""],
 };
 
+function columnNameDistance(original: string, candidate: string): number {
+  if (original.length > 2000 || candidate.length > 2000) return Number.POSITIVE_INFINITY;
+
+  let start = 0;
+  while (start < candidate.length && start < original.length) {
+    if (candidate[start] !== original[start]) break;
+    start++;
+  }
+  if (start === candidate.length - 1 || start === original.length - 1) {
+    return Math.abs(candidate.length - original.length);
+  }
+
+  start = Math.max(start - 1, 0);
+  const left = original.slice(start);
+  const right = candidate.slice(start);
+  let previousPrevious: number[] = [];
+  let previous = Array.from({ length: right.length + 1 }, (_, index) => index);
+  for (let i = 1; i <= left.length; i++) {
+    const current = Array<number>(right.length + 1);
+    current[0] = i;
+    for (let j = 1; j <= right.length; j++) {
+      const leftCharacter = left[i - 1]!;
+      const rightCharacter = right[j - 1]!;
+      const substitution =
+        previous[j - 1]! +
+        (leftCharacter === rightCharacter
+          ? 0
+          : leftCharacter.toLowerCase() === rightCharacter.toLowerCase()
+            ? 0.1
+            : 1);
+      let distance = Math.min(current[j - 1]! + 1, previous[j]! + 1, substitution);
+      if (i > 1 && j > 1 && leftCharacter === right[j - 2] && left[i - 2] === rightCharacter) {
+        distance = Math.min(distance, previousPrevious[j - 2]! + 1);
+      }
+      current[j] = distance;
+    }
+    previousPrevious = previous;
+    previous = current;
+  }
+  return previous[right.length]!;
+}
+
+function similarColumnName(name: string, fields: readonly RecordField[]): string | undefined {
+  let closest: string | undefined;
+  let closestDistance = Number.POSITIVE_INFINITY;
+  for (const field of [...fields].sort((a, b) =>
+    a.name < b.name ? -1 : a.name > b.name ? 1 : 0,
+  )) {
+    const distance = columnNameDistance(name, field.name);
+    if (distance < closestDistance) {
+      closest = field.name;
+      closestDistance = distance;
+    }
+  }
+  return closest !== undefined && closestDistance < name.length / 3 + 3 ? closest : undefined;
+}
+
 const TARGET_TYPES: Readonly<Record<CoercionTarget, FormulaType>> = {
   Number: NumberType,
   Decimal: DecimalType,
@@ -481,6 +538,68 @@ class Binder {
     }
     predicate = this.coerce(predicate, "Boolean");
     return { kind: "Filter", scopeId: id, source, predicate, span: node.span, type: source.type };
+  }
+
+  /**
+   * `DropColumns(source, name, ...)` uses identifier syntax for the column names in PowerFxV1.
+   * Bind those names from their syntax nodes directly: they are never evaluated or resolved as
+   * variables, even when a schema or scope contains a variable with the same name.
+   */
+  private bindDropColumns(node: CallNode): BoundNode {
+    const sourceArg = node.args[0];
+    if (node.args.length < 2 || sourceArg === undefined) {
+      node.args.forEach((arg) => this.bindExpression(arg));
+      this.report(DiagnosticCodes.BadArityMinimum, node.span, [String(node.args.length), "2"]);
+      return this.invalid(node.span);
+    }
+
+    const source = this.bindExpression(sourceArg);
+    if (source.type.kind === "Unknown") {
+      this.report(DiagnosticCodes.InvalidFunctionArguments, node.callee.span, ["DropColumns"]);
+      return this.invalid(node.span);
+    }
+    if (source.type.kind !== "Record" && source.type.kind !== "Table") {
+      this.report(DiagnosticCodes.BadType, sourceArg.span);
+      this.report(DiagnosticCodes.InvalidFunctionArguments, node.callee.span, ["DropColumns"]);
+      for (const argument of node.args.slice(1)) this.bindExpression(argument);
+      return this.invalid(node.span);
+    }
+
+    const sourceFields =
+      source.type.kind === "Record" ? source.type.fields : source.type.row.fields;
+    let remainingFields = [...sourceFields];
+    const columns: string[] = [];
+    let valid = true;
+    for (const argument of node.args.slice(1)) {
+      if (argument.kind !== "Name") {
+        this.report(DiagnosticCodes.ExpectedIdentifierName, argument.span);
+        valid = false;
+        continue;
+      }
+
+      const field = findField({ kind: "Record", fields: remainingFields }, argument.name);
+      if (field === undefined) {
+        const similar = similarColumnName(argument.name, remainingFields);
+        const suffix =
+          similar === undefined ? "" : ` The column with the most similar name is '${similar}'.`;
+        this.report(DiagnosticCodes.ColumnDoesNotExist, argument.span, [argument.name, suffix]);
+        valid = false;
+        continue;
+      }
+      columns.push(field.name);
+      remainingFields = remainingFields.filter((candidate) => candidate.name !== field.name);
+    }
+
+    if (!valid) {
+      this.report(DiagnosticCodes.InvalidFunctionArguments, node.callee.span, ["DropColumns"]);
+      return this.invalid(node.span);
+    }
+
+    const type: FormulaType =
+      source.type.kind === "Record"
+        ? { kind: "Record", fields: remainingFields }
+        : { kind: "Table", row: { kind: "Record", fields: remainingFields } };
+    return { kind: "DropColumns", source, columns, span: node.span, type };
   }
 
   /**
@@ -1060,6 +1179,7 @@ class Binder {
     if (!this.functions.get(name)) {
       if (name === "With") return this.bindWith(node);
       if (name === "Filter") return this.bindFilter(node);
+      if (name === "DropColumns") return this.bindDropColumns(node);
       if (name === "Table") return this.bindTableCall(node);
       if (name === "First") return this.bindFirst(node);
       if (name === "CountRows") return this.bindCountRows(node);

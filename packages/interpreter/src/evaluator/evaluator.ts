@@ -139,6 +139,8 @@ class Evaluator implements EvaluationContext {
       }
       case "Table":
         return this.table(node);
+      case "DropColumns":
+        return this.dropColumns(node);
       case "Filter":
         return this.filter(node);
       case "First": {
@@ -197,6 +199,25 @@ class Evaluator implements EvaluationContext {
       const verdict = this.inScope(node.scopeId, row, () => this.evaluate(node.predicate));
       if (verdict.kind === "Error") rows.push(verdict);
       else if (verdict.kind === "Boolean" && verdict.value) rows.push(row);
+    }
+    return table(rows);
+  }
+
+  /** Projects supported record/table values, ticking and checking cancellation for every row. */
+  private dropColumns(node: Extract<BoundNode, { kind: "DropColumns" }>): FormulaValue {
+    const source = this.evaluate(node.source);
+    if (source.kind === "Blank" || source.kind === "Error") return source;
+    const columns = new Set(node.columns);
+    const keep = (value: RecordValue): RecordValue =>
+      record(value.fields.filter((field) => !columns.has(field.name)));
+
+    if (source.kind === "Record") return keep(source);
+    if (source.kind !== "Table") throw new Error("DropColumns source is not a record or table.");
+
+    const rows: TableRow[] = [];
+    for (const row of source.rows) {
+      this.tick();
+      rows.push(row.kind === "Record" ? keep(row) : row);
     }
     return table(rows);
   }
