@@ -1,7 +1,68 @@
 import { BUILTIN_SIGNATURES } from "@powerfx-ts/core";
 import type { FunctionImplementation } from "../runtime/context.js";
-import { blank, boolean, type FormulaValue } from "../values/values.js";
+import { LOWER_EN_US, UPPER_EN_US } from "./text-case-map.js";
+import {
+  blank,
+  boolean,
+  decimal,
+  error,
+  number,
+  text,
+  type FormulaValue,
+} from "../values/values.js";
 import { coerceValue } from "../evaluator/coercion.js";
+
+function mapSimpleCase(
+  value: string,
+  ranges: readonly (readonly [number, number, number])[],
+): string {
+  let result = "";
+  for (let index = 0; index < value.length;) {
+    const codePoint = value.codePointAt(index)!;
+    let low = 0;
+    let high = ranges.length - 1;
+    let mapped = codePoint;
+    while (low <= high) {
+      const middle = low + Math.floor((high - low) / 2);
+      const [start, end, delta] = ranges[middle]!;
+      if (codePoint < start) high = middle - 1;
+      else if (codePoint > end) low = middle + 1;
+      else {
+        mapped += delta;
+        break;
+      }
+    }
+    result += String.fromCodePoint(mapped);
+    index += codePoint > 0xffff ? 2 : 1;
+  }
+  return result;
+}
+
+const lenFunction: FunctionImplementation = (args, context, returnType) => {
+  const value = context.evaluate(args[0]!);
+  if (value.kind === "Error") return value;
+  if (value.kind !== "Text") throw new Error("Len argument was not coerced to text.");
+  if (returnType.kind === "Decimal") {
+    const result = context.numerics.decimal.fromNumber(value.value.length);
+    return result === undefined ? error("Numeric") : decimal(result);
+  }
+  const result = context.numerics.float.fromNumber(value.value.length);
+  return result === undefined ? error("Numeric") : number(result);
+};
+
+const lowerFunction: FunctionImplementation = (args, context) => {
+  const value = context.evaluate(args[0]!);
+  if (value.kind === "Error") return value;
+  if (value.kind !== "Text") throw new Error("Lower argument was not coerced to text.");
+  return text(mapSimpleCase(value.value, LOWER_EN_US));
+};
+
+const upperFunction: FunctionImplementation = (args, context) => {
+  const value = context.evaluate(args[0]!);
+  if (value.kind === "Error") return value;
+  if (value.kind !== "Text") throw new Error("Upper argument was not coerced to text.");
+  return text(mapSimpleCase(value.value, UPPER_EN_US));
+};
 
 /** `If(cond, then [, cond2, then2, ...] [, else])`; evaluates only the branches it needs. */
 const ifFunction: FunctionImplementation = (args, context) => {
@@ -46,6 +107,9 @@ export const BUILTIN_IMPLEMENTATIONS: ReadonlyMap<string, FunctionImplementation
   ["Coalesce", coalesceFunction],
   ["Blank", () => blank],
   ["IsEmpty", isEmptyFunction],
+  ["Len", lenFunction],
+  ["Lower", lowerFunction],
+  ["Upper", upperFunction],
   [
     "IsBlank",
     (args, context) => {

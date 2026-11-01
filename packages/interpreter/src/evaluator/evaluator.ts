@@ -107,7 +107,7 @@ class Evaluator implements EvaluationContext {
         if (implementation === undefined) {
           throw new Error(`No implementation registered for function '${node.fn}'.`);
         }
-        return implementation(node.args, this);
+        return implementation(node.args, this, node.type);
       }
       case "Variable": {
         const value = this.options.variables?.get(node.name);

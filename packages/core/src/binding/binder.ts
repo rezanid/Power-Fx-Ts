@@ -1097,6 +1097,13 @@ class Binder {
 
     if (name === "Coalesce") return this.bindCoalesce(node, args);
 
+    if (
+      (name === "Len" || name === "Lower" || name === "Upper") &&
+      args.some((argument) => argument.type.kind === "Table")
+    ) {
+      return this.notSupported(`${name} table overload`, node.callee.span, "function");
+    }
+
     if (args.some((a) => a.type.kind === "Unknown")) {
       this.report(DiagnosticCodes.InvalidFunctionArguments, node.callee.span, [name]);
       return this.invalid(node.span);
@@ -1108,7 +1115,10 @@ class Binder {
       if (result !== undefined && "error" in result) return result.error;
       union = result?.union;
     }
-    const check = signature.check(args.map((a) => a.type));
+    const check = signature.check(
+      args.map((a) => a.type),
+      this.numberMode,
+    );
     if (check.argumentTypeErrors !== undefined && check.argumentTypeErrors.length > 0) {
       for (const issue of check.argumentTypeErrors) {
         const arg = args[issue.index]!;
@@ -1116,6 +1126,9 @@ class Binder {
           typeName(issue.expected),
           typeName(arg.type),
         ]);
+      }
+      if (check.reportInvalidFunctionArguments) {
+        this.report(DiagnosticCodes.InvalidFunctionArguments, node.callee.span, [name]);
       }
       return this.recovered(node.span, check.returnType);
     }

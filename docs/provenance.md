@@ -11,6 +11,15 @@ informed by corpus behavior and `BaseRunner.cs`. The test-suite reader (`package
 `profile.ts`, `runner.ts`) is an original implementation of the upstream `.txt` format and applicability
 rules, informed by `TestRunner.cs` and `BaseRunner.cs`.
 
+`docs/research/scalar-text-probes/`, `packages/engine/test/fixtures/scalar-text-probe.*.tsv`, and
+`docs/research/scalar-text-before-after.cases.tsv` contain reference probe or comparison data
+generated from the pinned `Len.txt`, `Lower.txt`, and `Upper.txt` corpus and harness.
+`packages/interpreter/src/functions/text-case-map.ts` is generated from installed .NET
+`CultureInfo("en-US").TextInfo` behavior used by pinned `LibraryText.cs`; the harness verifies every
+Unicode scalar before generation and when validating the committed snapshot. No upstream
+implementation code or test data is copied. Exact commands, source paths, runtime provenance, and
+the refresh caveat are recorded in `docs/research/scalar-text-probes/README.md`.
+
 | Our path                                                                                           | Upstream path                                                                                                                                                                                              | Upstream commit                            | Reuse kind (algorithm / test / data) | Notes                                                                                                                                                                                             |
 | -------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------ | ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `docs/research/powerfx-function-registry.tsv`                                                      | `src/libraries/Microsoft.PowerFx.Core/Texl/BuiltinFunctionsCore.cs`; `src/libraries/Microsoft.PowerFx.Core/Functions/TexlFunctionSet.cs`; `src/libraries/Microsoft.PowerFx.Core/Functions/TexlFunction.cs` | `df4ceba5e08220db670c25afead342ce699c50b5` | data                                 | Generated from the pinned assembly by the reference harness `registry` command; records function names, registry fields, implementation types and `OtherKnownFunctions`. No upstream code copied. |

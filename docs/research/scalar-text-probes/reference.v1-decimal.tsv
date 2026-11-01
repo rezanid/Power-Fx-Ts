@@ -1,0 +1,33 @@
+Len("Power Fx")	Decimal	Decimal(8)
+Len(12345)	Decimal	Decimal(5)
+Len(-123.45)	Decimal	Decimal(7)
+Len(true)	Decimal	Decimal(4)
+Len(false)	Decimal	Decimal(5)
+Len(Blank())	Decimal	Decimal(0)
+Len("")	Decimal	Decimal(0)
+Len("😀")	Decimal	Decimal(2)
+Len("𐐀𐐨")	Decimal	Decimal(4)
+Len(1/0)	Decimal	Error(Div0)
+Lower("E. E. Cummings")	Text	"e. e. cummings"
+Upper("Important!")	Text	"IMPORTANT!"
+Lower(12345)	Text	"12345"
+Upper(-123.45)	Text	"-123.45"
+Lower(true)	Text	"true"
+Upper(false)	Text	"FALSE"
+Lower(Blank())	Text	""
+Upper(Blank())	Text	""
+Lower(1/0)	Text	Error(Div0)
+Upper(1/0)	Text	Error(Div0)
+Lower("I i İ ı")	Text	"i i i \u0131"
+Upper("I i İ ı")	Text	"I I \u0130 I"
+Lower("ΟΣ ΟΣΑ ΣΟΣ Σ")	Text	"\u03BF\u03C3 \u03BF\u03C3\u03B1 \u03C3\u03BF\u03C3 \u03C3"
+Upper("ΟΣ ος οσ")	Text	"\u039F\u03A3 \u039F\u03A3 \u039F\u03A3"
+Lower("ß ẞ ﬀ ﬁ ŉ ǰ")	Text	"\u00DF \u00DF \uFB00 \uFB01 \u0149 \u01F0"
+Upper("ß ẞ ﬀ ﬁ ŉ ǰ")	Text	"\u00DF \u1E9E \uFB00 \uFB01 \u0149 \u01F0"
+Lower("𐐀𐐨")	Text	"\uD801\uDC28\uD801\uDC28"
+Upper("𐐀𐐨")	Text	"\uD801\uDC00\uD801\uDC00"
+Lower("😀")	Text	"\uD83D\uDE00"
+Upper("😀")	Text	"\uD83D\uDE00"
+Lower({a:"x"})		ERRORS:Error 6-13: Invalid argument type (Record). Expecting a Text value instead.|Error 0-5: The function 'Lower' has some invalid arguments.
+Len()		ERRORS:Error 0-5: Invalid number of arguments: received 0, expected 1.
+Lower("x","y")		ERRORS:Error 0-14: Invalid number of arguments: received 2, expected 1.

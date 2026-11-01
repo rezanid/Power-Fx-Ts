@@ -19,18 +19,20 @@ Fx. Not affiliated with Microsoft. See `docs/PowerFx-TypeScript-Plan.md` for the
 
 ## Implementation status
 
-At baseline `7825b2a95d767b07b57327f5928fbbb18af55197` (upstream
-`df4ceba5e08220db670c25afead342ce699c50b5`), the inventory covers 145 unique upstream
-Core-registered function names: 11 implemented in the supported slice, 4 partial, 129 missing,
-and 1 deliberately excluded (`Patch`, a host mutation operation). Upstream has additional
-host/runtime-known names outside this count. The reproducible evidence lists 220 shared-Core and
-10 feature-gated registration objects (139 and 7 unique names, respectively; 145 names in their
-union) and 66 `OtherKnownFunctions` names (3 overlap, 63 additional). See the [generated registry
-inventory](docs/research/powerfx-function-registry.tsv) and [full coverage report](docs/research/powerfx-coverage-inventory.md)
-for sources, counting rules, extraction command and overload limitations.
+The current implementation snapshot is based on `767321b122080991929dde50382d663dc306ac17`
+(PR #19 merge; upstream `df4ceba5e08220db670c25afead342ce699c50b5`). The inventory covers 145 unique upstream
+Core-registered function names: 11 implemented in the supported slice, 7 partial, 126 missing,
+and 1 deliberately excluded (`Patch`, a host mutation operation). `Len`, `Lower`, and `Upper`
+are partial: their scalar overloads are implemented, while table overloads remain unsupported.
+Upstream has additional host/runtime-known names outside this count. The reproducible evidence lists
+220 shared-Core and 10 feature-gated registration objects (139 and 7 unique names, respectively;
+145 names in their union) and 66 `OtherKnownFunctions` names (3 overlap, 63 additional). See the
+[generated registry inventory](docs/research/powerfx-function-registry.tsv) and [full coverage
+report](docs/research/powerfx-coverage-inventory.md) for sources, counting rules, extraction command
+and overload limitations.
 
-Compatibility corpus results: `v1-float` 2,228 pass / 1 fail / 46 skip / 12,684 unsupported;
-`v1-decimal` 2,758 / 1 / 56 / 13,358. These are outcomes on a finite, profile-dependent corpus,
+Compatibility corpus results: `v1-float` 2,299 pass / 1 fail / 46 skip / 12,613 unsupported;
+`v1-decimal` 2,831 / 1 / 56 / 13,285. These are outcomes on a finite, profile-dependent corpus,
 not percentages of language completeness or effort completed. The expression runtime is a useful
 but narrow V1 slice; authoring services are scaffolds, and Monaco/React, PCF, LSP, connectors and
 gateway integrations are not implemented. Future milestone PRs should update the function inventory

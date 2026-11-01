@@ -1,4 +1,12 @@
-import { BlankType, BooleanType, tableType, type FormulaType } from "../types/formula-type.js";
+import {
+  BlankType,
+  BooleanType,
+  DecimalType,
+  NumberType,
+  tableType,
+  TextType,
+  type FormulaType,
+} from "../types/formula-type.js";
 import type { CoercionTarget } from "../ir/bound-tree.js";
 import { unionTypes } from "../types/union.js";
 
@@ -13,6 +21,8 @@ export interface FunctionCheck {
     readonly index: number;
     readonly expected: FormulaType;
   }[];
+  /** Emit the generic invalid-function-arguments diagnostic alongside argument type errors. */
+  readonly reportInvalidFunctionArguments?: boolean;
 }
 
 /**
@@ -26,7 +36,10 @@ export interface FunctionSignature {
   /** Arguments are evaluated on demand by the implementation (e.g. `If`). */
   readonly lazy: boolean;
   /** Called only when the argument count is within bounds. */
-  readonly check: (argTypes: readonly FormulaType[]) => FunctionCheck;
+  readonly check: (
+    argTypes: readonly FormulaType[],
+    numberMode?: "float" | "decimal",
+  ) => FunctionCheck;
 }
 
 export interface FunctionRegistry {
@@ -196,6 +209,40 @@ const IS_EMPTY: FunctionSignature = {
   },
 };
 
+const LEN: FunctionSignature = {
+  name: "Len",
+  minArgs: 1,
+  maxArgs: 1,
+  lazy: false,
+  check(argTypes, numberMode) {
+    const type = argTypes[0]!;
+    const accepted = ["Text", "Number", "Decimal", "Boolean", "Blank"].includes(type.kind);
+    return {
+      returnType: numberMode === "decimal" ? DecimalType : NumberType,
+      coercions: [accepted ? "Text" : undefined],
+      argumentTypeErrors: accepted ? [] : [{ index: 0, expected: TextType }],
+      reportInvalidFunctionArguments: true,
+    };
+  },
+};
+
+const LOWER_UPPER = (name: "Lower" | "Upper"): FunctionSignature => ({
+  name,
+  minArgs: 1,
+  maxArgs: 1,
+  lazy: false,
+  check(argTypes) {
+    const type = argTypes[0]!;
+    const accepted = ["Text", "Number", "Decimal", "Boolean", "Blank"].includes(type.kind);
+    return {
+      returnType: TextType,
+      coercions: [accepted ? "Text" : undefined],
+      argumentTypeErrors: accepted ? [] : [{ index: 0, expected: TextType }],
+      reportInvalidFunctionArguments: true,
+    };
+  },
+});
+
 export const BUILTIN_SIGNATURES: readonly FunctionSignature[] = [
   IF,
   COALESCE,
@@ -203,5 +250,8 @@ export const BUILTIN_SIGNATURES: readonly FunctionSignature[] = [
   IS_BLANK,
   IS_BLANK_OR_ERROR,
   IS_EMPTY,
+  LEN,
+  LOWER_UPPER("Lower"),
+  LOWER_UPPER("Upper"),
 ];
 export const BUILTIN_FUNCTIONS: FunctionRegistry = createFunctionRegistry(BUILTIN_SIGNATURES);
