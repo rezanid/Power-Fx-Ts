@@ -21,6 +21,10 @@ AddColumns({a:1},A,2)	{A:Decimal,a:Decimal}	{A:Decimal(2),a:Decimal(1)}
 AddColumns({a:1},a,2)		ERRORS:Error 0-10: The function 'AddColumns' has some invalid arguments.
 AddColumns({a:1},x,1,y,2,x,3)		ERRORS:Error 0-10: The function 'AddColumns' has some invalid arguments.
 AddColumns({a:1},'b.d',2)	{a:Decimal,b.d:Decimal}	{a:Decimal(1),b.d:Decimal(2)}
+AddColumns(Table({a:1,b:{c:3}}),b.d,a+1)		ERRORS:Error 32-33: Name isn't valid. 'b' isn't recognized.|Error 33-35: The '.' operator cannot be used on Error values.|Error 0-10: The function 'AddColumns' has some invalid arguments.
+AddColumns({a:1,b:{c:3}},b.d,a+1)		ERRORS:Error 25-26: Name isn't valid. 'b' isn't recognized.|Error 26-28: The '.' operator cannot be used on Error values.|Error 0-10: The function 'AddColumns' has some invalid arguments.
+AddColumns(Table({a:1,b:{c:3}}),'b.d',a+1)	Table{a:Decimal,b:{c:Decimal},b.d:Decimal}	Table[{a:Decimal(1),b:{c:Decimal(3)},b.d:Decimal(2)}]
+AddColumns({a:1,b:{c:3}},'b.d',a+1)	{a:Decimal,b:{c:Decimal},b.d:Decimal}	{a:Decimal(1),b:{c:Decimal(3)},b.d:Decimal(2)}
 AddColumns({a:1},"b",2)		ERRORS:Error 17-20: Expected identifier name|Error 0-10: The function 'AddColumns' has some invalid arguments.
 AddColumns({a:1},3,2)		ERRORS:Error 17-18: Expected identifier name|Error 0-10: The function 'AddColumns' has some invalid arguments.
 AddColumns({a:1})		ERRORS:Error 0-17: Invalid number of arguments: received 1, expected 3 or more.
