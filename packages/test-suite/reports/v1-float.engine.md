@@ -4,8 +4,8 @@
 - Runner: engine
 - Setup: `PowerFxV1,NumberIsFloat,DecimalSupport` (number mode: float, culture en-US, time zone UTC)
 - Cases: 22047 total, 7088 not applicable to this profile
-- Pass 2299, fail 1, skip 46, unsupported 12613
-- Unsupported by reason: feature 9450, setup 3163, profile 0
+- Pass 2314, fail 1, skip 46, unsupported 12598
+- Unsupported by reason: feature 9435, setup 3163, profile 0
 - Passing compile-error cases whose error set differs from upstream's (strict diagnostic, not a verdict): 34
 - Passing numeric cases accepted only by upstream's float tolerance (diagnostic, not a verdict): 12
 
@@ -75,7 +75,7 @@
 | DecimalMathFuncs_NumberIsFloat_Constructors_DecimalSupport_PowerFxV1.txt | 8 | 4 | 0 | 0 | 4 |
 | Distinct.txt | 29 | 0 | 0 | 0 | 29 |
 | Distinct_V1Compat.txt | 2 | 0 | 0 | 0 | 2 |
-| DropColumns_SupportColumnNamesAsIdentifiers.txt | 21 | 0 | 0 | 0 | 21 |
+| DropColumns_SupportColumnNamesAsIdentifiers.txt | 21 | 15 | 0 | 0 | 6 |
 | EDateEOMonth.txt | 182 | 0 | 0 | 0 | 182 |
 | EncodeHTML.txt | 13 | 0 | 0 | 0 | 13 |
 | EncodeURL.txt | 20 | 0 | 0 | 0 | 20 |

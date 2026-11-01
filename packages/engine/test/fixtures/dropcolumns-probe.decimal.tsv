@@ -1,0 +1,23 @@
+DropColumns({a:1,b:2}, b)	{a:Decimal}	{a:Decimal(1)}
+DropColumns(Table({a:1,b:2},{a:3,b:4}), b)	Table{a:Decimal}	Table[{a:Decimal(1)},{a:Decimal(3)}]
+DropColumns([1,2], Value)	Table{}	Table[{},{}]
+DropColumns({a:1,b:2}, a, b)	{}	{}
+DropColumns(Table({a:1,b:2},{a:3,b:4}), a, b)	Table{}	Table[{},{}]
+DropColumns(Table({a:1,b:20},{a:2,b:10},{a:3,b:30}), a)	Table{b:Decimal}	Table[{b:Decimal(20)},{b:Decimal(10)},{b:Decimal(30)}]
+DropColumns(DropColumns({a:1,b:2}, a), b)	{}	{}
+DropColumns({a:1,b:2}, a, a)		ERRORS:Error 26-27: The specified column 'a' does not exist. The column with the most similar name is 'b'.|Error 0-11: The function 'DropColumns' has some invalid arguments.
+DropColumns({a:1,b:2}, z)		ERRORS:Error 23-24: The specified column 'z' does not exist. The column with the most similar name is 'a'.|Error 0-11: The function 'DropColumns' has some invalid arguments.
+DropColumns({a:1,b:2}, B)		ERRORS:Error 23-24: The specified column 'B' does not exist. The column with the most similar name is 'a'.|Error 0-11: The function 'DropColumns' has some invalid arguments.
+DropColumns({'First Name':1,b:2}, 'First Name')	{b:Decimal}	{b:Decimal(2)}
+DropColumns({a:1,b:2}, "b")		ERRORS:Error 23-26: Expected identifier name|Error 0-11: The function 'DropColumns' has some invalid arguments.
+DropColumns({a:1,b:2}, 5)		ERRORS:Error 23-24: Expected identifier name|Error 0-11: The function 'DropColumns' has some invalid arguments.
+DropColumns(1,a)		ERRORS:Error 12-13: Invalid argument type.|Error 0-11: The function 'DropColumns' has some invalid arguments.|Error 14-15: Name isn't valid. 'a' isn't recognized.
+DropColumns({a:1})		ERRORS:Error 0-18: Invalid number of arguments: received 1, expected 2 or more.
+With({b:99, source:{a:1,b:2}}, DropColumns(source,b))	{a:Decimal}	{a:Decimal(1)}
+DropColumns(If(false,{a:1,b:2}), b)	{a:Decimal}	Blank
+DropColumns(If(1/0=0,{a:1,b:2},{a:3,b:4}), b)	{a:Decimal}	Error(Div0)
+DropColumns(Table(If(false,{a:1,b:2}),{a:3,b:4}), b)	Table{a:Decimal}	Table[Blank,{a:Decimal(3)}]
+DropColumns(Table(If(1/0=0,{a:1,b:2},{a:3,b:4}),{a:3,b:4}), b)	Table{a:Decimal}	Table[Error(Div0),{a:Decimal(3)}]
+DropColumns({a:1,b:1/0}, b)	{a:Decimal}	{a:Decimal(1)}
+DropColumns({a:1,b:1/0}, a)	{b:Decimal}	{b:Error(Div0)}
+DropColumns(Filter([1,2], false), Value)	Table{}	Table[]

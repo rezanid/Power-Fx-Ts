@@ -40,6 +40,8 @@ export const DiagnosticCodes = {
   TextOrNumberExpected: "PFX2021",
   TextExpected: "PFX2022",
   TypeError: "PFX2023",
+  ExpectedIdentifierName: "PFX2024",
+  ColumnDoesNotExist: "PFX2025",
 } as const;
 
 export type DiagnosticCode = (typeof DiagnosticCodes)[keyof typeof DiagnosticCodes];
@@ -96,6 +98,8 @@ const TEMPLATES: Record<DiagnosticCode, string> = {
   PFX2022: "Expected text. We expect text at this point in the formula.",
   PFX2006:
     "Invalid argument type. Expecting one of the following: Number, Decimal, Date, Time, DateTime, Dynamic.",
+  PFX2024: "Expected identifier name",
+  PFX2025: "The specified column '{0}' does not exist.{1}",
 };
 
 export function formatMessage(code: DiagnosticCode, args: readonly string[]): string {

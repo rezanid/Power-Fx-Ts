@@ -1,7 +1,7 @@
 # Agent handoff: current state
 
-Current `main` before scalar text basics: `767321b122080991929dde50382d663dc306ac17` (PR #19 merge).
-The approved scalar text milestone is in the current review branch, based on this commit.
+Current `main` baseline before DropColumns: `fc59733cd2e562a1c93b673eed46fd4449a66ba8` (after merged
+scalar text basics, PR #20). The current DropColumns review branch is based on this commit.
 IsBlankOrError was implemented from `78bd2f7452aa6f14302aaa2b64124b7a5a6259aa` (PR #17 merge); IsEmpty's
 implementation baseline was `984a61b` (after PR #15).
 Previous baselines: `5cf1d25` (PR #13, empty-text coercion), `f9df8bb` (PR #12, `Coalesce`),
@@ -10,7 +10,7 @@ Upstream pin: `df4ceba5e08220db670c25afead342ce699c50b5` (`docs/provenance.md`).
 Profiles: `v1-float` (default, PowerFxV1 + NumberIsFloat) and `v1-decimal` (opt-in
 `new Engine({ numberMode: "decimal" })`), culture en-US, UTC.
 
-## Completed milestones (PRs #2–#10, #12–#13, #16, #18, all merged)
+## Completed milestones (PRs #2–#10, #12–#13, #16, #18, #20, all merged)
 
 Vertical slice (lexer/parser/binder/evaluator, compat runner) → parser parity → typed context and
 schema separation → record literals and `With` → tables, row scopes, `Filter`, `ThisRecord`/`As` →
@@ -93,16 +93,17 @@ diagnostics, merged operand errors, recovered result types) → `Coalesce` (PR #
 ## Coverage and remaining work
 
 - Research inventory: `docs/research/powerfx-coverage-inventory.md` (source baseline before this
-  milestone is the PR #19 merge, upstream pin `df4ceba5e08220db670c25afead342ce699c50b5`).
+  milestone is `fc59733cd2e562a1c93b673eed46fd4449a66ba8`, upstream pin
+  `df4ceba5e08220db670c25afead342ce699c50b5`).
 - It counts 145 unique Core-registered upstream function names: 11 implemented in the supported
-  slice, 7 partial, 126 missing, and 1 deliberately excluded (`Patch`). Upstream's additional
+  slice, 8 partial, 125 missing, and 1 deliberately excluded (`Patch`). Upstream's additional
   `OtherKnownFunctions`, overload scope, method and uncertainty are itemized separately.
-- Candidate reports after scalar text basics: `v1-float` 2299 / 1 / 46 / 12613 and `v1-decimal`
-  2831 / 1 / 56 / 13285 (pass / fail / skip / unsupported). Do not treat corpus outcomes as
+- Candidate reports after DropColumns: `v1-float` 2314 / 1 / 46 / 12598 and `v1-decimal`
+  2846 / 1 / 56 / 13270 (pass / fail / skip / unsupported). Do not treat corpus outcomes as
   language completeness.
 - Language/runtime foundation is a narrow, tested slice; authoring services are scaffolds; Monaco,
-  React, PCF, LSP, connectors and gateway are not implemented. Three bounded follow-on milestone
-  candidates remain proposals only.
+  React, PCF, LSP, connectors and gateway are not implemented. The remaining bounded candidates are
+  proposals only.
 
 ## Known gaps
 
@@ -166,12 +167,13 @@ owner's behalf by documentation PRs; the owner may update the labels separately.
 `docs/research/` (`upstream-inventory.md`, `decimal-before-after.md`, `numeric-text-before-after.md`,
 `compat-cleanup-before-after.md`, `coalesce-before-after.md`, `empty-text-before-after.md`,
 `isempty-before-after.md`, `isblankorerror-before-after.md`, `empty-text-probes/`, `isempty-probes/`,
-`isblankorerror-probes/`, `powerfx-coverage-inventory.md`); `packages/test-suite/reports/`.
+`isblankorerror-probes/`, `dropcolumns-probes/`, `dropcolumns-before-after.md`,
+`powerfx-coverage-inventory.md`); `packages/test-suite/reports/`.
 
-## Current approved milestone: scalar text basics
+## Most recently merged milestone: scalar text basics
 
 - Scope and decision: ADR 0016; `docs/milestones/0016-scalar-text-basics-milestone-spec.md`.
-- Baseline: `767321b122080991929dde50382d663dc306ac17`; upstream pin unchanged.
+- Baseline: `767321b122080991929dde50382d663dc306ac17`; PR #20 is merged; upstream pin unchanged.
 - Implemented scalar overloads for `Len`, `Lower`, and `Upper`, including float/decimal `Len`
   return types, existing scalar-to-Text coercions, explicit unsupported table calls, and a frozen
   en-US simple-case table. Table overloads, Text formatting, other text functions, and new types
@@ -183,8 +185,24 @@ owner's behalf by documentation PRs; the owner may update the labels separately.
   comparison shows 71 and 73 unsupported-to-pass transitions respectively and zero
   pass-to-non-pass regressions; see `docs/research/scalar-text-before-after.md`.
 - Local build, lint, formatting, all 1,295 tests, both compatibility profiles, and exhaustive casing
-  verification pass. The draft PR CI build check passed; stop for independent review and do not
-  merge or begin another milestone.
+  verification passed. Scalar-text implementation is part of main at the DropColumns baseline
+  `fc59733cd2e562a1c93b673eed46fd4449a66ba8`.
+
+## Current approved milestone: DropColumns
+
+- Scope and decision: ADR 0017; `docs/milestones/0017-dropcolumns-milestone-spec.md`.
+- Baseline: `fc59733cd2e562a1c93b673eed46fd4449a66ba8`; upstream pin unchanged.
+- Supports static Record/Table sources. PowerFxV1 column-name identifiers are captured from syntax,
+  not evaluated or resolved as variables. Output schemas and values preserve retained fields; all
+  table rows, their order, and recursive immutability are preserved. Blank/Error values and rows
+  pass through; projection checks budget and cancellation per row.
+- Pre-implementation reference inputs and float/decimal outputs are in
+  `packages/engine/test/fixtures/dropcolumns-probe.*.tsv`; pinned source paths and generation
+  commands are in `docs/research/dropcolumns-probes/README.md`.
+- Both profiles have 15 `unsupported` → `pass` transitions, zero pass-to-non-pass regressions, and
+  no other verdict changes. Totals and per-case comparison are in
+  `docs/research/dropcolumns-before-after.md`.
+- Independent review and final-commit CI remain pending; do not merge or begin another milestone.
 
 ## Next
 

@@ -120,6 +120,12 @@ export type BoundNode =
       readonly kind: "Table";
       readonly items: readonly { readonly shape: "row" | "rows"; readonly value: BoundNode }[];
     })
+  /** `DropColumns(source, name, ...)`; names are bound identifiers, not evaluated expressions. */
+  | (BoundBase & {
+      readonly kind: "DropColumns";
+      readonly source: BoundNode;
+      readonly columns: readonly string[];
+    })
   /**
    * `Filter(source, predicate)`: evaluates `predicate` once per row with that row bound as the
    * scope `scopeId`. A Blank source gives Blank; an Error predicate yields an error row.
