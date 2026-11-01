@@ -242,8 +242,13 @@ class Binder {
       : this.defaultNumeric;
   }
 
-  private report(code: DiagnosticCode, span: Span, args: string[] = []): void {
-    this.diagnostics.push(createDiagnostic(code, span, args));
+  private report(
+    code: DiagnosticCode,
+    span: Span,
+    args: string[] = [],
+    severity: "error" | "warning" | "info" | "hint" = "error",
+  ): void {
+    this.diagnostics.push(createDiagnostic(code, span, args, severity));
   }
 
   private isErrorTyped(node: BoundNode): boolean {
@@ -600,6 +605,78 @@ class Binder {
         ? { kind: "Record", fields: remainingFields }
         : { kind: "Table", row: { kind: "Record", fields: remainingFields } };
     return { kind: "DropColumns", source, columns, span: node.span, type };
+  }
+
+  /**
+   * PowerFxV1 column arguments are identifiers, not expressions. The result uses the source
+   * schema's canonical ordinal field order; duplicate names warn and still invalidate the call.
+   */
+  private bindShowColumns(node: CallNode): BoundNode {
+    const sourceArg = node.args[0];
+    if (node.args.length < 2 || sourceArg === undefined) {
+      node.args.forEach((arg) => this.bindExpression(arg));
+      this.report(DiagnosticCodes.BadArityMinimum, node.span, [String(node.args.length), "2"]);
+      return this.invalid(node.span);
+    }
+
+    const source = this.bindExpression(sourceArg);
+    if (source.type.kind === "Unknown") {
+      this.report(DiagnosticCodes.InvalidFunctionArguments, node.callee.span, ["ShowColumns"]);
+      return this.invalid(node.span);
+    }
+    if (source.type.kind !== "Record" && source.type.kind !== "Table") {
+      this.report(DiagnosticCodes.BadType, sourceArg.span);
+      this.report(DiagnosticCodes.InvalidFunctionArguments, node.callee.span, ["ShowColumns"]);
+      return this.invalid(node.span);
+    }
+
+    const sourceFields =
+      source.type.kind === "Record" ? source.type.fields : source.type.row.fields;
+    const selected = new Set<string>();
+    let valid = true;
+    for (const argument of node.args.slice(1)) {
+      if (argument.kind !== "Name") {
+        this.report(DiagnosticCodes.ExpectedIdentifierName, argument.span);
+        valid = false;
+        continue;
+      }
+
+      const field = findField({ kind: "Record", fields: sourceFields }, argument.name);
+      if (field === undefined) {
+        const similar = similarColumnName(argument.name, sourceFields);
+        const suffix =
+          similar === undefined ? "" : ` The column with the most similar name is '${similar}'.`;
+        this.report(DiagnosticCodes.ColumnDoesNotExist, argument.span, [argument.name, suffix]);
+        valid = false;
+        continue;
+      }
+      if (selected.has(field.name)) {
+        this.report(
+          DiagnosticCodes.DuplicateColumnNameWarning,
+          argument.span,
+          [field.name],
+          "warning",
+        );
+        valid = false;
+        continue;
+      }
+      selected.add(field.name);
+    }
+
+    if (!valid) {
+      this.report(DiagnosticCodes.InvalidFunctionArguments, node.callee.span, ["ShowColumns"]);
+      return this.invalid(node.span);
+    }
+
+    const selectedFields = sourceFields
+      .filter((field) => selected.has(field.name))
+      .sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0));
+    const columns = selectedFields.map((field) => field.name);
+    const type: FormulaType =
+      source.type.kind === "Record"
+        ? { kind: "Record", fields: selectedFields }
+        : { kind: "Table", row: { kind: "Record", fields: selectedFields } };
+    return { kind: "ShowColumns", source, columns, span: node.span, type };
   }
 
   /**
@@ -1180,6 +1257,7 @@ class Binder {
       if (name === "With") return this.bindWith(node);
       if (name === "Filter") return this.bindFilter(node);
       if (name === "DropColumns") return this.bindDropColumns(node);
+      if (name === "ShowColumns") return this.bindShowColumns(node);
       if (name === "Table") return this.bindTableCall(node);
       if (name === "First") return this.bindFirst(node);
       if (name === "CountRows") return this.bindCountRows(node);

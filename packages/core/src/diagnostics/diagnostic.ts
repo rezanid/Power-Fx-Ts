@@ -42,6 +42,7 @@ export const DiagnosticCodes = {
   TypeError: "PFX2023",
   ExpectedIdentifierName: "PFX2024",
   ColumnDoesNotExist: "PFX2025",
+  DuplicateColumnNameWarning: "PFX2026",
 } as const;
 
 export type DiagnosticCode = (typeof DiagnosticCodes)[keyof typeof DiagnosticCodes];
@@ -100,6 +101,7 @@ const TEMPLATES: Record<DiagnosticCode, string> = {
     "Invalid argument type. Expecting one of the following: Number, Decimal, Date, Time, DateTime, Dynamic.",
   PFX2024: "Expected identifier name",
   PFX2025: "The specified column '{0}' does not exist.{1}",
+  PFX2026: "A column named '{0}' was specified more than once.",
 };
 
 export function formatMessage(code: DiagnosticCode, args: readonly string[]): string {

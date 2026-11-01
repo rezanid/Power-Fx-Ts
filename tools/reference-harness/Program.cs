@@ -602,6 +602,60 @@ static class P
             }
             return 0;
         }
+        if (args.Length >= 3 && args[0] == "showcolumns-probe")
+        {
+            // Exposes schema order, runtime field enumeration, and Power Fx serialization
+            // independently; the ordinary probe intentionally canonicalizes schema fields.
+            var e = Engine(args[1]);
+            var opts = new ParserOptions { Culture = new CultureInfo("en-US"), NumberIsFloat = args[1] == "float" };
+            static string TypeOrder(FormulaType type)
+            {
+                var recordType = type switch
+                {
+                    RecordType record => record,
+                    TableType table => table.ToRecord(),
+                    _ => null
+                };
+                return recordType == null
+                    ? ""
+                    : string.Join(",", recordType.GetFieldTypes().Select(field => field.Name));
+            }
+            static string RuntimeOrder(FormulaValue value)
+            {
+                static string RecordOrder(RecordValue record) =>
+                    string.Join(",", record.Fields.Select(field => field.Name));
+                return value switch
+                {
+                    RecordValue record => RecordOrder(record),
+                    TableValue table => string.Join(";", table.Rows.Select(row =>
+                        row.IsValue ? RecordOrder(row.Value) :
+                        row.IsBlank ? "Blank" : row.ToFormulaValue().GetType().Name)),
+                    _ => value.GetType().Name
+                };
+            }
+            static string Diagnostics(CheckResult check)
+            {
+                var diagnostics = string.Join("|", check.Errors.Select(error =>
+                    $"{error.Severity}@{error.Span.Min}-{error.Span.Lim}:{error.Message}"));
+                return diagnostics.Length == 0 ? "-" : diagnostics;
+            }
+
+            foreach (var line in File.ReadAllLines(args[2]).Where(l => l.Trim() != ""))
+            {
+                var check = e.Check(line, opts);
+                var typeOrder = check.ReturnType == null ? "" : TypeOrder(check.ReturnType);
+                var status = check.IsSuccess ? "valid" : "invalid";
+                if (!check.IsSuccess)
+                {
+                    Console.WriteLine($"{line}\t{status}\t{typeOrder}\t\t\t{Diagnostics(check)}");
+                    continue;
+                }
+
+                var value = e.EvalAsync(line, System.Threading.CancellationToken.None, opts).GetAwaiter().GetResult();
+                Console.WriteLine($"{line}\t{status}\t{typeOrder}\t{RuntimeOrder(value)}\t{value.ToExpression()}\t{Diagnostics(check)}");
+            }
+            return 0;
+        }
         if (args.Length >= 3 && args[0] == "eval")
         {
             var e = Engine(args[1]);

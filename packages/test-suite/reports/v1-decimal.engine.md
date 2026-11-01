@@ -4,8 +4,8 @@
 - Runner: engine
 - Setup: `PowerFxV1,disable:NumberIsFloat,DecimalSupport` (number mode: decimal, culture en-US, time zone UTC)
 - Cases: 22047 total, 5874 not applicable to this profile
-- Pass 2846, fail 1, skip 56, unsupported 13270
-- Unsupported by reason: feature 10058, setup 3212, profile 0
+- Pass 2863, fail 1, skip 56, unsupported 13253
+- Unsupported by reason: feature 10041, setup 3212, profile 0
 - Passing compile-error cases whose error set differs from upstream's (strict diagnostic, not a verdict): 36
 - Passing numeric cases accepted only by upstream's float tolerance (diagnostic, not a verdict): 7
 
@@ -209,7 +209,7 @@
 | Sequence.txt | 11 | 0 | 0 | 0 | 11 |
 | Sequence_Decimal.txt | 4 | 0 | 0 | 0 | 4 |
 | Sequence_Decimal_DVDecimal.txt | 2 | 0 | 0 | 0 | 2 |
-| ShowColumns.txt | 24 | 0 | 0 | 0 | 24 |
+| ShowColumns.txt | 24 | 17 | 0 | 0 | 7 |
 | ShowColumns_WithMutationSetup.txt | 2 | 0 | 0 | 0 | 2 |
 | Shuffle.txt | 11 | 0 | 0 | 0 | 11 |
 | SingleColumnTableCoercion.txt | 211 | 0 | 0 | 0 | 211 |

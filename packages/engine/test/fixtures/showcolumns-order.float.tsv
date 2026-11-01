@@ -1,0 +1,20 @@
+{z:3,a:1,m:2}	valid	a,m,z	a,m,z	{a:Float(1),m:Float(2),z:Float(3)}	-
+Table({z:3,a:1,m:2},{z:6,a:4,m:5})	valid	a,m,z	a,m,z;a,m,z	Table({a:Float(1),m:Float(2),z:Float(3)},{a:Float(4),m:Float(5),z:Float(6)})	-
+ShowColumns({z:3,a:1,m:2}, m, z)	valid	m,z	m,z	{m:Float(2),z:Float(3)}	-
+ShowColumns(Table({z:3,a:1,m:2},{z:6,a:4,m:5}), m, z)	valid	m,z	m,z;m,z	Table({m:Float(2),z:Float(3)},{m:Float(5),z:Float(6)})	-
+ShowColumns({z:3,a:1,m:2}, z, m)	valid	m,z	m,z	{m:Float(2),z:Float(3)}	-
+ShowColumns(Table({z:3,a:1,m:2},{z:6,a:4,m:5}), z, m)	valid	m,z	m,z;m,z	Table({m:Float(2),z:Float(3)},{m:Float(5),z:Float(6)})	-
+ShowColumns({z:3,a:1,m:2}, a, z)	valid	a,z	a,z	{a:Float(1),z:Float(3)}	-
+ShowColumns({z:3,a:1,m:2}, z, z)	invalid				Warning@30-31:A column named 'z' was specified more than once.|Severe@0-11:The function 'ShowColumns' has some invalid arguments.
+ShowColumns({z:3,a:1,m:2}, Z)	invalid				Severe@27-28:The specified column 'Z' does not exist. The column with the most similar name is 'a'.|Severe@0-11:The function 'ShowColumns' has some invalid arguments.
+ShowColumns({'First Name':1,z:3,a:2}, 'First Name', z)	valid	First Name,z	First Name,z	{'First Name':Float(1),z:Float(3)}	-
+With({z:99, source:{z:3,a:1,m:2}}, ShowColumns(source,z))	valid	z	z	{z:Float(3)}	-
+ShowColumns(If(false,{z:3,a:1,m:2}), z)	valid	z	BlankValue	If(false,{z:Float("0")})	-
+ShowColumns(If(1/0=0,{z:3,a:1,m:2},{z:6,a:4,m:5}), z)	valid	z	ErrorValue	Error({Kind:ErrorKind.Div0, Message:"Invalid operation: division by zero."})	-
+ShowColumns(Filter(Table({z:3,a:1,m:2}), a < 0), z)	valid	z		FirstN(Table({z:Float("0")}),0)	-
+ShowColumns(Table(If(false,{z:3,a:1,m:2}), {z:6,a:4,m:5}), z)	valid	z	Blank;z	Table(If(false,{a:Float("0"),m:Float("0"),z:Float("0")}),{z:Float(6)})	-
+ShowColumns(Filter(Table({z:3,a:0,m:2},{z:6,a:1,m:5}), 1/a > 0), z)	valid	z	ErrorValue;z	Table(Error({Kind:ErrorKind.Div0, Message:"Invalid operation: division by zero."}),{z:Float(6)})	-
+ShowColumns({z:3,a:1/0,m:2}, a, z)	valid	a,z	a,z	{a:Error({Kind:ErrorKind.Div0, Message:"Invalid operation: division by zero."}),z:Float(3)}	-
+ShowColumns({z:3,a:1,m:2}, "z")	invalid				Severe@27-30:Expected identifier name|Severe@0-11:The function 'ShowColumns' has some invalid arguments.
+ShowColumns({z:3,a:1,m:2}, 5)	invalid				Severe@27-28:Expected identifier name|Severe@0-11:The function 'ShowColumns' has some invalid arguments.
+ShowColumns({z:3,a:1,m:2})	invalid				Critical@0-26:Invalid number of arguments: received 1, expected 2 or more.
