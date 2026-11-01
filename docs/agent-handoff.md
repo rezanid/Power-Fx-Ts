@@ -1,7 +1,8 @@
 # Agent handoff: current state
 
-Current `main` at handoff: `4a1b2de18ae0fa323f106526b70e6a365225ac7d` (PR #16 merge; verified as
-remote `main` HEAD on 2026-10-18). The IsEmpty implementation baseline was `984a61b` (after PR #15).
+Current `main` at handoff: `78bd2f7452aa6f14302aaa2b64124b7a5a6259aa` (PR #17 merge). The
+IsBlankOrError implementation baseline is this commit. The IsEmpty implementation baseline was
+`984a61b` (after PR #15).
 Previous baselines: `5cf1d25` (PR #13, empty-text coercion), `f9df8bb` (PR #12, `Coalesce`),
 `820c9be` (PR #11, docs only), `f2fa9d8` (PR #10).
 Upstream pin: `df4ceba5e08220db670c25afead342ce699c50b5` (`docs/provenance.md`).
@@ -53,6 +54,8 @@ diagnostics, merged operand errors, recovered result types) → `Coalesce` (PR #
 - ADR 0012 `Coalesce` (accepted; `emptyTextAsBlank` coercion flag, fold-time coercions, record/table
   conformance).
 - ADR 0014 `IsEmpty` (Option A accepted, independently reviewed, implemented, and merged in PR #16).
+- ADR 0015 `IsBlankOrError` (accepted and implemented on the active milestone branch; awaiting CI
+  and independent review, not merged).
 - Custom numeric backends must implement `fromScanned` (ADR 0010 migration notes).
 - Evaluation-budget accounting is per evaluated node; exact upstream step counts are not required.
 
@@ -72,6 +75,21 @@ diagnostics, merged operand errors, recovered result types) → `Coalesce` (PR #
 - Verification at final PR head: build, lint, formatting, and all 1,183 tests passed; both profiles have
   exactly 18 `IsEmpty.txt` unsupported-to-pass transitions, all 16 reviewed exclusions remain unsupported,
   and there are zero pass-to-non-pass regressions.
+
+## Current milestone branch: `IsBlankOrError`
+
+- Scope and decision: ADR 0015; archived spec `docs/milestones/0015-isblankorerror-milestone-spec.md`.
+- Pinned upstream source and corpus were checked out at
+  `df4ceba5e08220db670c25afead342ce699c50b5`. Reference probes generated before implementation are
+  recorded in `docs/research/isblankorerror-probes/`.
+- The builtin reuses the ordinary blank/empty-text predicate and frozen Boolean constructor, consumes
+  reached Error values as `true`, and preserves `IsBlank` Error propagation and generic arity diagnostics.
+- Both profiles replay all 17 reference probes. Case-level compatibility comparison against baseline
+  `78bd2f7` has three `unsupported` → `pass` transitions per profile, all in `IsBlankOrError.txt`, with
+  zero pass-to-non-pass regressions. See `docs/research/isblankorerror-before-after.md`.
+- OptionSet, controls, untyped objects, and host-specific values remain unsupported/out of scope.
+- Current branch `rezanid-milestone-isblankorerror` is unmerged. Run required checks, push/open a draft
+  PR, then wait for CI and independent review.
 
 ## Known gaps
 
@@ -132,9 +150,9 @@ owner's behalf by documentation PRs; the owner may update the labels separately.
 
 `docs/research/` (`upstream-inventory.md`, `decimal-before-after.md`, `numeric-text-before-after.md`,
 `compat-cleanup-before-after.md`, `coalesce-before-after.md`, `empty-text-before-after.md`,
-`isempty-before-after.md`, `empty-text-probes/`, `isempty-probes/`); `packages/test-suite/reports/`.
+`isempty-before-after.md`, `isblankorerror-before-after.md`, `empty-text-probes/`, `isempty-probes/`,
+`isblankorerror-probes/`); `packages/test-suite/reports/`.
 
 ## Next
 
-`docs/milestones/next.md` proposes `IsBlankOrError` as milestone 0015. It is **PROPOSED**, not
-owner-accepted; do not implement it until the proposal is independently reviewed and accepted.
+No next milestone has been proposed; do not start another milestone without owner approval.

@@ -170,6 +170,14 @@ const IS_BLANK: FunctionSignature = {
   check: () => ({ returnType: BooleanType, coercions: [undefined] }),
 };
 
+const IS_BLANK_OR_ERROR: FunctionSignature = {
+  name: "IsBlankOrError",
+  minArgs: 1,
+  maxArgs: 1,
+  lazy: false,
+  check: () => ({ returnType: BooleanType, coercions: [undefined] }),
+};
+
 const IS_EMPTY: FunctionSignature = {
   name: "IsEmpty",
   minArgs: 1,
@@ -193,6 +201,7 @@ export const BUILTIN_SIGNATURES: readonly FunctionSignature[] = [
   COALESCE,
   BLANK,
   IS_BLANK,
+  IS_BLANK_OR_ERROR,
   IS_EMPTY,
 ];
 export const BUILTIN_FUNCTIONS: FunctionRegistry = createFunctionRegistry(BUILTIN_SIGNATURES);

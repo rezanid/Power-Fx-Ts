@@ -53,6 +53,13 @@ export const BUILTIN_IMPLEMENTATIONS: ReadonlyMap<string, FunctionImplementation
       return value.kind === "Error" ? value : boolean(isBlank(value));
     },
   ],
+  [
+    "IsBlankOrError",
+    (args, context) => {
+      const value = context.evaluate(args[0]!);
+      return boolean(value.kind === "Error" || isBlank(value));
+    },
+  ],
 ]);
 
 /** Names registered for binding that lack an implementation; must be empty (checked by a test). */
