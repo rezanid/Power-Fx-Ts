@@ -8,6 +8,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="Program.cs" />
+    <ProjectReference Include="../../upstream/Power-Fx/src/libraries/Microsoft.PowerFx.Core/Microsoft.PowerFx.Core.csproj" />
     <ProjectReference Include="../../upstream/Power-Fx/src/libraries/Microsoft.PowerFx.Interpreter/Microsoft.PowerFx.Interpreter.csproj" />
   </ItemGroup>
 </Project>

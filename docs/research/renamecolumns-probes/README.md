@@ -51,9 +51,19 @@ deviation.
 Input files and generated float/decimal output TSVs are under
 `packages/engine/test/fixtures/renamecolumns-*.{expressions.txt,tsv}`. The `renamecolumns-probe` TSVs
 contain separate field-order and runtime-exception observations; `renamecolumns-replay` TSVs use the
-ordinary compatibility probe shape. Regenerate from the repository root after confirming
-`upstream/Power-Fx` is at the pinned commit. Build first so build logs cannot contaminate redirected
-TSV output:
+ordinary compatibility probe shape.
+
+## Supported harness setup
+
+The harness targets .NET 8 and is verified with the .NET 10 SDK. Use the .NET 8 SDK or a later SDK
+that supports targeting `net8.0`, with a compatible runtime. The pinned upstream source checkout
+must exist at `upstream/Power-Fx` and be at commit `df4ceba5e08220db670c25afead342ce699c50b5`.
+`ReferenceHarness.csproj` references both upstream Core (which declares `FormulaType` and
+`FormulaValue`) and Interpreter directly, so the harness does not depend on transitive project
+reference behavior.
+
+From the repository root, build once before redirecting command output to fixture files; this avoids
+build logs contaminating the TSVs:
 
 ```sh
 dotnet build tools/reference-harness -p:EnableSourceControlManagerQueries=false
