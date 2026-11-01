@@ -141,6 +141,8 @@ class Evaluator implements EvaluationContext {
         return this.table(node);
       case "DropColumns":
         return this.dropColumns(node);
+      case "ShowColumns":
+        return this.showColumns(node);
       case "Filter":
         return this.filter(node);
       case "First": {
@@ -218,6 +220,32 @@ class Evaluator implements EvaluationContext {
     for (const row of source.rows) {
       this.tick();
       rows.push(row.kind === "Record" ? keep(row) : row);
+    }
+    return table(rows);
+  }
+
+  /** Projects selected fields in canonical schema order, checking cancellation for every row. */
+  private showColumns(node: Extract<BoundNode, { kind: "ShowColumns" }>): FormulaValue {
+    const source = this.evaluate(node.source);
+    if (source.kind === "Blank" || source.kind === "Error") return source;
+    const select = (value: RecordValue): RecordValue => {
+      const fields = new Map(value.fields.map((field) => [field.name, field]));
+      return record(
+        node.columns.map((name) => {
+          const field = fields.get(name);
+          if (field === undefined) throw new Error(`ShowColumns source is missing '${name}'.`);
+          return field;
+        }),
+      );
+    };
+
+    if (source.kind === "Record") return select(source);
+    if (source.kind !== "Table") throw new Error("ShowColumns source is not a record or table.");
+
+    const rows: TableRow[] = [];
+    for (const row of source.rows) {
+      this.tick();
+      rows.push(row.kind === "Record" ? select(row) : row);
     }
     return table(rows);
   }

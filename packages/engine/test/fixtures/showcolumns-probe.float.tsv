@@ -1,0 +1,18 @@
+ShowColumns({z:3,a:1,m:2}, m, z)	{m:Number,z:Number}	{m:Number(2),z:Number(3)}
+ShowColumns(Table({z:3,a:1,m:2},{z:6,a:4,m:5}), m, z)	Table{m:Number,z:Number}	Table[{m:Number(2),z:Number(3)},{m:Number(5),z:Number(6)}]
+ShowColumns({z:3,a:1,m:2}, z, m)	{m:Number,z:Number}	{m:Number(2),z:Number(3)}
+ShowColumns(Table({z:3,a:1,m:2},{z:6,a:4,m:5}), z, m)	Table{m:Number,z:Number}	Table[{m:Number(2),z:Number(3)},{m:Number(5),z:Number(6)}]
+ShowColumns({z:3,a:1,m:2}, a, z)	{a:Number,z:Number}	{a:Number(1),z:Number(3)}
+ShowColumns({z:3,a:1,m:2}, z, z)		ERRORS:Error 0-11: The function 'ShowColumns' has some invalid arguments.
+ShowColumns({z:3,a:1,m:2}, Z)		ERRORS:Error 27-28: The specified column 'Z' does not exist. The column with the most similar name is 'a'.|Error 0-11: The function 'ShowColumns' has some invalid arguments.
+ShowColumns({'First Name':1,z:3,a:2}, 'First Name', z)	{First Name:Number,z:Number}	{First Name:Number(1),z:Number(3)}
+With({z:99, source:{z:3,a:1,m:2}}, ShowColumns(source,z))	{z:Number}	{z:Number(3)}
+ShowColumns(If(false,{z:3,a:1,m:2}), z)	{z:Number}	Blank
+ShowColumns(If(1/0=0,{z:3,a:1,m:2},{z:6,a:4,m:5}), z)	{z:Number}	Error(Div0)
+ShowColumns(Filter(Table({z:3,a:1,m:2}), a < 0), z)	Table{z:Number}	Table[]
+ShowColumns(Table(If(false,{z:3,a:1,m:2}), {z:6,a:4,m:5}), z)	Table{z:Number}	Table[Blank,{z:Number(6)}]
+ShowColumns(Filter(Table({z:3,a:0,m:2},{z:6,a:1,m:5}), 1/a > 0), z)	Table{z:Number}	Table[Error(Div0),{z:Number(6)}]
+ShowColumns({z:3,a:1/0,m:2}, a, z)	{a:Number,z:Number}	{a:Error(Div0),z:Number(3)}
+ShowColumns({z:3,a:1,m:2}, "z")		ERRORS:Error 27-30: Expected identifier name|Error 0-11: The function 'ShowColumns' has some invalid arguments.
+ShowColumns({z:3,a:1,m:2}, 5)		ERRORS:Error 27-28: Expected identifier name|Error 0-11: The function 'ShowColumns' has some invalid arguments.
+ShowColumns({z:3,a:1,m:2})		ERRORS:Error 0-26: Invalid number of arguments: received 1, expected 2 or more.

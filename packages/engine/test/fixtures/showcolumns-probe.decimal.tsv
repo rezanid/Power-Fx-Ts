@@ -1,0 +1,18 @@
+ShowColumns({z:3,a:1,m:2}, m, z)	{m:Decimal,z:Decimal}	{m:Decimal(2),z:Decimal(3)}
+ShowColumns(Table({z:3,a:1,m:2},{z:6,a:4,m:5}), m, z)	Table{m:Decimal,z:Decimal}	Table[{m:Decimal(2),z:Decimal(3)},{m:Decimal(5),z:Decimal(6)}]
+ShowColumns({z:3,a:1,m:2}, z, m)	{m:Decimal,z:Decimal}	{m:Decimal(2),z:Decimal(3)}
+ShowColumns(Table({z:3,a:1,m:2},{z:6,a:4,m:5}), z, m)	Table{m:Decimal,z:Decimal}	Table[{m:Decimal(2),z:Decimal(3)},{m:Decimal(5),z:Decimal(6)}]
+ShowColumns({z:3,a:1,m:2}, a, z)	{a:Decimal,z:Decimal}	{a:Decimal(1),z:Decimal(3)}
+ShowColumns({z:3,a:1,m:2}, z, z)		ERRORS:Error 0-11: The function 'ShowColumns' has some invalid arguments.
+ShowColumns({z:3,a:1,m:2}, Z)		ERRORS:Error 27-28: The specified column 'Z' does not exist. The column with the most similar name is 'a'.|Error 0-11: The function 'ShowColumns' has some invalid arguments.
+ShowColumns({'First Name':1,z:3,a:2}, 'First Name', z)	{First Name:Decimal,z:Decimal}	{First Name:Decimal(1),z:Decimal(3)}
+With({z:99, source:{z:3,a:1,m:2}}, ShowColumns(source,z))	{z:Decimal}	{z:Decimal(3)}
+ShowColumns(If(false,{z:3,a:1,m:2}), z)	{z:Decimal}	Blank
+ShowColumns(If(1/0=0,{z:3,a:1,m:2},{z:6,a:4,m:5}), z)	{z:Decimal}	Error(Div0)
+ShowColumns(Filter(Table({z:3,a:1,m:2}), a < 0), z)	Table{z:Decimal}	Table[]
+ShowColumns(Table(If(false,{z:3,a:1,m:2}), {z:6,a:4,m:5}), z)	Table{z:Decimal}	Table[Blank,{z:Decimal(6)}]
+ShowColumns(Filter(Table({z:3,a:0,m:2},{z:6,a:1,m:5}), 1/a > 0), z)	Table{z:Decimal}	Table[Error(Div0),{z:Decimal(6)}]
+ShowColumns({z:3,a:1/0,m:2}, a, z)	{a:Decimal,z:Decimal}	{a:Error(Div0),z:Decimal(3)}
+ShowColumns({z:3,a:1,m:2}, "z")		ERRORS:Error 27-30: Expected identifier name|Error 0-11: The function 'ShowColumns' has some invalid arguments.
+ShowColumns({z:3,a:1,m:2}, 5)		ERRORS:Error 27-28: Expected identifier name|Error 0-11: The function 'ShowColumns' has some invalid arguments.
+ShowColumns({z:3,a:1,m:2})		ERRORS:Error 0-26: Invalid number of arguments: received 1, expected 2 or more.

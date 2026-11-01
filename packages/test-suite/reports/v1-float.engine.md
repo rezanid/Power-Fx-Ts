@@ -4,8 +4,8 @@
 - Runner: engine
 - Setup: `PowerFxV1,NumberIsFloat,DecimalSupport` (number mode: float, culture en-US, time zone UTC)
 - Cases: 22047 total, 7088 not applicable to this profile
-- Pass 2314, fail 1, skip 46, unsupported 12598
-- Unsupported by reason: feature 9435, setup 3163, profile 0
+- Pass 2331, fail 1, skip 46, unsupported 12581
+- Unsupported by reason: feature 9418, setup 3163, profile 0
 - Passing compile-error cases whose error set differs from upstream's (strict diagnostic, not a verdict): 34
 - Passing numeric cases accepted only by upstream's float tolerance (diagnostic, not a verdict): 12
 
@@ -222,7 +222,7 @@
 | Search.txt | 18 | 0 | 0 | 0 | 18 |
 | Sequence.txt | 11 | 0 | 0 | 0 | 11 |
 | Sequence_Float.txt | 4 | 0 | 0 | 0 | 4 |
-| ShowColumns.txt | 24 | 0 | 0 | 0 | 24 |
+| ShowColumns.txt | 24 | 17 | 0 | 0 | 7 |
 | ShowColumns_WithMutationSetup.txt | 2 | 0 | 0 | 0 | 2 |
 | Shuffle.txt | 11 | 0 | 0 | 0 | 11 |
 | SingleColumnTableCoercion.txt | 211 | 0 | 0 | 0 | 211 |

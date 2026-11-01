@@ -1,7 +1,7 @@
 # Agent handoff: current state
 
-Current `main` baseline before DropColumns: `fc59733cd2e562a1c93b673eed46fd4449a66ba8` (after merged
-scalar text basics, PR #20). The current DropColumns review branch is based on this commit.
+Current `main` baseline before ShowColumns: `e2d4624f0ab599745c23a0548622811cb8e59748` (DropColumns
+merge commit, PR #21). The current ShowColumns review branch is based on this commit.
 IsBlankOrError was implemented from `78bd2f7452aa6f14302aaa2b64124b7a5a6259aa` (PR #17 merge); IsEmpty's
 implementation baseline was `984a61b` (after PR #15).
 Previous baselines: `5cf1d25` (PR #13, empty-text coercion), `f9df8bb` (PR #12, `Coalesce`),
@@ -10,7 +10,7 @@ Upstream pin: `df4ceba5e08220db670c25afead342ce699c50b5` (`docs/provenance.md`).
 Profiles: `v1-float` (default, PowerFxV1 + NumberIsFloat) and `v1-decimal` (opt-in
 `new Engine({ numberMode: "decimal" })`), culture en-US, UTC.
 
-## Completed milestones (PRs #2–#10, #12–#13, #16, #18, #20, all merged)
+## Completed milestones (PRs #2–#10, #12–#13, #16, #18, #20–#21, all merged)
 
 Vertical slice (lexer/parser/binder/evaluator, compat runner) → parser parity → typed context and
 schema separation → record literals and `With` → tables, row scopes, `Filter`, `ThisRecord`/`As` →
@@ -20,7 +20,8 @@ diagnostics, merged operand errors, recovered result types) → `Coalesce` (PR #
 `docs/milestones/0012-coalesce-milestone-spec.md`) → empty-text-to-Blank in `If` results, table literals and
 `Table(...)` (PR #13; spec `docs/milestones/0013-empty-text-coercion-milestone-spec.md`) →
 `IsEmpty` and reusable signature argument-type diagnostics (PR #16; archived spec
-`docs/milestones/0014-isempty-milestone-spec.md`, ADR 0014).
+`docs/milestones/0014-isempty-milestone-spec.md`, ADR 0014) → scalar `Len`, `Lower`, and `Upper`
+(PR #20; ADR 0016) → `DropColumns` for static Record/Table values (PR #21; ADR 0017).
 
 ## Source and test map
 
@@ -93,13 +94,13 @@ diagnostics, merged operand errors, recovered result types) → `Coalesce` (PR #
 ## Coverage and remaining work
 
 - Research inventory: `docs/research/powerfx-coverage-inventory.md` (source baseline before this
-  milestone is `fc59733cd2e562a1c93b673eed46fd4449a66ba8`, upstream pin
+  milestone is `e2d4624f0ab599745c23a0548622811cb8e59748`, upstream pin
   `df4ceba5e08220db670c25afead342ce699c50b5`).
 - It counts 145 unique Core-registered upstream function names: 11 implemented in the supported
-  slice, 8 partial, 125 missing, and 1 deliberately excluded (`Patch`). Upstream's additional
+  slice, 9 partial, 124 missing, and 1 deliberately excluded (`Patch`). Upstream's additional
   `OtherKnownFunctions`, overload scope, method and uncertainty are itemized separately.
-- Candidate reports after DropColumns: `v1-float` 2314 / 1 / 46 / 12598 and `v1-decimal`
-  2846 / 1 / 56 / 13270 (pass / fail / skip / unsupported). Do not treat corpus outcomes as
+- Candidate reports after ShowColumns: `v1-float` 2331 / 1 / 46 / 12581 and `v1-decimal`
+  2863 / 1 / 56 / 13253 (pass / fail / skip / unsupported). Do not treat corpus outcomes as
   language completeness.
 - Language/runtime foundation is a narrow, tested slice; authoring services are scaffolds; Monaco,
   React, PCF, LSP, connectors and gateway are not implemented. The remaining bounded candidates are
@@ -168,6 +169,7 @@ owner's behalf by documentation PRs; the owner may update the labels separately.
 `compat-cleanup-before-after.md`, `coalesce-before-after.md`, `empty-text-before-after.md`,
 `isempty-before-after.md`, `isblankorerror-before-after.md`, `empty-text-probes/`, `isempty-probes/`,
 `isblankorerror-probes/`, `dropcolumns-probes/`, `dropcolumns-before-after.md`,
+`showcolumns-probes/`, `showcolumns-before-after.md`,
 `powerfx-coverage-inventory.md`); `packages/test-suite/reports/`.
 
 ## Most recently merged milestone: scalar text basics
@@ -188,7 +190,7 @@ owner's behalf by documentation PRs; the owner may update the labels separately.
   verification passed. Scalar-text implementation is part of main at the DropColumns baseline
   `fc59733cd2e562a1c93b673eed46fd4449a66ba8`.
 
-## Current approved milestone: DropColumns
+## Most recently merged milestone: DropColumns
 
 - Scope and decision: ADR 0017; `docs/milestones/0017-dropcolumns-milestone-spec.md`.
 - Baseline: `fc59733cd2e562a1c93b673eed46fd4449a66ba8`; upstream pin unchanged.
@@ -202,7 +204,27 @@ owner's behalf by documentation PRs; the owner may update the labels separately.
 - Both profiles have 15 `unsupported` → `pass` transitions, zero pass-to-non-pass regressions, and
   no other verdict changes. Totals and per-case comparison are in
   `docs/research/dropcolumns-before-after.md`.
-- Independent review and final-commit CI remain pending; do not merge or begin another milestone.
+- PR #21 final head `8a0094ba0f9ac9fbec650886aebe22cc11c6fd2d` merged as
+  `e2d4624f0ab599745c23a0548622811cb8e59748`. PR CI passed in run
+  [41330953195](https://github.com/rezanid/Power-Fx-Ts/actions/runs/41330953195).
+
+## Current approved milestone: ShowColumns
+
+- Scope and decision: ADR 0018; `docs/milestones/0018-showcolumns-milestone-spec.md`.
+- Baseline: `e2d4624f0ab599745c23a0548622811cb8e59748`; upstream pin unchanged.
+- Supports static Record/Table projection with PowerFxV1 bare and escaped identifiers, captured
+  from syntax rather than resolved as variables. Output fields follow canonical ordinal name order,
+  independent of argument order; direct reference probes separately record type-field order, runtime
+  field enumeration and serialized output.
+- Duplicate names preserve the reference warning severity and also produce invalid-function-argument
+  error; the check remains invalid. Blank/Error propagation, Blank/Error rows, empty tables,
+  immutability, and per-row budget/cancellation are covered.
+- Pre-implementation probes are in `packages/engine/test/fixtures/showcolumns-*.tsv`; sources and
+  generation commands are in `docs/research/showcolumns-probes/README.md`.
+- Both profiles have 17 `unsupported` → `pass` transitions, zero regressions, and no other verdict
+  changes; see `docs/research/showcolumns-before-after.md`.
+- Draft PR [#22](https://github.com/rezanid/Power-Fx-Ts/pull/22) contains the current implementation;
+  check it for CI and independent review. Do not merge or begin another milestone.
 
 ## Next
 

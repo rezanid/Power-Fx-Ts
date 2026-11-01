@@ -1,8 +1,9 @@
 # ADR 0017: `DropColumns` for static record/table values
 
-Status: **accepted and implemented; independent review pending**. Baseline:
+Status: **accepted, implemented, reviewed, and merged in PR #21**. Baseline:
 `fc59733cd2e562a1c93b673eed46fd4449a66ba8`. Upstream pin:
-`df4ceba5e08220db670c25afead342ce699c50b5`.
+`df4ceba5e08220db670c25afead342ce699c50b5`. Merge commit:
+`e2d4624f0ab599745c23a0548622811cb8e59748`.
 
 ## Decision
 
