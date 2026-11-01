@@ -1,0 +1,3 @@
+{z:3,a:1,m:2}	valid	a,m,z	a,m,z	{a:Decimal(1),m:Decimal(2),z:Decimal(3)}	-	-
+RenameColumns({z:3,a:1,m:2}, z, b)	valid	a,b,m	a,b,m	{a:Decimal(1),b:Decimal(3),m:Decimal(2)}	-	-
+RenameColumns({z:3,a:1,m:2}, a, x, z, y)	valid	m,x,y	m,x,y	{m:Decimal(2),x:Decimal(1),y:Decimal(3)}	-	-

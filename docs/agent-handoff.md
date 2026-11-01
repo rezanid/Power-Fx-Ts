@@ -1,7 +1,7 @@
 # Agent handoff: current state
 
-Current `main` baseline before ShowColumns: `e2d4624f0ab599745c23a0548622811cb8e59748` (DropColumns
-merge commit, PR #21). The current ShowColumns review branch is based on this commit.
+Current `main` baseline before RenameColumns: `fbbb6c786aba882479806c2e0c36150cf451b156` (ShowColumns
+merge commit, PR #22). The current RenameColumns review branch is based on this commit.
 IsBlankOrError was implemented from `78bd2f7452aa6f14302aaa2b64124b7a5a6259aa` (PR #17 merge); IsEmpty's
 implementation baseline was `984a61b` (after PR #15).
 Previous baselines: `5cf1d25` (PR #13, empty-text coercion), `f9df8bb` (PR #12, `Coalesce`),
@@ -10,7 +10,7 @@ Upstream pin: `df4ceba5e08220db670c25afead342ce699c50b5` (`docs/provenance.md`).
 Profiles: `v1-float` (default, PowerFxV1 + NumberIsFloat) and `v1-decimal` (opt-in
 `new Engine({ numberMode: "decimal" })`), culture en-US, UTC.
 
-## Completed milestones (PRs #2–#10, #12–#13, #16, #18, #20–#21, all merged)
+## Completed milestones (PRs #2–#10, #12–#13, #16, #18, #20–#22, all merged)
 
 Vertical slice (lexer/parser/binder/evaluator, compat runner) → parser parity → typed context and
 schema separation → record literals and `With` → tables, row scopes, `Filter`, `ThisRecord`/`As` →
@@ -21,29 +21,30 @@ diagnostics, merged operand errors, recovered result types) → `Coalesce` (PR #
 `Table(...)` (PR #13; spec `docs/milestones/0013-empty-text-coercion-milestone-spec.md`) →
 `IsEmpty` and reusable signature argument-type diagnostics (PR #16; archived spec
 `docs/milestones/0014-isempty-milestone-spec.md`, ADR 0014) → scalar `Len`, `Lower`, and `Upper`
-(PR #20; ADR 0016) → `DropColumns` for static Record/Table values (PR #21; ADR 0017).
+(PR #20; ADR 0016) → `DropColumns` for static Record/Table values (PR #21; ADR 0017) →
+`ShowColumns` for static Record/Table values (PR #22; ADR 0018).
 
 ## Source and test map
 
-| Area                                           | Location                                                                                                  |
-| ---------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
-| Lexer, parser, syntax nodes                    | `packages/core/src/lexer/`, `packages/core/src/parser/`, `packages/core/src/syntax/`                      |
-| Binder (types, scopes, coercions, diagnostics) | `packages/core/src/binding/binder.ts`                                                                     |
-| Bound tree                                     | `packages/core/src/ir/bound-tree.ts`                                                                      |
-| Types, schema, record/table unions             | `packages/core/src/types/{formula-type,schema,union}.ts`                                                  |
-| Builtin signatures and known names             | `packages/core/src/functions/{signature,known-names}.ts`                                                  |
-| Diagnostics and message templates              | `packages/core/src/diagnostics/diagnostic.ts`                                                             |
-| Numeric text scanning (core side) / Decimal    | `packages/core/src/numeric/{text-number,decimal}.ts`                                                      |
-| Numeric backends (float/decimal), text parsing | `packages/interpreter/src/numeric/{backend,decimal,text-number}.ts`                                       |
-| Values (frozen)                                | `packages/interpreter/src/values/values.ts`                                                               |
-| Evaluator, coercion                            | `packages/interpreter/src/evaluator/{evaluator,coercion}.ts`                                              |
-| Builtin implementations                        | `packages/interpreter/src/functions/builtins.ts`; frozen casing data in `text-case-map.ts`                |
-| Runtime context and host-input validation      | `packages/interpreter/src/runtime/{context,validate}.ts`                                                  |
-| Engine facade (`check`, `evaluate`)            | `packages/engine/src/engine.ts` (`dependencies/`, `recalc/` are empty placeholders)                       |
-| Compat runner, profiles, reports               | `packages/test-suite/src/*.ts`; committed `packages/test-suite/reports/*.engine.md`                       |
-| Behavior tests and reference fixtures          | `packages/engine/test/*.test.ts`, `packages/engine/test/fixtures/*.json`                                  |
-| Executable C# reference                        | `tools/reference-harness/Program.cs` (`eval`, `check`, `generate`, `parse`, `probe`, `case-map`)          |
-| Language service, serialization, test-runner   | `packages/language-service`, `packages/serialization`, `packages/test-runner`: skeletal, not yet in scope |
+| Area                                           | Location                                                                                                                                     |
+| ---------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| Lexer, parser, syntax nodes                    | `packages/core/src/lexer/`, `packages/core/src/parser/`, `packages/core/src/syntax/`                                                         |
+| Binder (types, scopes, coercions, diagnostics) | `packages/core/src/binding/binder.ts`                                                                                                        |
+| Bound tree                                     | `packages/core/src/ir/bound-tree.ts`                                                                                                         |
+| Types, schema, record/table unions             | `packages/core/src/types/{formula-type,schema,union}.ts`                                                                                     |
+| Builtin signatures and known names             | `packages/core/src/functions/{signature,known-names}.ts`                                                                                     |
+| Diagnostics and message templates              | `packages/core/src/diagnostics/diagnostic.ts`                                                                                                |
+| Numeric text scanning (core side) / Decimal    | `packages/core/src/numeric/{text-number,decimal}.ts`                                                                                         |
+| Numeric backends (float/decimal), text parsing | `packages/interpreter/src/numeric/{backend,decimal,text-number}.ts`                                                                          |
+| Values (frozen)                                | `packages/interpreter/src/values/values.ts`                                                                                                  |
+| Evaluator, coercion                            | `packages/interpreter/src/evaluator/{evaluator,coercion}.ts`                                                                                 |
+| Builtin implementations                        | `packages/interpreter/src/functions/builtins.ts`; frozen casing data in `text-case-map.ts`                                                   |
+| Runtime context and host-input validation      | `packages/interpreter/src/runtime/{context,validate}.ts`                                                                                     |
+| Engine facade (`check`, `evaluate`)            | `packages/engine/src/engine.ts` (`dependencies/`, `recalc/` are empty placeholders)                                                          |
+| Compat runner, profiles, reports               | `packages/test-suite/src/*.ts`; committed `packages/test-suite/reports/*.engine.md`                                                          |
+| Behavior tests and reference fixtures          | `packages/engine/test/*.test.ts`, `packages/engine/test/fixtures/*.json`                                                                     |
+| Executable C# reference                        | `tools/reference-harness/Program.cs` (`eval`, `check`, `generate`, `parse`, `probe`, `showcolumns-probe`, `renamecolumns-probe`, `case-map`) |
+| Language service, serialization, test-runner   | `packages/language-service`, `packages/serialization`, `packages/test-runner`: skeletal, not yet in scope                                    |
 
 ## Accepted decisions (details in ADRs)
 
@@ -94,13 +95,13 @@ diagnostics, merged operand errors, recovered result types) → `Coalesce` (PR #
 ## Coverage and remaining work
 
 - Research inventory: `docs/research/powerfx-coverage-inventory.md` (source baseline before this
-  milestone is `e2d4624f0ab599745c23a0548622811cb8e59748`, upstream pin
+  milestone is `fbbb6c786aba882479806c2e0c36150cf451b156`, upstream pin
   `df4ceba5e08220db670c25afead342ce699c50b5`).
 - It counts 145 unique Core-registered upstream function names: 11 implemented in the supported
-  slice, 9 partial, 124 missing, and 1 deliberately excluded (`Patch`). Upstream's additional
+  slice, 10 partial, 123 missing, and 1 deliberately excluded (`Patch`). Upstream's additional
   `OtherKnownFunctions`, overload scope, method and uncertainty are itemized separately.
-- Candidate reports after ShowColumns: `v1-float` 2331 / 1 / 46 / 12581 and `v1-decimal`
-  2863 / 1 / 56 / 13253 (pass / fail / skip / unsupported). Do not treat corpus outcomes as
+- Candidate reports after RenameColumns: `v1-float` 2357 / 1 / 46 / 12555 and `v1-decimal`
+  2889 / 1 / 56 / 13227 (pass / fail / skip / unsupported). Do not treat corpus outcomes as
   language completeness.
 - Language/runtime foundation is a narrow, tested slice; authoring services are scaffolds; Monaco,
   React, PCF, LSP, connectors and gateway are not implemented. The remaining bounded candidates are
@@ -169,7 +170,8 @@ owner's behalf by documentation PRs; the owner may update the labels separately.
 `compat-cleanup-before-after.md`, `coalesce-before-after.md`, `empty-text-before-after.md`,
 `isempty-before-after.md`, `isblankorerror-before-after.md`, `empty-text-probes/`, `isempty-probes/`,
 `isblankorerror-probes/`, `dropcolumns-probes/`, `dropcolumns-before-after.md`,
-`showcolumns-probes/`, `showcolumns-before-after.md`,
+`showcolumns-probes/`, `showcolumns-before-after.md`, `renamecolumns-probes/`,
+`renamecolumns-before-after.md`,
 `powerfx-coverage-inventory.md`); `packages/test-suite/reports/`.
 
 ## Most recently merged milestone: scalar text basics
@@ -208,7 +210,7 @@ owner's behalf by documentation PRs; the owner may update the labels separately.
   `e2d4624f0ab599745c23a0548622811cb8e59748`. PR CI passed in run
   [41330953195](https://github.com/rezanid/Power-Fx-Ts/actions/runs/41330953195).
 
-## Current approved milestone: ShowColumns
+## Most recently merged milestone: ShowColumns
 
 - Scope and decision: ADR 0018; `docs/milestones/0018-showcolumns-milestone-spec.md`.
 - Baseline: `e2d4624f0ab599745c23a0548622811cb8e59748`; upstream pin unchanged.
@@ -223,8 +225,28 @@ owner's behalf by documentation PRs; the owner may update the labels separately.
   generation commands are in `docs/research/showcolumns-probes/README.md`.
 - Both profiles have 17 `unsupported` → `pass` transitions, zero regressions, and no other verdict
   changes; see `docs/research/showcolumns-before-after.md`.
-- Draft PR [#22](https://github.com/rezanid/Power-Fx-Ts/pull/22) contains the current implementation;
-  check it for CI and independent review. Do not merge or begin another milestone.
+- PR #22 merged at `fbbb6c786aba882479806c2e0c36150cf451b156`; its final head is
+  `c7ed36da01e1098c4ae41acb333e9bc5aa92d122`.
+
+## Current approved milestone: RenameColumns
+
+- Scope and decision: ADR 0019; `docs/milestones/0019-renamecolumns-milestone-spec.md`.
+- Baseline: `fbbb6c786aba882479806c2e0c36150cf451b156`; upstream pin unchanged.
+- Supports static Record/Table values with syntax-only PowerFxV1 old/new name identifiers. Rename
+  pairs apply simultaneously against the original schema; no-op rename is valid and output fields
+  use canonical ordinal order.
+- Blank/Error source propagation, Blank/Error rows, retained field errors, empty tables,
+  immutability and per-row budget/cancellation are covered.
+- The pinned reference checks repeated old-name calls with a preceding no-op as successful but its
+  interpreter throws a duplicate-key exception. The approved deviation rejects them at bind time;
+  separate reference fixtures retain check success and runtime exception evidence, and these cases
+  are not claimed as parity.
+- Pre-implementation probes and generation commands are in
+  `docs/research/renamecolumns-probes/`; per-case compatibility evidence is in
+  `docs/research/renamecolumns-before-after.md`.
+- Both profiles have 26 `unsupported` → `pass` transitions, zero regressions, and no other verdict
+  changes.
+- Draft PR and final-commit CI remain pending; do not merge or begin another milestone.
 
 ## Next
 

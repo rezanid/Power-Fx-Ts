@@ -1,0 +1,2 @@
+RenameColumns({a:1,b:2}, a, a, a, x)
+RenameColumns({a:1,b:2}, a, a, a, a)

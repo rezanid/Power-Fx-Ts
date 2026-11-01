@@ -1,0 +1,3 @@
+{z:3,a:1,m:2}	valid	a,m,z	a,m,z	{a:Float(1),m:Float(2),z:Float(3)}	-	-
+RenameColumns({z:3,a:1,m:2}, z, b)	valid	a,b,m	a,b,m	{a:Float(1),b:Float(3),m:Float(2)}	-	-
+RenameColumns({z:3,a:1,m:2}, a, x, z, y)	valid	m,x,y	m,x,y	{m:Float(2),x:Float(1),y:Float(3)}	-	-
