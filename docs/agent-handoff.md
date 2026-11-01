@@ -1,7 +1,7 @@
 # Agent handoff: current state
 
-Current `main` baseline before RenameColumns: `fbbb6c786aba882479806c2e0c36150cf451b156` (ShowColumns
-merge commit, PR #22). The current RenameColumns review branch is based on this commit.
+Current `main` baseline before AddColumns: `3d26204f5c970141a449cc596cf7969b6a18aaa9` (RenameColumns
+merge commit, PR #23). The current AddColumns review branch is based on this commit.
 IsBlankOrError was implemented from `78bd2f7452aa6f14302aaa2b64124b7a5a6259aa` (PR #17 merge); IsEmpty's
 implementation baseline was `984a61b` (after PR #15).
 Previous baselines: `5cf1d25` (PR #13, empty-text coercion), `f9df8bb` (PR #12, `Coalesce`),
@@ -10,7 +10,7 @@ Upstream pin: `df4ceba5e08220db670c25afead342ce699c50b5` (`docs/provenance.md`).
 Profiles: `v1-float` (default, PowerFxV1 + NumberIsFloat) and `v1-decimal` (opt-in
 `new Engine({ numberMode: "decimal" })`), culture en-US, UTC.
 
-## Completed milestones (PRs #2–#10, #12–#13, #16, #18, #20–#22, all merged)
+## Completed milestones (PRs #2–#10, #12–#13, #16, #18, #20–#23, all merged)
 
 Vertical slice (lexer/parser/binder/evaluator, compat runner) → parser parity → typed context and
 schema separation → record literals and `With` → tables, row scopes, `Filter`, `ThisRecord`/`As` →
@@ -22,7 +22,8 @@ diagnostics, merged operand errors, recovered result types) → `Coalesce` (PR #
 `IsEmpty` and reusable signature argument-type diagnostics (PR #16; archived spec
 `docs/milestones/0014-isempty-milestone-spec.md`, ADR 0014) → scalar `Len`, `Lower`, and `Upper`
 (PR #20; ADR 0016) → `DropColumns` for static Record/Table values (PR #21; ADR 0017) →
-`ShowColumns` for static Record/Table values (PR #22; ADR 0018).
+`ShowColumns` for static Record/Table values (PR #22; ADR 0018) → `RenameColumns` for static
+Record/Table values (PR #23; ADR 0019).
 
 ## Source and test map
 
@@ -58,6 +59,7 @@ diagnostics, merged operand errors, recovered result types) → `Coalesce` (PR #
   conformance).
 - ADR 0014 `IsEmpty` (Option A accepted, independently reviewed, implemented, and merged in PR #16).
 - ADR 0015 `IsBlankOrError` (accepted, implemented, independently reviewed, and merged in PR #18).
+- ADR 0019 `RenameColumns` (accepted, implemented, and merged in PR #23).
 - Custom numeric backends must implement `fromScanned` (ADR 0010 migration notes).
 - Evaluation-budget accounting is per evaluated node; exact upstream step counts are not required.
 
@@ -95,13 +97,14 @@ diagnostics, merged operand errors, recovered result types) → `Coalesce` (PR #
 ## Coverage and remaining work
 
 - Research inventory: `docs/research/powerfx-coverage-inventory.md` (source baseline before this
-  milestone is `fbbb6c786aba882479806c2e0c36150cf451b156`, upstream pin
+  milestone is `3d26204f5c970141a449cc596cf7969b6a18aaa9`, upstream pin
   `df4ceba5e08220db670c25afead342ce699c50b5`).
-- It counts 145 unique Core-registered upstream function names: 11 implemented in the supported
-  slice, 10 partial, 123 missing, and 1 deliberately excluded (`Patch`). Upstream's additional
+- The current candidate inventory counts 145 unique Core-registered upstream function names: 11
+  implemented in the supported slice, 11 partial, 122 missing, and 1 deliberately excluded
+  (`Patch`). Upstream's additional
   `OtherKnownFunctions`, overload scope, method and uncertainty are itemized separately.
-- Candidate reports after RenameColumns: `v1-float` 2357 / 1 / 46 / 12555 and `v1-decimal`
-  2889 / 1 / 56 / 13227 (pass / fail / skip / unsupported). Do not treat corpus outcomes as
+- Candidate reports after AddColumns: `v1-float` 2398 / 1 / 46 / 12514 and `v1-decimal`
+  2934 / 1 / 56 / 13182 (pass / fail / skip / unsupported). Do not treat corpus outcomes as
   language completeness.
 - Language/runtime foundation is a narrow, tested slice; authoring services are scaffolds; Monaco,
   React, PCF, LSP, connectors and gateway are not implemented. The remaining bounded candidates are
@@ -228,24 +231,19 @@ owner's behalf by documentation PRs; the owner may update the labels separately.
 - PR #22 merged at `fbbb6c786aba882479806c2e0c36150cf451b156`; its final head is
   `c7ed36da01e1098c4ae41acb333e9bc5aa92d122`.
 
-## Current approved milestone: RenameColumns
+## Current approved milestone: AddColumns
 
-- Scope and decision: ADR 0019; `docs/milestones/0019-renamecolumns-milestone-spec.md`.
-- Baseline: `fbbb6c786aba882479806c2e0c36150cf451b156`; upstream pin unchanged.
-- Supports static Record/Table values with syntax-only PowerFxV1 old/new name identifiers. Rename
-  pairs apply simultaneously against the original schema; no-op rename is valid and output fields
-  use canonical ordinal order.
-- Blank/Error source propagation, Blank/Error rows, retained field errors, empty tables,
-  immutability and per-row budget/cancellation are covered.
-- The pinned reference checks repeated old-name calls with a preceding no-op as successful but its
-  interpreter throws a duplicate-key exception. The approved deviation rejects them at bind time;
-  separate reference fixtures retain check success and runtime exception evidence, and these cases
-  are not claimed as parity.
-- Pre-implementation probes and generation commands are in
-  `docs/research/renamecolumns-probes/`; per-case compatibility evidence is in
-  `docs/research/renamecolumns-before-after.md`.
-- Both profiles have 26 `unsupported` → `pass` transitions, zero regressions, and no other verdict
-  changes.
+- Scope and decision: ADR 0020; `docs/milestones/0020-addcolumns-milestone-spec.md`.
+- Baseline: `3d26204f5c970141a449cc596cf7969b6a18aaa9`; upstream pin unchanged.
+- Supports static Record/Table values with syntax-only PowerFxV1 column-name identifiers. Every
+  added expression binds to the original row scope, additions evaluate left-to-right and later
+  expressions do not see earlier added fields. Output fields use canonical ordinal order.
+- Blank/Error source propagation, Blank/Error rows skipping additions, empty tables, recursive
+  immutability, and per-row/per-expression budget and cancellation checks are covered.
+- Pre-implementation probes and generation commands are in `docs/research/addcolumns-probes/`;
+  per-case compatibility evidence is in `docs/research/addcolumns-before-after.md`.
+- Float has 41 and decimal 45 `unsupported` → `pass` transitions, zero pass-to-non-pass
+  regressions, and no other verdict changes. The existing Text failure remains unchanged.
 - Draft PR and final-commit CI remain pending; do not merge or begin another milestone.
 
 ## Next

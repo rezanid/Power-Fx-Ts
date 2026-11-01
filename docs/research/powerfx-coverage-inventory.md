@@ -1,8 +1,8 @@
 # Power Fx TypeScript coverage and remaining-work inventory
 
-**Baseline for RenameColumns:** `fbbb6c786aba882479806c2e0c36150cf451b156` (main after merged
-ShowColumns, before this implementation). Counts below describe the candidate source state after the
-approved static Record/Table `RenameColumns` slice. **Upstream:** Microsoft Power Fx
+**Baseline for AddColumns:** `3d26204f5c970141a449cc596cf7969b6a18aaa9` (main after merged
+RenameColumns, before this implementation). Counts below describe the candidate source state after the
+approved static Record/Table `AddColumns` slice. **Upstream:** Microsoft Power Fx
 `df4ceba5e08220db670c25afead342ce699c50b5`, `Features.PowerFxV1`. Profiles are `v1-float`
 (`NumberIsFloat`) and `v1-decimal` (Power Fx 1.0 numeric default), en-US, UTC.
 
@@ -15,8 +15,8 @@ Power Fx implemented.
 | Area                 | Current status                                                                                                                                                                                                                                                    |
 | -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Expression runtime   | A real, tested TypeScript lexer/parser/binder/IR/evaluator supports a useful but narrow V1 slice. It is not a general Power Fx implementation.                                                                                                                    |
-| Function names       | 145 distinct names registered by upstream Core plus feature-gated Core; 11 implemented in the supported slice, 10 partial, 123 missing, 1 deliberately excluded (`Patch`, a host mutation operation). Registration-object and overload counts are separate below. |
-| Compatibility corpus | `v1-float`: 2,357 pass, 1 fail, 46 skip, 12,555 unsupported. `v1-decimal`: 2,889 pass, 1 fail, 56 skip, 13,227 unsupported.                                                                                                                                       |
+| Function names       | 145 distinct names registered by upstream Core plus feature-gated Core; 11 implemented in the supported slice, 11 partial, 122 missing, 1 deliberately excluded (`Patch`, a host mutation operation). Registration-object and overload counts are separate below. |
+| Compatibility corpus | `v1-float`: 2,398 pass, 1 fail, 46 skip, 12,514 unsupported. `v1-decimal`: 2,934 pass, 1 fail, 56 skip, 13,182 unsupported.                                                                                                                                       |
 | Authoring            | Editor-neutral language-service, serialization and test-runner packages are scaffolds only. There is no completion, signature help, hover, semantic information, formatting, or test-session implementation.                                                      |
 | Integrations         | No Monaco/React editor, PCF control, LSP adapter, connector runtime, transport or gateway is implemented. These remain roadmap work.                                                                                                                              |
 
@@ -79,15 +79,17 @@ or overall language completeness. Do not report a single completion percentage.
 | Status                         |   Count | Names                                                                                                                                           |
 | ------------------------------ | ------: | ----------------------------------------------------------------------------------------------------------------------------------------------- |
 | Implemented in supported slice |      11 | `Blank`, `Coalesce`, `CountRows`, `Filter`, `First`, `If`, `IsBlank`, `IsBlankOrError`, `IsEmpty`, `Table`, `With`                              |
-| Partial                        |      10 | `Decimal`, `DropColumns`, `Float`, `Len`, `LookUp`, `Lower`, `RenameColumns`, `ShowColumns`, `Upper`, `Value`                                   |
-| Missing                        |     123 | Listed in the function inventory below.                                                                                                         |
+| Partial                        |      11 | `AddColumns`, `Decimal`, `DropColumns`, `Float`, `Len`, `LookUp`, `Lower`, `RenameColumns`, `ShowColumns`, `Upper`, `Value`                     |
+| Missing                        |     122 | Listed in the function inventory below.                                                                                                         |
 | Deliberately excluded          |       1 | `Patch` — registered by Core, but mutating data-source behavior belongs to an explicitly granted host capability, not the language-only engine. |
 | **Total**                      | **145** | **Unique names**, not overload signatures.                                                                                                      |
 
 `LookUp` is partial because its supported table/row-scope path exists, but some upstream error-row
-and projection edge behavior is known to differ. `DropColumns`, `ShowColumns`, and `RenameColumns`
+and projection edge behavior is known to differ. `AddColumns`, `DropColumns`, `ShowColumns`, and `RenameColumns`
 support statically typed Record and Table sources, but dynamic/untyped and host data-source variants
-remain outside the slice. `ShowColumns` preserves canonical ordinal output field order, independent
+remain outside the slice. `AddColumns` evaluates every addition against the original row scope,
+left-to-right; additions are not visible to later expressions. Its output schema, runtime fields and
+serialization use canonical ordinal field order. `ShowColumns` preserves canonical ordinal output field order, independent
 of argument order. `RenameColumns` applies pairs simultaneously and uses canonical output field
 order. It deliberately rejects a repeated old name after an earlier no-op pair; the pinned reference
 checks those calls successfully but its interpreter throws at runtime. That narrow deviation is
@@ -99,7 +101,7 @@ parity is incomplete. The 11 implemented labels mean the documented slice is usa
 they do not assert full upstream parity (e.g. values of unsupported types cannot be passed to
 `IsBlank`).
 
-**Missing registered names, alphabetically:** `Abs`, `Acos`, `Acot`, `AddColumns`, `AmPm`,
+**Missing registered names, alphabetically:** `Abs`, `Acos`, `Acot`, `AmPm`,
 `AmPmShort`, `And`, `Asin`, `AsType`, `Atan`, `Atan2`, `Average`, `Boolean`, `Char`, `ColorFade`,
 `ColorValue`, `Column`, `ColumnNames`, `Concat`, `Concatenate`, `Cos`, `Cot`, `Count`, `CountA`,
 `CountIf`, `Date`, `DateAdd`, `DateDiff`, `DateTime`, `DateTimeValue`, `DateValue`, `Day`,
@@ -147,13 +149,13 @@ upstream exposes them as a distinct `Name`.
 
 ## Expression language, types and runtime
 
-| Layer             | Implemented                                                                                                                                                                                                                                                                                                                                                                        | Incomplete / absent                                                                                                                                                                                                                                                                                                                                                                                     |
-| ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Lexing and syntax | Arithmetic/comparison/logical operators, identifiers, calls, literals, records, tables, comments, spans, selected malformed/incomplete recovery. `As` row aliases and optional expression chaining are represented.                                                                                                                                                                | Interpolation and `Type(...)` are marked unsupported; semicolon-separated expression chaining requires an option and binder reports it unsupported; broader Power Fx syntax (including lambdas, behavioral formulas, declarations, named formulas and user-defined functions) is absent. Parser recovery and token/diagnostic parity are not comprehensive.                                             |
-| Binding and types | Primitive Number/Decimal/Text/Boolean/Blank, structural records/tables, schema variables, row scopes, selected type unions/conformance, coercion nodes and diagnostics.                                                                                                                                                                                                            | No Date, Time, DateTime, GUID, Color, OptionSet/enum, Dynamic/untyped object, control, view/entity/file/media, polymorphic or named types. Overload constraints, full coercion matrix, enums/options and aggregate equality are absent. Record/table comparisons are explicitly unsupported; all-Blank table literals are unsupported.                                                                  |
-| Evaluation        | Frozen values; arithmetic and selected operators; lazy `If`/`Coalesce`; scalar `Len`, `Lower`, `Upper`; records, tables, `DropColumns`, `ShowColumns`, `RenameColumns`, `With`, `Filter`, `First`, `CountRows`, `LookUp`; numeric backends; cancellation signal and per-node budget. All three column operations check cancellation and charge the budget for every projected row. | No general function implementation registry for hosts or async external operations; no mutation/behavior functions. Dates/time zones, broader string/regex/JSON, most builtins, option sets, UDFs, delegation, dependency calculation and recalculation remain absent. Evaluation is synchronous internally despite async public engine methods; actual cooperative worker yielding is not implemented. |
-| Host boundary     | Typed schemas separated from values; strict validation; recursively frozen values; backend identity checks; engine API returns distinct `value`/`invalid`/`unsupported`.                                                                                                                                                                                                           | Schema providers, lazy/paged metadata, versioned semantic snapshots, serialized worker messages, worker RPC, external capability authorization, operation effect descriptors, and host transport APIs are not implemented.                                                                                                                                                                              |
-| Compatibility     | Pinned text corpus reader and float/decimal reports; unit/reference fixtures and distinct pass/fail/skip/unsupported outcomes.                                                                                                                                                                                                                                                     | Some C# runner setup handlers, `#OVERRIDE` merging, `#NoValue`, date-tick tolerance, and host-specific `Error*` re-runs are missing; not every upstream unit/API suite is ported.                                                                                                                                                                                                                       |
+| Layer             | Implemented                                                                                                                                                                                                                                                                                                                                                                                                          | Incomplete / absent                                                                                                                                                                                                                                                                                                                                                                                     |
+| ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Lexing and syntax | Arithmetic/comparison/logical operators, identifiers, calls, literals, records, tables, comments, spans, selected malformed/incomplete recovery. `As` row aliases and optional expression chaining are represented.                                                                                                                                                                                                  | Interpolation and `Type(...)` are marked unsupported; semicolon-separated expression chaining requires an option and binder reports it unsupported; broader Power Fx syntax (including lambdas, behavioral formulas, declarations, named formulas and user-defined functions) is absent. Parser recovery and token/diagnostic parity are not comprehensive.                                             |
+| Binding and types | Primitive Number/Decimal/Text/Boolean/Blank, structural records/tables, schema variables, row scopes, selected type unions/conformance, coercion nodes and diagnostics.                                                                                                                                                                                                                                              | No Date, Time, DateTime, GUID, Color, OptionSet/enum, Dynamic/untyped object, control, view/entity/file/media, polymorphic or named types. Overload constraints, full coercion matrix, enums/options and aggregate equality are absent. Record/table comparisons are explicitly unsupported; all-Blank table literals are unsupported.                                                                  |
+| Evaluation        | Frozen values; arithmetic and selected operators; lazy `If`/`Coalesce`; scalar `Len`, `Lower`, `Upper`; records, tables, `AddColumns`, `DropColumns`, `ShowColumns`, `RenameColumns`, `With`, `Filter`, `First`, `CountRows`, `LookUp`; numeric backends; cancellation signal and per-node budget. Column operations check cancellation and charge the budget for each row and each evaluated AddColumns expression. | No general function implementation registry for hosts or async external operations; no mutation/behavior functions. Dates/time zones, broader string/regex/JSON, most builtins, option sets, UDFs, delegation, dependency calculation and recalculation remain absent. Evaluation is synchronous internally despite async public engine methods; actual cooperative worker yielding is not implemented. |
+| Host boundary     | Typed schemas separated from values; strict validation; recursively frozen values; backend identity checks; engine API returns distinct `value`/`invalid`/`unsupported`.                                                                                                                                                                                                                                             | Schema providers, lazy/paged metadata, versioned semantic snapshots, serialized worker messages, worker RPC, external capability authorization, operation effect descriptors, and host transport APIs are not implemented.                                                                                                                                                                              |
+| Compatibility     | Pinned text corpus reader and float/decimal reports; unit/reference fixtures and distinct pass/fail/skip/unsupported outcomes.                                                                                                                                                                                                                                                                                       | Some C# runner setup handlers, `#OVERRIDE` merging, `#NoValue`, date-tick tolerance, and host-specific `Error*` re-runs are missing; not every upstream unit/API suite is ported.                                                                                                                                                                                                                       |
 
 These are not interchangeable statuses: a construct can parse but fail binding, bind to an
 unsupported node, or be absent altogether. Invalid formulas are not the same as unsupported
@@ -162,14 +164,14 @@ semantics.
 ## Current compatibility evidence
 
 Profiles use `PowerFxV1`, en-US, UTC, with Decimal support enabled. These candidate reports follow
-the approved `RenameColumns` slice and compare every applicable case in the pinned 22,047-case corpus;
+the approved `AddColumns` slice and compare every applicable case in the pinned 22,047-case corpus;
 profile applicability differs. Baseline-to-candidate transitions are recorded in
-`renamecolumns-before-after.md`.
+`addcolumns-before-after.md`.
 
 | Profile      | Applicable | Not applicable |  Pass | Fail | Skip | Unsupported (feature) | Unsupported (setup) |
 | ------------ | ---------: | -------------: | ----: | ---: | ---: | --------------------: | ------------------: |
-| `v1-float`   |     14,959 |          7,088 | 2,357 |    1 |   46 |                 9,392 |               3,163 |
-| `v1-decimal` |     16,173 |          5,874 | 2,889 |    1 |   56 |                10,015 |               3,212 |
+| `v1-float`   |     14,959 |          7,088 | 2,398 |    1 |   46 |                 9,351 |               3,163 |
+| `v1-decimal` |     16,173 |          5,874 | 2,934 |    1 |   56 |                 9,970 |               3,212 |
 
 The one fail in each profile is `Text_ExcelCompat_PowerFxV1Compat.txt:13`; its diagnostics depend
 on the unimplemented `Text` function. Many setup-unsupported cases need upstream-specific test
@@ -249,9 +251,9 @@ remaining work; each spans multiple functions, dependencies and independent revi
 | Authoring services     | Build editor-neutral diagnostics and language services before Monaco, React, LSP or host integrations.                  |
 
 These are possible **next implementation slices** within those workstreams. They are intentionally
-narrower than a feature family; all remaining proposals are unaccepted and unstarted. `DropColumns`
-and `ShowColumns` are merged, and `RenameColumns` is implemented in the current candidate slice;
-none remains a proposal. Effort is relative
+narrower than a feature family; all remaining proposals are unaccepted and unstarted. `DropColumns`,
+`ShowColumns`, and `RenameColumns` are merged; `AddColumns` is implemented in the current candidate
+slice. Effort is relative
 engineering scope (S/M/L), not a calendar estimate. Compatibility gains are qualitative and not
 additive because corpus files overlap and include setup dependencies.
 

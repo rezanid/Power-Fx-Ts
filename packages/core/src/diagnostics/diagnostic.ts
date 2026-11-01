@@ -45,6 +45,7 @@ export const DiagnosticCodes = {
   DuplicateColumnNameWarning: "PFX2026",
   ColumnRenamedTwice: "PFX2027",
   ColumnAlreadyExists: "PFX2028",
+  ColumnNameConflict: "PFX2029",
 } as const;
 
 export type DiagnosticCode = (typeof DiagnosticCodes)[keyof typeof DiagnosticCodes];
@@ -106,6 +107,7 @@ const TEMPLATES: Record<DiagnosticCode, string> = {
   PFX2026: "A column named '{0}' was specified more than once.",
   PFX2027: "The specified column '{0}' cannot be renamed twice.",
   PFX2028: "A column named '{0}' already exists.",
+  PFX2029: "Column name conflict for '{0}'.",
 };
 
 export function formatMessage(code: DiagnosticCode, args: readonly string[]): string {

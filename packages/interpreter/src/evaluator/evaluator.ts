@@ -145,6 +145,8 @@ class Evaluator implements EvaluationContext {
         return this.showColumns(node);
       case "RenameColumns":
         return this.renameColumns(node);
+      case "AddColumns":
+        return this.addColumns(node);
       case "Filter":
         return this.filter(node);
       case "First": {
@@ -275,6 +277,35 @@ class Evaluator implements EvaluationContext {
       this.tick();
       rows.push(row.kind === "Record" ? rename(row) : row);
     }
+    return table(rows);
+  }
+
+  /** Adds every expression to each value row in order, preserving Blank/Error rows unchanged. */
+  private addColumns(node: Extract<BoundNode, { kind: "AddColumns" }>): FormulaValue {
+    const source = this.evaluate(node.source);
+    if (source.kind === "Blank" || source.kind === "Error") return source;
+
+    const add = (row: TableRow): TableRow => {
+      this.tick();
+      if (row.kind !== "Record") return row;
+      const values = this.inScope(node.scopeId, row, () => {
+        const result: { name: string; value: FormulaValue }[] = [];
+        for (const addition of node.additions) {
+          this.tick();
+          result.push({ name: addition.name, value: this.evaluate(addition.expression) });
+        }
+        return result;
+      });
+      return record(
+        [...row.fields, ...values].sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0)),
+      );
+    };
+
+    if (source.kind === "Record") return add(source);
+    if (source.kind !== "Table") throw new Error("AddColumns source is not a record or table.");
+
+    const rows: TableRow[] = [];
+    for (const row of source.rows) rows.push(add(row));
     return table(rows);
   }
 

@@ -48,3 +48,7 @@ dotnet run --no-build --project tools/reference-harness -p:EnableSourceControlMa
 The existing ordering-aware `renamecolumns-probe` command is used only as a generic independent
 reference observation tool; its output records schema, runtime and serialization separately. It
 does not imply that AddColumns uses RenameColumns behavior.
+
+The bare dotted-name probes (`b.d`) intentionally remain invalid: upstream binds that expression
+outside the AddColumns row scope, reports the unresolved `b` and dot-on-Error diagnostics, then
+reports invalid arguments. The escaped identifier (`'b.d'`) is a valid single column name.

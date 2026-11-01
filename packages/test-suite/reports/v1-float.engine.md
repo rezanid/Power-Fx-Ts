@@ -4,9 +4,9 @@
 - Runner: engine
 - Setup: `PowerFxV1,NumberIsFloat,DecimalSupport` (number mode: float, culture en-US, time zone UTC)
 - Cases: 22047 total, 7088 not applicable to this profile
-- Pass 2357, fail 1, skip 46, unsupported 12555
-- Unsupported by reason: feature 9392, setup 3163, profile 0
-- Passing compile-error cases whose error set differs from upstream's (strict diagnostic, not a verdict): 34
+- Pass 2398, fail 1, skip 46, unsupported 12514
+- Unsupported by reason: feature 9351, setup 3163, profile 0
+- Passing compile-error cases whose error set differs from upstream's (strict diagnostic, not a verdict): 36
 - Passing numeric cases accepted only by upstream's float tolerance (diagnostic, not a verdict): 12
 
 | File | Total | Pass | Fail | Skip | Unsupported |
@@ -14,7 +14,7 @@
 | Abs.txt | 22 | 0 | 0 | 0 | 22 |
 | AbsT.txt | 7 | 0 | 0 | 0 | 7 |
 | Acumatica.txt | 13 | 5 | 0 | 0 | 8 |
-| AddColumns_SupportColumnNamesAsIdentifiers.txt | 32 | 0 | 0 | 0 | 32 |
+| AddColumns_SupportColumnNamesAsIdentifiers.txt | 32 | 30 | 0 | 0 | 2 |
 | AndOrCases.txt | 127 | 28 | 0 | 0 | 99 |
 | ArgCoercion.txt | 17 | 1 | 0 | 0 | 16 |
 | ArgCoercionT.txt | 5 | 0 | 0 | 0 | 5 |
@@ -75,7 +75,7 @@
 | DecimalMathFuncs_NumberIsFloat_Constructors_DecimalSupport_PowerFxV1.txt | 8 | 4 | 0 | 0 | 4 |
 | Distinct.txt | 29 | 0 | 0 | 0 | 29 |
 | Distinct_V1Compat.txt | 2 | 0 | 0 | 0 | 2 |
-| DropColumns_SupportColumnNamesAsIdentifiers.txt | 21 | 15 | 0 | 0 | 6 |
+| DropColumns_SupportColumnNamesAsIdentifiers.txt | 21 | 19 | 0 | 0 | 2 |
 | EDateEOMonth.txt | 182 | 0 | 0 | 0 | 182 |
 | EncodeHTML.txt | 13 | 0 | 0 | 0 | 13 |
 | EncodeURL.txt | 20 | 0 | 0 | 0 | 20 |
@@ -83,7 +83,7 @@
 | Equality.txt | 28 | 20 | 0 | 0 | 8 |
 | Error.txt | 87 | 5 | 0 | 0 | 82 |
 | ErrorKinds.txt | 206 | 15 | 0 | 0 | 191 |
-| ErrorKinds_ColumnNamesAsIdentifiers.txt | 1 | 0 | 0 | 0 | 1 |
+| ErrorKinds_ColumnNamesAsIdentifiers.txt | 1 | 1 | 0 | 0 | 0 |
 | Escaping.txt | 4 | 3 | 0 | 0 | 1 |
 | Exp.txt | 26 | 0 | 0 | 0 | 26 |
 | ExpT.txt | 6 | 0 | 0 | 0 | 6 |
@@ -205,7 +205,7 @@
 | Record.txt | 10 | 10 | 0 | 0 | 0 |
 | Remove.txt | 33 | 0 | 0 | 0 | 33 |
 | Remove_V1Compact.txt | 4 | 0 | 0 | 0 | 4 |
-| RenameColumns_SupportColumnNamesAsIdentifiers.txt | 29 | 26 | 0 | 0 | 3 |
+| RenameColumns_SupportColumnNamesAsIdentifiers.txt | 29 | 28 | 0 | 0 | 1 |
 | Replace.txt | 66 | 0 | 0 | 0 | 66 |
 | ReservedKeyword.txt | 24 | 24 | 0 | 0 | 0 |
 | ReservedKeyword_Disabled.txt | 12 | 0 | 0 | 0 | 12 |
@@ -222,7 +222,7 @@
 | Search.txt | 18 | 0 | 0 | 0 | 18 |
 | Sequence.txt | 11 | 0 | 0 | 0 | 11 |
 | Sequence_Float.txt | 4 | 0 | 0 | 0 | 4 |
-| ShowColumns.txt | 24 | 17 | 0 | 0 | 7 |
+| ShowColumns.txt | 24 | 21 | 0 | 0 | 3 |
 | ShowColumns_WithMutationSetup.txt | 2 | 0 | 0 | 0 | 2 |
 | Shuffle.txt | 11 | 0 | 0 | 0 | 11 |
 | SingleColumnTableCoercion.txt | 211 | 0 | 0 | 0 | 211 |
