@@ -223,8 +223,8 @@ owner's behalf by documentation PRs; the owner may update the labels separately.
   generation commands are in `docs/research/showcolumns-probes/README.md`.
 - Both profiles have 17 `unsupported` → `pass` transitions, zero regressions, and no other verdict
   changes; see `docs/research/showcolumns-before-after.md`.
-- Draft PR [#22](https://github.com/rezanid/Power-Fx-Ts/pull/22) is open; CI and independent review
-  remain pending. Do not merge or begin another milestone.
+- Draft PR [#22](https://github.com/rezanid/Power-Fx-Ts/pull/22) contains the current implementation;
+  check it for CI and independent review. Do not merge or begin another milestone.
 
 ## Next
 
