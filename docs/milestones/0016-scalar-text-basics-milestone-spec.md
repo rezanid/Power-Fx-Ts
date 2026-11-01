@@ -1,6 +1,6 @@
 # Milestone 0016: Scalar text basics
 
-Status: **accepted and implemented; local verification complete, final PR CI pending**. See ADR 0016
+Status: **accepted and implemented; local verification and PR CI pass**. See ADR 0016
 and [`scalar-text-before-after.md`](../research/scalar-text-before-after.md).
 
 Baseline: `767321b122080991929dde50382d663dc306ac17` (PR #19 merge). Upstream pin:
@@ -79,4 +79,4 @@ Existing `emptyTextAsBlank` sites, `IsEmpty`, and other builtin semantics remain
   pass-to-non-pass regressions; totals and transitions are recorded in
   [`scalar-text-before-after.md`](../research/scalar-text-before-after.md).
 - Unsupported: table overloads and all exclusions above.
-- CI: final PR checks are pending. No subsequent milestone is included here.
+- CI: the draft PR build check passed. No subsequent milestone is included here.

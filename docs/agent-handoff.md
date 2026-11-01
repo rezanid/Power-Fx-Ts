@@ -183,7 +183,8 @@ owner's behalf by documentation PRs; the owner may update the labels separately.
   comparison shows 71 and 73 unsupported-to-pass transitions respectively and zero
   pass-to-non-pass regressions; see `docs/research/scalar-text-before-after.md`.
 - Local build, lint, formatting, all 1,295 tests, both compatibility profiles, and exhaustive casing
-  verification pass. Final PR CI is pending; do not merge or begin another milestone.
+  verification pass. The draft PR CI build check passed; stop for independent review and do not
+  merge or begin another milestone.
 
 ## Next
 

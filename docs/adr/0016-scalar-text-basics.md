@@ -1,6 +1,6 @@
 # ADR 0016: Scalar `Len`, `Lower`, and `Upper`
 
-Status: **accepted, implemented, locally verified; final PR CI pending**. Baseline:
+Status: **accepted, implemented, locally verified; PR CI passed**. Baseline:
 `767321b122080991929dde50382d663dc306ac17`. Upstream pin:
 `df4ceba5e08220db670c25afead342ce699c50b5`. Scope:
 `docs/milestones/0016-scalar-text-basics-milestone-spec.md`.
