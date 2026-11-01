@@ -27,28 +27,49 @@ or overall language completeness. Do not report a single completion percentage.
 
 ## Counting method and limits
 
-1. The primary name inventory is the case-insensitive union of the unique `TexlFunction.Name`
-   values in pinned `BuiltinFunctionsCore._library` and `_featureGateFunctions`. The pinned assembly
-   was loaded by the reference harness and reflected: 220 `_library` registrations (139 unique
-   names), 10 feature-gate registrations (7 unique names), 145 distinct names in the union. One name
-   (`Boolean`) occurs in both registries.
-2. Registrations are not overloads: each `TexlFunction` object can expose multiple signatures and
+1. The generated evidence is committed as
+   [`powerfx-function-registry.tsv`](powerfx-function-registry.tsv). Regenerate it from the
+   repository root with .NET 8 and the upstream checkout at the pinned commit:
+
+   ```sh
+   git -C upstream/Power-Fx rev-parse HEAD
+   dotnet run --project tools/reference-harness -p:EnableSourceControlManagerQueries=false -- registry docs/research/powerfx-function-registry.tsv
+   ```
+
+   The command refuses to run unless the upstream `HEAD` is
+   `df4ceba5e08220db670c25afead342ce699c50b5`. It reflects the pinned
+   `Microsoft.PowerFx.Core.Texl.BuiltinFunctionsCore` assembly type, enumerates `_library` and
+   `_featureGateFunctions` through `TexlFunctionSet.Functions`, and reads each `TexlFunction.Name`,
+   its static registration field and implementation type. It also enumerates `OtherKnownFunctions`.
+   Rows are sorted by registry, case-insensitive canonical name, then registration field. The TSV
+   records the upstream commit and source path on every row.
+
+2. The relevant pinned source is
+   `upstream/Power-Fx/src/libraries/Microsoft.PowerFx.Core/Texl/BuiltinFunctionsCore.cs`
+   (registry fields and `OtherKnownFunctions`),
+   `upstream/Power-Fx/src/libraries/Microsoft.PowerFx.Core/Functions/TexlFunctionSet.cs`
+   (`Functions` enumeration), and
+   `upstream/Power-Fx/src/libraries/Microsoft.PowerFx.Core/Functions/TexlFunction.cs`
+   (`Name`). The primary name inventory is the case-insensitive union of `Name` values from the
+   first two registries: 220 `_library` registrations (139 unique names), 10 feature-gated
+   registrations (7 unique names), and 145 unique names combined. `Boolean` occurs in both.
+3. Registrations are not overloads: each `TexlFunction` object can expose multiple signatures and
    type-dependent behavior. The 230 registration objects are reported only as registration counts.
    The detailed overload inventory below calls out known shapes and distinguishes overload gaps;
    this work did not enumerate every `GetSignatures()` expansion for every upstream function.
-3. Upstream `OtherKnownFunctions` contains 66 additional distinct names. Three (`IsType`, `Patch`,
+4. Upstream `OtherKnownFunctions` contains 66 distinct names. Three (`IsType`, `Patch`,
    `ShowColumns`) overlap the registered-name set, so there are 63 additional unique names outside
    the primary count. The list is maintained by upstream to recognize Power Apps/runtime functions
    without adding them to the shared Core library; it mixes host operations and functions that need
    more investigation. They are listed separately, not silently counted as Core functions or all
    labelled “host-only.”
-4. TypeScript status is assessed from checked-in signatures, binder and evaluator paths, tests,
+5. TypeScript status is assessed from checked-in signatures, binder and evaluator paths, tests,
    ADRs, and explicit roadmap exclusions. **Implemented** means the primary supported V1 path has
    implementation and tests, not that every upstream overload/profile is complete. **Partial**
    means the function exists but known supported cases, type combinations, or overloads remain.
    **Missing** means no usable implementation in the current engine. **Excluded** is reserved for
    an explicit scope boundary, not a synonym for hard or unsupported.
-5. Corpus totals are transcribed from the committed reports. Unsupported-file counts are sorted by
+6. Corpus totals are transcribed from the committed reports. Unsupported-file counts are sorted by
    corpus file and can overlap across thematic groups. Setup-unavailable cases are not evidence of
    missing formula semantics.
 
@@ -87,16 +108,11 @@ assert full upstream parity (e.g. values of unsupported types cannot be passed t
 ### Additional names known to upstream, outside the primary Core registry
 
 `OtherKnownFunctions` has 66 names, including three overlaps already counted above. The 63
-additional names are: `Assert`, `Back`, `Choices`, `Clear`, `ClearCollect`, `ClearData`, `Collect`,
-`Concurrent`, `Confirm`, `Copy`, `DataSourceInfo`, `Defaults`, `Disable`, `Distinct`, `Download`,
-`EditForm`, `Enable`, `Errors`, `Exit`, `GroupBy`, `HashTags`, `IsMatch`, `Join`, `JSON`, `Launch`,
-`LoadData`, `Match`, `MatchAll`, `Navigate`, `NewForm`, `Notify`, `Param`, `PDF`, `Pending`, `Print`,
-`ReadNFC`, `RecordInfo`, `Relate`, `Remove`, `RemoveAll`, `RemoveIf`, `RequestHide`, `Reset`,
-`ResetForm`, `Revert`, `SaveData`, `ScanBarcode`, `Select`, `Set`, `SetFocus`, `SetProperty`,
-`State`, `SubmitForm`, `TraceValue`, `Ungroup`, `Unrelate`, `Update`, `UpdateContext`, `UpdateIf`,
-`User`, `Validate`, `ValidateRecord`, `ViewForm`.
+additional names are listed as `OtherKnownFunctions` rows in
+[`powerfx-function-registry.tsv`](powerfx-function-registry.tsv). The list is generated from the
+pinned source, rather than maintained separately in prose.
 
-This supplemental set is not all one kind of gap. Some functions are app/host operations or
+The supplemental set is not all one kind of gap. Some functions are app/host operations or
 mutation; some are recognizable language functions absent from the shared registry. The exact
 boundary and support model must be researched per function before assigning future work. It also
 does not include every Power Apps/custom connector/user-defined function or every name in the
@@ -121,13 +137,13 @@ upstream exposes them as a distinct `Name`.
 
 ## Expression language, types and runtime
 
-| Layer             | Implemented                                                                                                                                                                                              | Incomplete / absent                                                                                                                                                                                                                                                                                                                                                                                   |
-| ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Lexing and syntax | Arithmetic/comparison/logical operators, identifiers, calls, literals, records, tables, comments, spans, selected malformed/incomplete recovery. `As` row aliases and optional chaining are represented. | Interpolation and `Type(...)` are marked unsupported; expression chaining requires an option and binder reports it unsupported; broader Power Fx syntax (including lambdas, behavioral formulas, declarations, named formulas and user-defined functions) is absent. Parser recovery and token/diagnostic parity are not comprehensive.                                                               |
-| Binding and types | Primitive Number/Decimal/Text/Boolean/Blank, structural records/tables, schema variables, row scopes, selected type unions/conformance, coercion nodes and diagnostics.                                  | No Date, Time, DateTime, GUID, Color, OptionSet/enum, Dynamic/untyped object, control, view/entity/file/media, polymorphic or named types. Overload constraints, full coercion matrix, enums/options and aggregate equality are absent. Record/table comparisons are explicitly unsupported; all-Blank table literals are unsupported.                                                                |
-| Evaluation        | Frozen values; arithmetic and selected operators; lazy `If`/`Coalesce`; records, tables, `With`, `Filter`, `First`, `CountRows`, `LookUp`; numeric backends; cancellation signal and per-node budget.    | No general function implementation registry for hosts or async external operations; no mutation/behavior functions. Dates/time zones, broad string/regex/JSON, most builtins, option sets, UDFs, delegation, dependency calculation and recalculation remain absent. Evaluation is synchronous internally despite async public engine methods; actual cooperative worker yielding is not implemented. |
-| Host boundary     | Typed schemas separated from values; strict validation; recursively frozen values; backend identity checks; engine API returns distinct `value`/`invalid`/`unsupported`.                                 | Schema providers, lazy/paged metadata, versioned semantic snapshots, serialized worker messages, worker RPC, external capability authorization, operation effect descriptors, and host transport APIs are not implemented.                                                                                                                                                                            |
-| Compatibility     | Pinned text corpus reader and float/decimal reports; unit/reference fixtures and distinct pass/fail/skip/unsupported outcomes.                                                                           | Some C# runner setup handlers, `#OVERRIDE` merging, `#NoValue`, date-tick tolerance, and host-specific `Error*` re-runs are missing; not every upstream unit/API suite is ported.                                                                                                                                                                                                                     |
+| Layer             | Implemented                                                                                                                                                                                                         | Incomplete / absent                                                                                                                                                                                                                                                                                                                                                                                   |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Lexing and syntax | Arithmetic/comparison/logical operators, identifiers, calls, literals, records, tables, comments, spans, selected malformed/incomplete recovery. `As` row aliases and optional expression chaining are represented. | Interpolation and `Type(...)` are marked unsupported; semicolon-separated expression chaining requires an option and binder reports it unsupported; broader Power Fx syntax (including lambdas, behavioral formulas, declarations, named formulas and user-defined functions) is absent. Parser recovery and token/diagnostic parity are not comprehensive.                                           |
+| Binding and types | Primitive Number/Decimal/Text/Boolean/Blank, structural records/tables, schema variables, row scopes, selected type unions/conformance, coercion nodes and diagnostics.                                             | No Date, Time, DateTime, GUID, Color, OptionSet/enum, Dynamic/untyped object, control, view/entity/file/media, polymorphic or named types. Overload constraints, full coercion matrix, enums/options and aggregate equality are absent. Record/table comparisons are explicitly unsupported; all-Blank table literals are unsupported.                                                                |
+| Evaluation        | Frozen values; arithmetic and selected operators; lazy `If`/`Coalesce`; records, tables, `With`, `Filter`, `First`, `CountRows`, `LookUp`; numeric backends; cancellation signal and per-node budget.               | No general function implementation registry for hosts or async external operations; no mutation/behavior functions. Dates/time zones, broad string/regex/JSON, most builtins, option sets, UDFs, delegation, dependency calculation and recalculation remain absent. Evaluation is synchronous internally despite async public engine methods; actual cooperative worker yielding is not implemented. |
+| Host boundary     | Typed schemas separated from values; strict validation; recursively frozen values; backend identity checks; engine API returns distinct `value`/`invalid`/`unsupported`.                                            | Schema providers, lazy/paged metadata, versioned semantic snapshots, serialized worker messages, worker RPC, external capability authorization, operation effect descriptors, and host transport APIs are not implemented.                                                                                                                                                                            |
+| Compatibility     | Pinned text corpus reader and float/decimal reports; unit/reference fixtures and distinct pass/fail/skip/unsupported outcomes.                                                                                      | Some C# runner setup handlers, `#OVERRIDE` merging, `#NoValue`, date-tick tolerance, and host-specific `Error*` re-runs are missing; not every upstream unit/API suite is ported.                                                                                                                                                                                                                     |
 
 These are not interchangeable statuses: a construct can parse but fail binding, bind to an
 unsupported node, or be absent altogether. Invalid formulas are not the same as unsupported
@@ -207,24 +223,35 @@ These are high-leverage blockers; resolving one can unlock groups rather than a 
    missing test environment from missing semantics. Needed for an honest signal on configured,
    enum-heavy, mutation and host-function behavior.
 
-## Prioritized bounded milestone proposals
+## Workstreams and bounded implementation-slice proposals
 
-Effort is relative S/M/L engineering scope, not a calendar estimate. Compatibility gains are
-qualitative: corpus cases overlap features and setup, so no additive pass forecast is implied.
-These proposals are not accepted milestones.
+The five broad groupings below remain **workstreams**, not single milestones. They organize
+remaining work; each spans multiple functions, dependencies and independent review points:
 
-| Priority / milestone                        | Scope and usefulness                                                                                                                                                                                             | Dependencies                                                                                  | Likely compatibility gain                                                                                                                             | Effort |
-| ------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- | ------ |
-| 1. Date/time type foundation                | Add reference-derived Date/Time/DateTime values, constructors, literal/parsing rules, timezone policy and arithmetic/coercion tests. Enables useful business formulas and a base for formatting.                 | Type/value model and explicit culture/timezone decisions; keep locale assumptions documented. | Date, Time, DateAdd/DateDiff, EDate/EOMonth and many comparison/operator cases; unlocks date `Text` later.                                            | L      |
-| 2. Text, formatting and conversion families | Add `Text` with supported format subset, then `Len`, trim/case, substring/search/replace, encoding and table-lifted forms by bounded family. Include the current `Text()` failure as a must-fix acceptance case. | General signature/overload design; Date/time milestone for date formatting; culture model.    | Largest visible corpus opportunity: the text files alone contain many thousands of cases, but setup and other dependencies constrain reachable gains. | L      |
-| 3. Table transformations and aggregates     | Implement a selected stable group (`ShowColumns`, `DropColumns`, `RenameColumns`, `AddColumns`, `Sort`, `FirstN`/`Last`/`LastN`, numeric aggregates) with schema, row-scope and Error/Blank semantics.           | Signature/row-scope generalization; robust record/table types and coercion.                   | Table/coercion/aggregate and tabular-overload files; broad utility for application formulas.                                                          | L      |
-| 4. Enum/OptionSet and error/type families   | Model enums and OptionSets (including member resolution and host-defined symbols); then a separate bounded slice for `IsError`, `Error`, and `IfError` semantics.                                                | Type/host-symbol model; option-set conversion rules; error type and lazy-call semantics.      | Built-in/test enum files and strongly typed overloads; error corpus groups.                                                                           | L      |
-| 5. Editor-neutral authoring services        | Implement incomplete-document snapshots, check/diagnostics, completion and signature help against shared binder metadata, then hover/semantic info; verify UTF-16 ranges, cancellation and stale revisions.      | General signatures and schema snapshots. Does not require LSP or Monaco.                      | No direct corpus pass gain; enables reliable editor clients and validates language semantics during authoring.                                        | M/L    |
+| Workstream             | Longer-horizon scope                                                                                                    |
+| ---------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| Date/time              | Add date/time value types and progressively cover constructors, parsing, arithmetic, time zones and formatting.         |
+| Text and formatting    | Add formatting, scalar text utilities, search/replace, encoding, regex and table-lifted variants as separate slices.    |
+| Tables and collections | Add projection/column operations, row-scope transforms, sorting, collection functions and aggregates in bounded groups. |
+| Enums and errors       | Add OptionSet/enum symbol support and separately improve Error construction, predicates and lazy handling.              |
+| Authoring services     | Build editor-neutral diagnostics and language services before Monaco, React, LSP or host integrations.                  |
 
-After these, schedule Monaco/React and the PCF hosting experiment as distinct integration milestones;
-then LSP if consumers need it. OpenAPI connectors follow mature function/effect/capability and
-serialization boundaries. The gateway is later still. This ordering preserves the plan's separation
-between runtime parity and product integrations.
+These are possible **next implementation slices** within those workstreams. They are intentionally
+narrower than a feature family; all remain proposals, unaccepted and unstarted. Effort is relative
+engineering scope (S/M/L), not a calendar estimate. Compatibility gains are qualitative and not
+additive because corpus files overlap and include setup dependencies.
+
+| Candidate slice                     | Inclusions                                                                                                                                                                                                                  | Explicit exclusions                                                                                                       | Dependencies                                                                                                                                                                 | Likely evidence / relative effort                                                                                                            |
+| ----------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| `IfError` fallback semantics        | Bind and evaluate `IfError` over the existing Error value model; verify lazy fallback evaluation, return-type/coercion behavior, diagnostics and Error propagation against pinned probes and corpus cases in both profiles. | `Error()` construction, `IsError`, new error kinds, host error tables, and general exception recovery.                    | Existing Error values and lazy argument evaluation must cover the upstream behavior; any gap there must be isolated as a prerequisite rather than broadened into this slice. | Focused `IfError` corpus cases and regression tests; **M**.                                                                                  |
+| Scalar text basics                  | Add `Len`, `Lower` and `Upper` for supported Text values, with upstream-derived Unicode behavior, diagnostics and float/decimal parity.                                                                                     | `Text` formatting, locale-sensitive conversion, trim/substrings/search/replace, regex, table lifting and date formatting. | Existing Text values and builtin binding/evaluation path; no generalized overload framework should be required.                                                              | Corresponding scalar text corpus subset and reference probes; **S/M**.                                                                       |
+| `DropColumns`                       | Implement `DropColumns` for supported record/table schemas, including bound output schema, runtime row projection, invalid/duplicate/missing column diagnostics and Blank/Error row preservation.                           | `ShowColumns`, `RenameColumns`, `AddColumns`, sorting, aggregation, dynamic column names and untyped objects.             | Existing structural record/table types, row representation and table-function binding path.                                                                                  | `DropColumns` corpus subset plus schema and error-row probes; **M**.                                                                         |
+| Date value and `Date()` constructor | Add a Date formula type/value and `Date(year, month, day)` with reference-compatible normalization/range behavior, formatting-independent serialization and comparison tests.                                               | `DateValue`, Time/DateTime, parsing, date arithmetic, time zones, `Text` formatting and calendar functions.               | A recorded calendar representation and worker-safe serialization decision; no locale or time-zone behavior should be implied by this date-only slice.                        | `Date.txt` constructor cases in both profiles and direct reference probes; **L** because it crosses type, value, binding and runtime layers. |
+
+After these candidates, keep Monaco/React and the PCF hosting experiment as distinct integration
+work. LSP remains a parallel adapter if consumers need it. OpenAPI connectors depend on mature
+function/effect/capability and serialization boundaries; the gateway remains later still. No
+candidate is an accepted milestone or authorization to implement.
 
 ## Keeping status statistics consistent
 

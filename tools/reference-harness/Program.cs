@@ -3,14 +3,18 @@
 //
 //   dotnet run --project tools/reference-harness -- eval <float|decimal> <file>   one expression per line
 //   dotnet run --project tools/reference-harness -- generate <out.json>           differential fixture
+//   dotnet run --project tools/reference-harness -- registry <out.tsv>            pinned Core registry inventory
 //
 // "float" = RecalcEngine(numberIsFloat: true) (profile v1-float); "decimal" = default PowerFxV1
 // (profile v1-decimal). Both use Features.PowerFxV1 and en-US.
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Reflection;
+using System.Diagnostics;
 using System.Text;
 using System.Text.Json;
 using Microsoft.PowerFx;
@@ -299,9 +303,97 @@ static class P
         return 0;
     }
 
+    static int GenerateRegistry(string outPath)
+    {
+        const string upstreamCommit = "df4ceba5e08220db670c25afead342ce699c50b5";
+        const string coreTypeName = "Microsoft.PowerFx.Core.Texl.BuiltinFunctionsCore";
+        const string sourcePath = "src/libraries/Microsoft.PowerFx.Core/Texl/BuiltinFunctionsCore.cs";
+        var upstreamDirectory = Path.Combine(Directory.GetCurrentDirectory(), "upstream", "Power-Fx");
+        var git = new Process
+        {
+            StartInfo = new ProcessStartInfo("git")
+            {
+                WorkingDirectory = upstreamDirectory,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+            },
+        };
+        git.StartInfo.ArgumentList.Add("rev-parse");
+        git.StartInfo.ArgumentList.Add("HEAD");
+        if (!git.Start())
+            throw new InvalidOperationException("Could not start git to verify the pinned upstream checkout.");
+        var actualCommit = git.StandardOutput.ReadToEnd().Trim();
+        var gitError = git.StandardError.ReadToEnd();
+        git.WaitForExit();
+        if (git.ExitCode != 0 || actualCommit != upstreamCommit)
+            throw new InvalidOperationException(
+                $"Registry extraction requires upstream/Power-Fx at {upstreamCommit}; found {actualCommit}. {gitError}".Trim());
+
+        _ = Engine("decimal");
+        var core = AppDomain.CurrentDomain.GetAssemblies()
+            .Select(assembly => assembly.GetType(coreTypeName))
+            .FirstOrDefault(type => type != null)
+            ?? throw new InvalidOperationException($"Could not load upstream type {coreTypeName}.");
+        const BindingFlags staticFlags = BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic;
+        const BindingFlags instanceFlags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
+        var fieldsByInstance = core.GetFields(staticFlags)
+            .Where(field => field.FieldType.Name == "TexlFunction")
+            .Select(field => (Field: field, Value: field.GetValue(null)))
+            .Where(item => item.Value != null)
+            .ToDictionary(item => item.Value, item => item.Field.Name, ReferenceEqualityComparer.Instance);
+
+        IEnumerable RegistryFunctions(string fieldName)
+        {
+            var set = core.GetField(fieldName, staticFlags)?.GetValue(null)
+                ?? throw new InvalidOperationException($"Could not read upstream registry {fieldName}.");
+            var property = set.GetType().GetProperty("Functions", instanceFlags)
+                ?? throw new InvalidOperationException($"Could not read functions from upstream registry {fieldName}.");
+            return (IEnumerable)(property.GetValue(set)
+                ?? throw new InvalidOperationException($"Upstream registry {fieldName} returned no functions."));
+        }
+
+        var rows = new List<(string Registry, string Name, string Registration, string Implementation)>();
+        void AddRegistry(string registry, string fieldName)
+        {
+            foreach (var function in RegistryFunctions(fieldName))
+            {
+                var name = (string)(function.GetType().GetProperty("Name", instanceFlags)?.GetValue(function)
+                    ?? throw new InvalidOperationException($"Could not read function name in {fieldName}."));
+                rows.Add((registry, name, fieldsByInstance.GetValueOrDefault(function) ?? "",
+                    function.GetType().Name));
+            }
+        }
+
+        AddRegistry("SharedCore", "_library");
+        AddRegistry("FeatureGatedCore", "_featureGateFunctions");
+
+        var otherKnown = (IEnumerable)(core.GetField("OtherKnownFunctions", staticFlags)?.GetValue(null)
+            ?? throw new InvalidOperationException("Could not read upstream OtherKnownFunctions."));
+        rows.AddRange(otherKnown.Cast<string>().Select(name =>
+            ("OtherKnownFunctions", name, "", "")));
+
+        var lines = new List<string>
+        {
+            "upstream_commit\tregistry\tcanonical_name\tregistration_field\timplementation_type\tsource_path",
+        };
+        lines.AddRange(rows
+            .OrderBy(row => row.Registry, StringComparer.Ordinal)
+            .ThenBy(row => row.Name, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(row => row.Registration, StringComparer.Ordinal)
+            .Select(row => $"{upstreamCommit}\t{row.Registry}\t{row.Name}\t{row.Registration}\t{row.Implementation}\t{sourcePath}"));
+        File.WriteAllText(outPath, string.Join("\n", lines) + "\n");
+        Console.Error.WriteLine($"{rows.Count} rows: " +
+            $"{rows.Count(row => row.Registry == "SharedCore")} shared Core, " +
+            $"{rows.Count(row => row.Registry == "FeatureGatedCore")} feature-gated Core, " +
+            $"{rows.Count(row => row.Registry == "OtherKnownFunctions")} OtherKnownFunctions");
+        return 0;
+    }
+
     static int Main(string[] args)
     {
         if (args.Length >= 2 && args[0] == "generate-text") return GenerateText(args[1]);
+        if (args.Length >= 2 && args[0] == "registry") return GenerateRegistry(args[1]);
         if (args.Length >= 3 && args[0] == "check")
         {
             // Full compile-error list, as the corpus `Errors:` expectation prints it.

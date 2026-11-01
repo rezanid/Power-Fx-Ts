@@ -23,8 +23,11 @@ At baseline `7825b2a95d767b07b57327f5928fbbb18af55197` (upstream
 `df4ceba5e08220db670c25afead342ce699c50b5`), the inventory covers 145 unique upstream
 Core-registered function names: 11 implemented in the supported slice, 4 partial, 129 missing,
 and 1 deliberately excluded (`Patch`, a host mutation operation). Upstream has additional
-host/runtime-known names outside this count; see the [full inventory](docs/research/powerfx-coverage-inventory.md)
-for scope, overloads, sources and counting rules.
+host/runtime-known names outside this count. The reproducible evidence lists 220 shared-Core and
+10 feature-gated registration objects (139 and 7 unique names, respectively; 145 names in their
+union) and 66 `OtherKnownFunctions` names (3 overlap, 63 additional). See the [generated registry
+inventory](docs/research/powerfx-function-registry.tsv) and [full coverage report](docs/research/powerfx-coverage-inventory.md)
+for sources, counting rules, extraction command and overload limitations.
 
 Compatibility corpus results: `v1-float` 2,228 pass / 1 fail / 46 skip / 12,684 unsupported;
 `v1-decimal` 2,758 / 1 / 56 / 13,358. These are outcomes on a finite, profile-dependent corpus,
