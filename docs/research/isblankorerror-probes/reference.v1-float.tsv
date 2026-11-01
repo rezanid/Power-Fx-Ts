@@ -1,0 +1,17 @@
+IsBlankOrError(Blank())	Boolean	true
+IsBlankOrError("")	Boolean	true
+IsBlankOrError(" ")	Boolean	false
+IsBlankOrError("hello")	Boolean	false
+IsBlankOrError(0)	Boolean	false
+IsBlankOrError(true)	Boolean	false
+IsBlankOrError({a: 1})	Boolean	false
+IsBlankOrError([1, 2])	Boolean	false
+IsBlankOrError(Table({a: 1}))	Boolean	false
+IsBlankOrError(If(1 < 0, "hello"))	Boolean	true
+IsBlankOrError(If(1 / 0 < 2, "hello"))	Boolean	true
+IsBlankOrError(1 / 0)	Boolean	true
+IsBlank(1 / 0)	Boolean	Error(Div0)
+IsBlankOrError(If(false, 1 / 0, 3))	Boolean	false
+IsBlankOrError(If(true, Blank(), 5))	Boolean	true
+IsBlankOrError()		ERRORS:Error 0-16: Invalid number of arguments: received 0, expected 1.
+IsBlankOrError(1, 2)		ERRORS:Error 0-20: Invalid number of arguments: received 2, expected 1.
