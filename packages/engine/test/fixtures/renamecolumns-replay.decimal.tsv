@@ -1,0 +1,24 @@
+RenameColumns({z:3,a:1,m:2}, z, b)	{a:Decimal,b:Decimal,m:Decimal}	{a:Decimal(1),b:Decimal(3),m:Decimal(2)}
+RenameColumns({z:3,a:1,m:2}, a, x, z, y)	{m:Decimal,x:Decimal,y:Decimal}	{m:Decimal(2),x:Decimal(1),y:Decimal(3)}
+RenameColumns({a:1,b:2}, b, b)	{a:Decimal,b:Decimal}	{a:Decimal(1),b:Decimal(2)}
+RenameColumns({z:3,a:1,m:2}, a, A)	{A:Decimal,m:Decimal,z:Decimal}	{A:Decimal(1),m:Decimal(2),z:Decimal(3)}
+RenameColumns({a:1,b:2}, A, x)		ERRORS:Error 25-26: The specified column 'A' does not exist. The column with the most similar name is 'a'.|Error 0-13: The function 'RenameColumns' has some invalid arguments.
+RenameColumns({'First Name':1,z:3,a:2}, 'First Name', 'Last Name', z, b)	{Last Name:Decimal,a:Decimal,b:Decimal}	{Last Name:Decimal(1),a:Decimal(2),b:Decimal(3)}
+With({source:{a:1,b:2}, a:"variable-old", c:"variable-new"}, RenameColumns(source,a,c))	{b:Decimal,c:Decimal}	{b:Decimal(2),c:Decimal(1)}
+RenameColumns(RenameColumns({a:1,b:2}, a, c), c, a)	{a:Decimal,b:Decimal}	{a:Decimal(1),b:Decimal(2)}
+RenameColumns({a:1,b:2}, a, b)		ERRORS:Error 28-29: A column named 'b' already exists.|Error 0-13: The function 'RenameColumns' has some invalid arguments.
+RenameColumns({a:1,b:2}, a, c, b, c)		ERRORS:Error 34-35: A column named 'c' already exists.|Error 0-13: The function 'RenameColumns' has some invalid arguments.
+RenameColumns({a:1,b:2}, a, x, a, y)		ERRORS:Error 31-32: The specified column 'a' cannot be renamed twice.|Error 0-13: The function 'RenameColumns' has some invalid arguments.
+RenameColumns({a:1,b:2}, a, x, b, x)		ERRORS:Error 34-35: A column named 'x' already exists.|Error 0-13: The function 'RenameColumns' has some invalid arguments.
+RenameColumns({a:1,b:2}, missing, c)		ERRORS:Error 25-32: The specified column 'missing' does not exist.|Error 0-13: The function 'RenameColumns' has some invalid arguments.
+RenameColumns({a:1}, "a", "b")		ERRORS:Error 21-24: Expected identifier name|Error 0-13: The function 'RenameColumns' has some invalid arguments.
+RenameColumns({a:1})		ERRORS:Error 0-20: Invalid number of arguments: received 1, expected 3 or more.
+RenameColumns({a:1,b:2}, a, c, b)		ERRORS:Error 0-33: Invalid number of arguments: received 4, expected an odd number.
+RenameColumns({a:1,b:2}, a, b, b)		ERRORS:Error 0-33: Invalid number of arguments: received 4, expected an odd number.|Error 28-29: A column named 'b' already exists.|Error 0-13: The function 'RenameColumns' has some invalid arguments.
+RenameColumns(If(false,{z:3,a:1,m:2}), z, b)	{a:Decimal,b:Decimal,m:Decimal}	Blank
+RenameColumns(If(1/0=0,{z:3,a:1,m:2}), z, b)	{a:Decimal,b:Decimal,m:Decimal}	Error(Div0)
+RenameColumns(Table(If(false,{z:3,a:1,m:2}),{z:6,a:4,m:5}), z, b)	Table{a:Decimal,b:Decimal,m:Decimal}	Table[Blank,{a:Decimal(4),b:Decimal(6),m:Decimal(5)}]
+RenameColumns(Table(If(1/0=0,{z:3,a:1,m:2}),{z:6,a:4,m:5}), z, b)	Table{a:Decimal,b:Decimal,m:Decimal}	Table[Error(Div0),{a:Decimal(4),b:Decimal(6),m:Decimal(5)}]
+RenameColumns(Filter(Table({z:3,a:1,m:2}),a<0), z, b)	Table{a:Decimal,b:Decimal,m:Decimal}	Table[]
+RenameColumns({z:3,a:1/0,m:2}, z, b)	{a:Decimal,b:Decimal,m:Decimal}	{a:Error(Div0),b:Decimal(3),m:Decimal(2)}
+RenameColumns(Table({a:1,b:2},{a:1/0,b:3}),a,c)	Table{b:Decimal,c:Decimal}	Table[{b:Decimal(2),c:Decimal(1)},{b:Decimal(3),c:Error(Div0)}]

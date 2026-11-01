@@ -1,0 +1,24 @@
+RenameColumns({z:3,a:1,m:2}, z, b)	{a:Number,b:Number,m:Number}	{a:Number(1),b:Number(3),m:Number(2)}
+RenameColumns({z:3,a:1,m:2}, a, x, z, y)	{m:Number,x:Number,y:Number}	{m:Number(2),x:Number(1),y:Number(3)}
+RenameColumns({a:1,b:2}, b, b)	{a:Number,b:Number}	{a:Number(1),b:Number(2)}
+RenameColumns({z:3,a:1,m:2}, a, A)	{A:Number,m:Number,z:Number}	{A:Number(1),m:Number(2),z:Number(3)}
+RenameColumns({a:1,b:2}, A, x)		ERRORS:Error 25-26: The specified column 'A' does not exist. The column with the most similar name is 'a'.|Error 0-13: The function 'RenameColumns' has some invalid arguments.
+RenameColumns({'First Name':1,z:3,a:2}, 'First Name', 'Last Name', z, b)	{Last Name:Number,a:Number,b:Number}	{Last Name:Number(1),a:Number(2),b:Number(3)}
+With({source:{a:1,b:2}, a:"variable-old", c:"variable-new"}, RenameColumns(source,a,c))	{b:Number,c:Number}	{b:Number(2),c:Number(1)}
+RenameColumns(RenameColumns({a:1,b:2}, a, c), c, a)	{a:Number,b:Number}	{a:Number(1),b:Number(2)}
+RenameColumns({a:1,b:2}, a, b)		ERRORS:Error 28-29: A column named 'b' already exists.|Error 0-13: The function 'RenameColumns' has some invalid arguments.
+RenameColumns({a:1,b:2}, a, c, b, c)		ERRORS:Error 34-35: A column named 'c' already exists.|Error 0-13: The function 'RenameColumns' has some invalid arguments.
+RenameColumns({a:1,b:2}, a, x, a, y)		ERRORS:Error 31-32: The specified column 'a' cannot be renamed twice.|Error 0-13: The function 'RenameColumns' has some invalid arguments.
+RenameColumns({a:1,b:2}, a, x, b, x)		ERRORS:Error 34-35: A column named 'x' already exists.|Error 0-13: The function 'RenameColumns' has some invalid arguments.
+RenameColumns({a:1,b:2}, missing, c)		ERRORS:Error 25-32: The specified column 'missing' does not exist.|Error 0-13: The function 'RenameColumns' has some invalid arguments.
+RenameColumns({a:1}, "a", "b")		ERRORS:Error 21-24: Expected identifier name|Error 0-13: The function 'RenameColumns' has some invalid arguments.
+RenameColumns({a:1})		ERRORS:Error 0-20: Invalid number of arguments: received 1, expected 3 or more.
+RenameColumns({a:1,b:2}, a, c, b)		ERRORS:Error 0-33: Invalid number of arguments: received 4, expected an odd number.
+RenameColumns({a:1,b:2}, a, b, b)		ERRORS:Error 0-33: Invalid number of arguments: received 4, expected an odd number.|Error 28-29: A column named 'b' already exists.|Error 0-13: The function 'RenameColumns' has some invalid arguments.
+RenameColumns(If(false,{z:3,a:1,m:2}), z, b)	{a:Number,b:Number,m:Number}	Blank
+RenameColumns(If(1/0=0,{z:3,a:1,m:2}), z, b)	{a:Number,b:Number,m:Number}	Error(Div0)
+RenameColumns(Table(If(false,{z:3,a:1,m:2}),{z:6,a:4,m:5}), z, b)	Table{a:Number,b:Number,m:Number}	Table[Blank,{a:Number(4),b:Number(6),m:Number(5)}]
+RenameColumns(Table(If(1/0=0,{z:3,a:1,m:2}),{z:6,a:4,m:5}), z, b)	Table{a:Number,b:Number,m:Number}	Table[Error(Div0),{a:Number(4),b:Number(6),m:Number(5)}]
+RenameColumns(Filter(Table({z:3,a:1,m:2}),a<0), z, b)	Table{a:Number,b:Number,m:Number}	Table[]
+RenameColumns({z:3,a:1/0,m:2}, z, b)	{a:Number,b:Number,m:Number}	{a:Error(Div0),b:Number(3),m:Number(2)}
+RenameColumns(Table({a:1,b:2},{a:1/0,b:3}),a,c)	Table{b:Number,c:Number}	Table[{b:Number(2),c:Number(1)},{b:Number(3),c:Error(Div0)}]

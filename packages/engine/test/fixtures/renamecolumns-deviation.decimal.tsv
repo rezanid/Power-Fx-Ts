@@ -1,0 +1,2 @@
+RenameColumns({a:1,b:2}, a, a, a, x)	valid	b,x			-	An item with the same key has already been added. Key: a
+RenameColumns({a:1,b:2}, a, a, a, a)	valid	a,b			-	An item with the same key has already been added. Key: a

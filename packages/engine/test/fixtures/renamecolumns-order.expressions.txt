@@ -1,0 +1,3 @@
+{z:3,a:1,m:2}
+RenameColumns({z:3,a:1,m:2}, z, b)
+RenameColumns({z:3,a:1,m:2}, a, x, z, y)

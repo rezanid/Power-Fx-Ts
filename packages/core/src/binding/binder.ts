@@ -680,6 +680,106 @@ class Binder {
   }
 
   /**
+   * Rename pairs refer to the original schema. Reject every repeated source, including repeated
+   * no-op pairs, rather than allowing the reference interpreter's duplicate-key runtime exception.
+   */
+  private bindRenameColumns(node: CallNode): BoundNode {
+    const sourceArg = node.args[0];
+    if (node.args.length < 3 || sourceArg === undefined) {
+      node.args.forEach((arg) => this.bindExpression(arg));
+      this.report(DiagnosticCodes.BadArityMinimum, node.span, [String(node.args.length), "3"]);
+      return this.invalid(node.span);
+    }
+
+    const source = this.bindExpression(sourceArg);
+    if (source.type.kind === "Unknown") {
+      this.report(DiagnosticCodes.InvalidFunctionArguments, node.callee.span, ["RenameColumns"]);
+      return this.invalid(node.span);
+    }
+    if (source.type.kind !== "Record" && source.type.kind !== "Table") {
+      this.report(DiagnosticCodes.BadType, sourceArg.span);
+      this.report(DiagnosticCodes.InvalidFunctionArguments, node.callee.span, ["RenameColumns"]);
+      return this.invalid(node.span);
+    }
+
+    const sourceFields =
+      source.type.kind === "Record" ? source.type.fields : source.type.row.fields;
+    const pairs = Math.floor((node.args.length - 1) / 2);
+    const hasOddArity = node.args.length % 2 === 1;
+    if (!hasOddArity) {
+      this.report(DiagnosticCodes.BadArity, node.span, [String(node.args.length), "an odd number"]);
+    }
+
+    const seenSources = new Set<string>();
+    const destinations = new Set<string>();
+    const renames: { oldName: string; newName: string }[] = [];
+    let valid = true;
+    for (let pair = 0; pair < pairs; pair++) {
+      const oldArg = node.args[1 + pair * 2];
+      const newArg = node.args[2 + pair * 2];
+      if (oldArg === undefined || newArg === undefined) continue;
+
+      if (oldArg.kind !== "Name") {
+        this.report(DiagnosticCodes.ExpectedIdentifierName, oldArg.span);
+        valid = false;
+        continue;
+      }
+      if (newArg.kind !== "Name") {
+        this.report(DiagnosticCodes.ExpectedIdentifierName, newArg.span);
+        valid = false;
+        continue;
+      }
+
+      const oldField = findField({ kind: "Record", fields: sourceFields }, oldArg.name);
+      if (oldField === undefined) {
+        const similar = similarColumnName(oldArg.name, sourceFields);
+        const suffix =
+          similar === undefined ? "" : ` The column with the most similar name is '${similar}'.`;
+        this.report(DiagnosticCodes.ColumnDoesNotExist, oldArg.span, [oldArg.name, suffix]);
+        valid = false;
+        continue;
+      }
+      if (seenSources.has(oldField.name)) {
+        this.report(DiagnosticCodes.ColumnRenamedTwice, oldArg.span, [oldField.name]);
+        valid = false;
+        continue;
+      }
+      seenSources.add(oldField.name);
+
+      const newName = newArg.name;
+      if (newName !== oldField.name) {
+        const destinationExists = sourceFields.some((field) => field.name === newName);
+        if (destinationExists || destinations.has(newName)) {
+          this.report(DiagnosticCodes.ColumnAlreadyExists, newArg.span, [newName]);
+          valid = false;
+          continue;
+        }
+        destinations.add(newName);
+        renames.push({ oldName: oldField.name, newName });
+      }
+    }
+
+    if (!valid) {
+      this.report(DiagnosticCodes.InvalidFunctionArguments, node.callee.span, ["RenameColumns"]);
+      return this.invalid(node.span);
+    }
+    if (!hasOddArity) return this.invalid(node.span);
+
+    const renameBySource = new Map(renames.map(({ oldName, newName }) => [oldName, newName]));
+    const resultFields = sourceFields
+      .map((field) => ({
+        ...field,
+        name: renameBySource.get(field.name) ?? field.name,
+      }))
+      .sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0));
+    const type: FormulaType =
+      source.type.kind === "Record"
+        ? { kind: "Record", fields: resultFields }
+        : { kind: "Table", row: { kind: "Record", fields: resultFields } };
+    return { kind: "RenameColumns", source, renames, span: node.span, type };
+  }
+
+  /**
    * `LookUp` source that is not a table. Pinned corpus (`Lookup_V1Compat.txt`): an untyped Blank
    * gives `ErrBadType` on the argument plus the invalid-arguments error; other types give only
    * `ErrBadType`. (`Filter` differs, see `bindFilter`.)
@@ -1258,6 +1358,7 @@ class Binder {
       if (name === "Filter") return this.bindFilter(node);
       if (name === "DropColumns") return this.bindDropColumns(node);
       if (name === "ShowColumns") return this.bindShowColumns(node);
+      if (name === "RenameColumns") return this.bindRenameColumns(node);
       if (name === "Table") return this.bindTableCall(node);
       if (name === "First") return this.bindFirst(node);
       if (name === "CountRows") return this.bindCountRows(node);

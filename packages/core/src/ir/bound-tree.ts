@@ -132,6 +132,15 @@ export type BoundNode =
       readonly source: BoundNode;
       readonly columns: readonly string[];
     })
+  /** `RenameColumns(source, oldName, newName, ...)`; names are syntax-bound identifiers. */
+  | (BoundBase & {
+      readonly kind: "RenameColumns";
+      readonly source: BoundNode;
+      readonly renames: readonly {
+        readonly oldName: string;
+        readonly newName: string;
+      }[];
+    })
   /**
    * `Filter(source, predicate)`: evaluates `predicate` once per row with that row bound as the
    * scope `scopeId`. A Blank source gives Blank; an Error predicate yields an error row.

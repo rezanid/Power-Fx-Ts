@@ -1,0 +1,24 @@
+RenameColumns({z:3,a:1,m:2}, z, b)	valid	a,b,m	a,b,m	{a:Decimal(1),b:Decimal(3),m:Decimal(2)}	-	-
+RenameColumns({z:3,a:1,m:2}, a, x, z, y)	valid	m,x,y	m,x,y	{m:Decimal(2),x:Decimal(1),y:Decimal(3)}	-	-
+RenameColumns({a:1,b:2}, b, b)	valid	a,b	a,b	{a:Decimal(1),b:Decimal(2)}	-	-
+RenameColumns({z:3,a:1,m:2}, a, A)	valid	A,m,z	A,m,z	{A:Decimal(1),m:Decimal(2),z:Decimal(3)}	-	-
+RenameColumns({a:1,b:2}, A, x)	invalid				Severe@25-26:The specified column 'A' does not exist. The column with the most similar name is 'a'.|Severe@0-13:The function 'RenameColumns' has some invalid arguments.	-
+RenameColumns({'First Name':1,z:3,a:2}, 'First Name', 'Last Name', z, b)	valid	Last Name,a,b	Last Name,a,b	{'Last Name':Decimal(1),a:Decimal(2),b:Decimal(3)}	-	-
+With({source:{a:1,b:2}, a:"variable-old", c:"variable-new"}, RenameColumns(source,a,c))	valid	b,c	b,c	{b:Decimal(2),c:Decimal(1)}	-	-
+RenameColumns(RenameColumns({a:1,b:2}, a, c), c, a)	valid	a,b	a,b	{a:Decimal(1),b:Decimal(2)}	-	-
+RenameColumns({a:1,b:2}, a, b)	invalid				Severe@28-29:A column named 'b' already exists.|Severe@0-13:The function 'RenameColumns' has some invalid arguments.	-
+RenameColumns({a:1,b:2}, a, c, b, c)	invalid				Severe@34-35:A column named 'c' already exists.|Severe@0-13:The function 'RenameColumns' has some invalid arguments.	-
+RenameColumns({a:1,b:2}, a, x, a, y)	invalid				Severe@31-32:The specified column 'a' cannot be renamed twice.|Severe@0-13:The function 'RenameColumns' has some invalid arguments.	-
+RenameColumns({a:1,b:2}, a, x, b, x)	invalid				Severe@34-35:A column named 'x' already exists.|Severe@0-13:The function 'RenameColumns' has some invalid arguments.	-
+RenameColumns({a:1,b:2}, missing, c)	invalid				Severe@25-32:The specified column 'missing' does not exist.|Severe@0-13:The function 'RenameColumns' has some invalid arguments.	-
+RenameColumns({a:1}, "a", "b")	invalid				Severe@21-24:Expected identifier name|Severe@0-13:The function 'RenameColumns' has some invalid arguments.	-
+RenameColumns({a:1})	invalid				Critical@0-20:Invalid number of arguments: received 1, expected 3 or more.	-
+RenameColumns({a:1,b:2}, a, c, b)	invalid				Severe@0-33:Invalid number of arguments: received 4, expected an odd number.	-
+RenameColumns({a:1,b:2}, a, b, b)	invalid				Severe@0-33:Invalid number of arguments: received 4, expected an odd number.|Severe@28-29:A column named 'b' already exists.|Severe@0-13:The function 'RenameColumns' has some invalid arguments.	-
+RenameColumns(If(false,{z:3,a:1,m:2}), z, b)	valid	a,b,m	BlankValue	If(false,{a:Decimal("0"),b:Decimal("0"),m:Decimal("0")})	-	-
+RenameColumns(If(1/0=0,{z:3,a:1,m:2}), z, b)	valid	a,b,m	ErrorValue	Error({Kind:ErrorKind.Div0, Message:"Invalid operation: division by zero."})	-	-
+RenameColumns(Table(If(false,{z:3,a:1,m:2}),{z:6,a:4,m:5}), z, b)	valid	a,b,m	Blank;a,b,m	Table(If(false,{a:Decimal("0"),m:Decimal("0"),z:Decimal("0")}),{a:Decimal(4),b:Decimal(6),m:Decimal(5)})	-	-
+RenameColumns(Table(If(1/0=0,{z:3,a:1,m:2}),{z:6,a:4,m:5}), z, b)	valid	a,b,m	ErrorValue;a,b,m	Table(Error({Kind:ErrorKind.Div0, Message:"Invalid operation: division by zero."}),{a:Decimal(4),b:Decimal(6),m:Decimal(5)})	-	-
+RenameColumns(Filter(Table({z:3,a:1,m:2}),a<0), z, b)	valid	a,b,m		FirstN(Table({a:Decimal("0"),b:Decimal("0"),m:Decimal("0")}),0)	-	-
+RenameColumns({z:3,a:1/0,m:2}, z, b)	valid	a,b,m	a,b,m	{a:Error({Kind:ErrorKind.Div0, Message:"Invalid operation: division by zero."}),b:Decimal(3),m:Decimal(2)}	-	-
+RenameColumns(Table({a:1,b:2},{a:1/0,b:3}),a,c)	valid	b,c	b,c;b,c	Table({b:Decimal(2),c:Decimal(1)},{b:Decimal(3),c:Error({Kind:ErrorKind.Div0, Message:"Invalid operation: division by zero."})})	-	-

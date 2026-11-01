@@ -4,8 +4,8 @@
 - Runner: engine
 - Setup: `PowerFxV1,NumberIsFloat,DecimalSupport` (number mode: float, culture en-US, time zone UTC)
 - Cases: 22047 total, 7088 not applicable to this profile
-- Pass 2331, fail 1, skip 46, unsupported 12581
-- Unsupported by reason: feature 9418, setup 3163, profile 0
+- Pass 2357, fail 1, skip 46, unsupported 12555
+- Unsupported by reason: feature 9392, setup 3163, profile 0
 - Passing compile-error cases whose error set differs from upstream's (strict diagnostic, not a verdict): 34
 - Passing numeric cases accepted only by upstream's float tolerance (diagnostic, not a verdict): 12
 
@@ -205,7 +205,7 @@
 | Record.txt | 10 | 10 | 0 | 0 | 0 |
 | Remove.txt | 33 | 0 | 0 | 0 | 33 |
 | Remove_V1Compact.txt | 4 | 0 | 0 | 0 | 4 |
-| RenameColumns_SupportColumnNamesAsIdentifiers.txt | 29 | 0 | 0 | 0 | 29 |
+| RenameColumns_SupportColumnNamesAsIdentifiers.txt | 29 | 26 | 0 | 0 | 3 |
 | Replace.txt | 66 | 0 | 0 | 0 | 66 |
 | ReservedKeyword.txt | 24 | 24 | 0 | 0 | 0 |
 | ReservedKeyword_Disabled.txt | 12 | 0 | 0 | 0 | 12 |

@@ -143,6 +143,8 @@ class Evaluator implements EvaluationContext {
         return this.dropColumns(node);
       case "ShowColumns":
         return this.showColumns(node);
+      case "RenameColumns":
+        return this.renameColumns(node);
       case "Filter":
         return this.filter(node);
       case "First": {
@@ -246,6 +248,32 @@ class Evaluator implements EvaluationContext {
     for (const row of source.rows) {
       this.tick();
       rows.push(row.kind === "Record" ? select(row) : row);
+    }
+    return table(rows);
+  }
+
+  /** Renames fields simultaneously and charges/checks the budget once for each table row. */
+  private renameColumns(node: Extract<BoundNode, { kind: "RenameColumns" }>): FormulaValue {
+    const source = this.evaluate(node.source);
+    if (source.kind === "Blank" || source.kind === "Error") return source;
+    const renameBySource = new Map(node.renames.map(({ oldName, newName }) => [oldName, newName]));
+    const rename = (value: RecordValue): RecordValue =>
+      record(
+        value.fields
+          .map((field) => ({
+            ...field,
+            name: renameBySource.get(field.name) ?? field.name,
+          }))
+          .sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0)),
+      );
+
+    if (source.kind === "Record") return rename(source);
+    if (source.kind !== "Table") throw new Error("RenameColumns source is not a record or table.");
+
+    const rows: TableRow[] = [];
+    for (const row of source.rows) {
+      this.tick();
+      rows.push(row.kind === "Record" ? rename(row) : row);
     }
     return table(rows);
   }
