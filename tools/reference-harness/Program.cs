@@ -17,6 +17,7 @@ using System.Reflection;
 using System.Diagnostics;
 using System.Text;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using Microsoft.PowerFx;
 using Microsoft.PowerFx.Types;
 
@@ -390,10 +391,178 @@ static class P
         return 0;
     }
 
+    sealed record CaseRange(int Start, int End, int Delta);
+
+    static int CaseMapCommand(string action, string path)
+    {
+        const string upstreamCommit = "df4ceba5e08220db670c25afead342ce699c50b5";
+        const string upstreamDirectoryName = "upstream/Power-Fx";
+        var upstreamDirectory = Path.Combine(Directory.GetCurrentDirectory(), upstreamDirectoryName);
+        var git = new Process
+        {
+            StartInfo = new ProcessStartInfo("git")
+            {
+                WorkingDirectory = upstreamDirectory,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+            },
+        };
+        git.StartInfo.ArgumentList.Add("rev-parse");
+        git.StartInfo.ArgumentList.Add("HEAD");
+        if (!git.Start())
+            throw new InvalidOperationException("Could not start git to verify the pinned upstream checkout.");
+        var actualCommit = git.StandardOutput.ReadToEnd().Trim();
+        var gitError = git.StandardError.ReadToEnd();
+        git.WaitForExit();
+        if (git.ExitCode != 0 || actualCommit != upstreamCommit)
+            throw new InvalidOperationException(
+                $"Case-map generation requires upstream/Power-Fx at {upstreamCommit}; found {actualCommit}. {gitError}".Trim());
+
+        var textInfo = CultureInfo.GetCultureInfo("en-US").TextInfo;
+        if (action == "generate")
+        {
+            var lower = BuildCaseRanges(textInfo, upper: false);
+            var upper = BuildCaseRanges(textInfo, upper: true);
+            VerifyCaseRanges(textInfo, lower, upper);
+            File.WriteAllText(path, RenderCaseMap(lower, upper, upstreamCommit));
+            Console.Error.WriteLine(
+                $"Verified all Unicode scalar values; generated {lower.Count} lowercase and {upper.Count} uppercase ranges.");
+            return 0;
+        }
+
+        if (action == "verify")
+        {
+            var source = File.ReadAllText(path);
+            var lower = ReadCaseRanges(source, "LOWER_EN_US");
+            var upper = ReadCaseRanges(source, "UPPER_EN_US");
+            VerifyCaseRanges(textInfo, lower, upper);
+            Console.Error.WriteLine(
+                $"Verified all Unicode scalar values against {System.Runtime.InteropServices.RuntimeInformation.FrameworkDescription} en-US TextInfo.");
+            return 0;
+        }
+
+        throw new ArgumentException($"Unknown case-map action '{action}'. Use generate or verify.");
+    }
+
+    static List<CaseRange> BuildCaseRanges(TextInfo textInfo, bool upper)
+    {
+        var ranges = new List<CaseRange>();
+        for (var codePoint = 0; codePoint <= 0x10FFFF; codePoint++)
+        {
+            if (codePoint is >= 0xD800 and <= 0xDFFF) continue;
+            var source = new Rune(codePoint).ToString();
+            var mapped = upper ? textInfo.ToUpper(source) : textInfo.ToLower(source);
+            if (!Rune.TryGetRuneAt(mapped, 0, out var target) || target.Utf16SequenceLength != mapped.Length)
+                throw new InvalidOperationException(
+                    $"en-US TextInfo expanded U+{codePoint:X} to more than one Unicode scalar.");
+            if (target.Value == codePoint) continue;
+
+            var delta = target.Value - codePoint;
+            if (ranges.Count > 0 && ranges[^1].End == codePoint - 1 && ranges[^1].Delta == delta)
+                ranges[^1] = ranges[^1] with { End = codePoint };
+            else
+                ranges.Add(new CaseRange(codePoint, codePoint, delta));
+        }
+        return ranges;
+    }
+
+    static void VerifyCaseRanges(TextInfo textInfo, IReadOnlyList<CaseRange> lower, IReadOnlyList<CaseRange> upper)
+    {
+        VerifyCaseRanges(textInfo, lower, upperCase: false);
+        VerifyCaseRanges(textInfo, upper, upperCase: true);
+    }
+
+    static void VerifyCaseRanges(
+        TextInfo textInfo,
+        IReadOnlyList<CaseRange> ranges,
+        bool upperCase)
+    {
+        for (var codePoint = 0; codePoint <= 0x10FFFF; codePoint++)
+        {
+            if (codePoint is >= 0xD800 and <= 0xDFFF) continue;
+            var source = new Rune(codePoint).ToString();
+            var reference = upperCase ? textInfo.ToUpper(source) : textInfo.ToLower(source);
+            if (!Rune.TryGetRuneAt(reference, 0, out var referenceRune) ||
+                referenceRune.Utf16SequenceLength != reference.Length)
+                throw new InvalidOperationException(
+                    $"en-US TextInfo expanded U+{codePoint:X} to more than one Unicode scalar.");
+            var mapped = ApplyCaseRanges(codePoint, ranges);
+            if (mapped != referenceRune.Value)
+                throw new InvalidOperationException(
+                    $"Case-map mismatch at U+{codePoint:X}: table U+{mapped:X}, reference U+{referenceRune.Value:X}.");
+        }
+    }
+
+    static int ApplyCaseRanges(int codePoint, IReadOnlyList<CaseRange> ranges)
+    {
+        var low = 0;
+        var high = ranges.Count - 1;
+        while (low <= high)
+        {
+            var middle = low + (high - low) / 2;
+            var range = ranges[middle];
+            if (codePoint < range.Start) high = middle - 1;
+            else if (codePoint > range.End) low = middle + 1;
+            else return codePoint + range.Delta;
+        }
+        return codePoint;
+    }
+
+    static string RenderCaseMap(IReadOnlyList<CaseRange> lower, IReadOnlyList<CaseRange> upper, string upstreamCommit)
+    {
+        static void AppendRanges(StringBuilder output, string name, IReadOnlyList<CaseRange> ranges)
+        {
+            output.AppendLine($"export const {name}: readonly (readonly [number, number, number])[] = [");
+            foreach (var range in ranges)
+                output.AppendLine($"  [0x{range.Start:x}, 0x{range.End:x}, {range.Delta}],");
+            output.AppendLine("];");
+            output.AppendLine();
+        }
+
+        var output = new StringBuilder();
+        output.AppendLine("// Frozen en-US simple casing from the pinned Power Fx TextInfo reference.");
+        output.AppendLine($"// Upstream: {upstreamCommit}; runtime: {System.Runtime.InteropServices.RuntimeInformation.FrameworkDescription}; culture: en-US.");
+        output.AppendLine("// Regenerate only with explicit review; see docs/research/scalar-text-probes/README.md.");
+        output.AppendLine();
+        AppendRanges(output, "LOWER_EN_US", lower);
+        AppendRanges(output, "UPPER_EN_US", upper);
+        return output.ToString();
+    }
+
+    static List<CaseRange> ReadCaseRanges(string source, string name)
+    {
+        var section = Regex.Match(
+            source,
+            $@"export const {Regex.Escape(name)}:[^\n]*= \[\n(.*?)\n\];",
+            RegexOptions.Singleline);
+        if (!section.Success) throw new InvalidDataException($"Could not find generated mapping {name}.");
+        var ranges = new List<CaseRange>();
+        foreach (Match match in Regex.Matches(
+            section.Groups[1].Value,
+            @"^\s*\[0x([0-9a-fA-F]+), 0x([0-9a-fA-F]+), (-?\d+)\],\s*$",
+            RegexOptions.Multiline))
+        {
+            ranges.Add(new CaseRange(
+                Convert.ToInt32(match.Groups[1].Value, 16),
+                Convert.ToInt32(match.Groups[2].Value, 16),
+                int.Parse(match.Groups[3].Value, CultureInfo.InvariantCulture)));
+        }
+        if (ranges.Count == 0) throw new InvalidDataException($"Generated mapping {name} is empty or malformed.");
+        for (var i = 0; i < ranges.Count; i++)
+        {
+            if (ranges[i].Start > ranges[i].End ||
+                (i > 0 && ranges[i - 1].End >= ranges[i].Start))
+                throw new InvalidDataException($"Generated mapping {name} is not ordered and disjoint.");
+        }
+        return ranges;
+    }
+
     static int Main(string[] args)
     {
         if (args.Length >= 2 && args[0] == "generate-text") return GenerateText(args[1]);
         if (args.Length >= 2 && args[0] == "registry") return GenerateRegistry(args[1]);
+        if (args.Length >= 3 && args[0] == "case-map") return CaseMapCommand(args[1], args[2]);
         if (args.Length >= 3 && args[0] == "check")
         {
             // Full compile-error list, as the corpus `Errors:` expectation prints it.

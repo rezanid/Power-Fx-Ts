@@ -1,7 +1,8 @@
 # Agent handoff: current state
 
-Current `main` at handoff: `7825b2a95d767b07b57327f5928fbbb18af55197` (PR #18 merge). IsBlankOrError
-was implemented from `78bd2f7452aa6f14302aaa2b64124b7a5a6259aa` (PR #17 merge); IsEmpty's
+Current `main` before scalar text basics: `767321b122080991929dde50382d663dc306ac17` (PR #19 merge).
+The approved scalar text milestone is in the current review branch, based on this commit.
+IsBlankOrError was implemented from `78bd2f7452aa6f14302aaa2b64124b7a5a6259aa` (PR #17 merge); IsEmpty's
 implementation baseline was `984a61b` (after PR #15).
 Previous baselines: `5cf1d25` (PR #13, empty-text coercion), `f9df8bb` (PR #12, `Coalesce`),
 `820c9be` (PR #11, docs only), `f2fa9d8` (PR #10).
@@ -35,12 +36,12 @@ diagnostics, merged operand errors, recovered result types) → `Coalesce` (PR #
 | Numeric backends (float/decimal), text parsing | `packages/interpreter/src/numeric/{backend,decimal,text-number}.ts`                                       |
 | Values (frozen)                                | `packages/interpreter/src/values/values.ts`                                                               |
 | Evaluator, coercion                            | `packages/interpreter/src/evaluator/{evaluator,coercion}.ts`                                              |
-| Builtin implementations                        | `packages/interpreter/src/functions/builtins.ts`                                                          |
+| Builtin implementations                        | `packages/interpreter/src/functions/builtins.ts`; frozen casing data in `text-case-map.ts`                |
 | Runtime context and host-input validation      | `packages/interpreter/src/runtime/{context,validate}.ts`                                                  |
 | Engine facade (`check`, `evaluate`)            | `packages/engine/src/engine.ts` (`dependencies/`, `recalc/` are empty placeholders)                       |
 | Compat runner, profiles, reports               | `packages/test-suite/src/*.ts`; committed `packages/test-suite/reports/*.engine.md`                       |
 | Behavior tests and reference fixtures          | `packages/engine/test/*.test.ts`, `packages/engine/test/fixtures/*.json`                                  |
-| Executable C# reference                        | `tools/reference-harness/Program.cs` (`eval`, `check`, `generate`, `parse`, `probe`)                      |
+| Executable C# reference                        | `tools/reference-harness/Program.cs` (`eval`, `check`, `generate`, `parse`, `probe`, `case-map`)          |
 | Language service, serialization, test-runner   | `packages/language-service`, `packages/serialization`, `packages/test-runner`: skeletal, not yet in scope |
 
 ## Accepted decisions (details in ADRs)
@@ -91,22 +92,24 @@ diagnostics, merged operand errors, recovered result types) → `Coalesce` (PR #
 
 ## Coverage and remaining work
 
-- Research inventory: `docs/research/powerfx-coverage-inventory.md` (baseline PR #18 merge,
-  upstream pin `df4ceba5e08220db670c25afead342ce699c50b5`).
+- Research inventory: `docs/research/powerfx-coverage-inventory.md` (source baseline before this
+  milestone is the PR #19 merge, upstream pin `df4ceba5e08220db670c25afead342ce699c50b5`).
 - It counts 145 unique Core-registered upstream function names: 11 implemented in the supported
-  slice, 4 partial, 129 missing, and 1 deliberately excluded (`Patch`). Upstream's additional
+  slice, 7 partial, 126 missing, and 1 deliberately excluded (`Patch`). Upstream's additional
   `OtherKnownFunctions`, overload scope, method and uncertainty are itemized separately.
-- Current reports: `v1-float` 2228 / 1 / 46 / 12684 and `v1-decimal` 2758 / 1 / 56 / 13358
-  (pass / fail / skip / unsupported). Do not treat corpus outcomes as language completeness.
+- Candidate reports after scalar text basics: `v1-float` 2299 / 1 / 46 / 12613 and `v1-decimal`
+  2831 / 1 / 56 / 13285 (pass / fail / skip / unsupported). Do not treat corpus outcomes as
+  language completeness.
 - Language/runtime foundation is a narrow, tested slice; authoring services are scaffolds; Monaco,
-  React, PCF, LSP, connectors and gateway are not implemented. The report proposes five bounded
-  follow-on milestones; none is accepted or started.
+  React, PCF, LSP, connectors and gateway are not implemented. Three bounded follow-on milestone
+  candidates remain proposals only.
 
 ## Known gaps
 
 - At the IsEmpty baseline (`4a1b2de`): `v1-float` 2225 pass / 1 fail / 46 skip / 12687 unsupported;
-  `v1-decimal` 2755 / 1 / 56 / 13361. At current main after IsBlankOrError (`7825b2a`), counts are
-  recorded above. The one failure in each profile remains
+  `v1-decimal` 2755 / 1 / 56 / 13361. The PR #19 baseline after IsBlankOrError has
+  `v1-float` 2228 / 1 / 46 / 12684 and `v1-decimal` 2758 / 1 / 56 / 13358. The one failure in
+  each profile remains
   `Text_ExcelCompat_PowerFxV1Compat.txt:13` (`Text()` formatting). Remaining unsupported cases are mostly
   unimplemented builtins (e.g. `IfError`, math/text/date functions, `Text`); 16 `IsEmpty` cases remain
   excluded by the accepted milestone scope.
@@ -165,8 +168,26 @@ owner's behalf by documentation PRs; the owner may update the labels separately.
 `isempty-before-after.md`, `isblankorerror-before-after.md`, `empty-text-probes/`, `isempty-probes/`,
 `isblankorerror-probes/`, `powerfx-coverage-inventory.md`); `packages/test-suite/reports/`.
 
+## Current approved milestone: scalar text basics
+
+- Scope and decision: ADR 0016; `docs/milestones/0016-scalar-text-basics-milestone-spec.md`.
+- Baseline: `767321b122080991929dde50382d663dc306ac17`; upstream pin unchanged.
+- Implemented scalar overloads for `Len`, `Lower`, and `Upper`, including float/decimal `Len`
+  return types, existing scalar-to-Text coercions, explicit unsupported table calls, and a frozen
+  en-US simple-case table. Table overloads, Text formatting, other text functions, and new types
+  remain excluded.
+- Reference probes and map generator/verification commands are documented in
+  `docs/research/scalar-text-probes/README.md`. The table was verified against en-US `TextInfo`
+  for all Unicode scalar values.
+- Candidate compat totals: float 2299 / 1 / 46 / 12613; decimal 2831 / 1 / 56 / 13285. Per-case
+  comparison shows 71 and 73 unsupported-to-pass transitions respectively and zero
+  pass-to-non-pass regressions; see `docs/research/scalar-text-before-after.md`.
+- Local build, lint, formatting, all 1,295 tests, both compatibility profiles, and exhaustive casing
+  verification pass. The draft PR CI build check passed; stop for independent review and do not
+  merge or begin another milestone.
+
 ## Next
 
-The inventory proposes follow-on milestone groupings in
-`docs/research/powerfx-coverage-inventory.md`; none has been selected or accepted. Do not start
-another milestone without owner approval.
+No subsequent milestone has been selected or accepted. The remaining candidates in
+`docs/research/powerfx-coverage-inventory.md` are proposals only; do not start another milestone
+without owner approval.

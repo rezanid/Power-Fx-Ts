@@ -1,6 +1,6 @@
 # Next milestone
 
-No next milestone has been selected or accepted. The research-only coverage inventory proposes
-possible bounded groupings in `docs/research/powerfx-coverage-inventory.md`; those proposals are
-not authorization to begin implementation. The completed `IsBlankOrError` milestone is documented
-in `docs/milestones/0015-isblankorerror-milestone-spec.md` and ADR 0015.
+The approved `Len`, `Lower`, and `Upper` scalar text milestone is implemented in the current
+review branch; see `docs/milestones/0016-scalar-text-basics-milestone-spec.md` and ADR 0016. No
+subsequent milestone has been selected or accepted. The other bounded candidates in
+`docs/research/powerfx-coverage-inventory.md` remain proposals, not authorization to begin work.

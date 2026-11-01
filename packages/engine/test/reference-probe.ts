@@ -53,7 +53,10 @@ export function renderValue(engine: Engine, v: FormulaValue): string {
     case "Decimal":
       return `Decimal(${engine.formatDecimal(v.value)})`;
     case "Text":
-      return JSON.stringify(v.value);
+      return JSON.stringify(v.value).replace(
+        /[\u0080-\uFFFF]/g,
+        (character) => `\\u${character.charCodeAt(0).toString(16).toUpperCase().padStart(4, "0")}`,
+      );
     case "Boolean":
       return String(v.value);
     case "Error":

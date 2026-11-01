@@ -1,4 +1,4 @@
-import type { BoundNode } from "@powerfx-ts/core";
+import type { BoundNode, FormulaType } from "@powerfx-ts/core";
 import type { Numerics } from "../numeric/backend.js";
 import type { FormulaValue } from "../values/values.js";
 
@@ -50,4 +50,5 @@ export interface EvaluationContext {
 export type FunctionImplementation = (
   args: readonly BoundNode[],
   context: EvaluationContext,
+  returnType: FormulaType,
 ) => FormulaValue;
