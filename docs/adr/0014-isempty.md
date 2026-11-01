@@ -1,8 +1,10 @@
 # ADR 0014: `IsEmpty`
 
-Status: **owner-accepted (Option A), implemented, independent review pending, not merged**.
+Status: **accepted (Option A), independently reviewed, implemented, and merged** in PR #16
+(`d600b74806c0b4fd22ef476cf9da2e78f86b9abb`; merge commit
+`4a1b2de18ae0fa323f106526b70e6a365225ac7d`).
 Upstream pin `df4ceba5e08220db670c25afead342ce699c50b5`. Baseline `main` `984a61b` (after PR #15).
-Scope: `docs/milestones/next.md`.
+Archived scope: `docs/milestones/0014-isempty-milestone-spec.md`.
 
 ## Context
 
@@ -50,6 +52,11 @@ argument. The result uses the existing frozen Boolean constructor.
 - Both compatibility profiles have exactly 18 `unsupported` → `pass` transitions and zero
   pass-to-non-pass regressions. All 16 excluded cases remain unsupported. Per-case transitions and
   totals: `docs/research/isempty-before-after.md`.
+- Independent review passed before owner acceptance and merge. CI passed on final PR head
+  `d600b74806c0b4fd22ef476cf9da2e78f86b9abb` (run
+  [39166838346](https://github.com/rezanid/Power-Fx-Ts/actions/runs/39166838346)) and merge commit
+  `4a1b2de18ae0fa323f106526b70e6a365225ac7d` (run
+  [39167949555](https://github.com/rezanid/Power-Fx-Ts/actions/runs/39167949555)).
 
 ## Known limits
 

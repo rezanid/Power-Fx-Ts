@@ -1,13 +1,14 @@
 # Agent handoff: current state
 
-Implementation baseline: `984a61b` (`main` after PR #15; verified as remote `main` HEAD on
-2026-10-18). Previous baselines: `5cf1d25` (PR #13, empty-text coercion), `f9df8bb` (PR #12, `Coalesce`),
+Current `main` at handoff: `4a1b2de18ae0fa323f106526b70e6a365225ac7d` (PR #16 merge; verified as
+remote `main` HEAD on 2026-10-18). The IsEmpty implementation baseline was `984a61b` (after PR #15).
+Previous baselines: `5cf1d25` (PR #13, empty-text coercion), `f9df8bb` (PR #12, `Coalesce`),
 `820c9be` (PR #11, docs only), `f2fa9d8` (PR #10).
 Upstream pin: `df4ceba5e08220db670c25afead342ce699c50b5` (`docs/provenance.md`).
 Profiles: `v1-float` (default, PowerFxV1 + NumberIsFloat) and `v1-decimal` (opt-in
 `new Engine({ numberMode: "decimal" })`), culture en-US, UTC.
 
-## Completed milestones (PRs #2–#10, #12, #13, all merged)
+## Completed milestones (PRs #2–#10, #12–#13, #16, all merged)
 
 Vertical slice (lexer/parser/binder/evaluator, compat runner) → parser parity → typed context and
 schema separation → record literals and `With` → tables, row scopes, `Filter`, `ThisRecord`/`As` →
@@ -15,7 +16,9 @@ schema separation → record literals and `With` → tables, row scopes, `Filter
 culture-aware numeric text parsing (en-US, fr-FR) → compat cleanup (cascaded out-of-range-literal
 diagnostics, merged operand errors, recovered result types) → `Coalesce` (PR #12; spec archived at
 `docs/milestones/0012-coalesce-milestone-spec.md`) → empty-text-to-Blank in `If` results, table literals and
-`Table(...)` (PR #13; spec `docs/milestones/0013-empty-text-coercion-milestone-spec.md`).
+`Table(...)` (PR #13; spec `docs/milestones/0013-empty-text-coercion-milestone-spec.md`) →
+`IsEmpty` and reusable signature argument-type diagnostics (PR #16; archived spec
+`docs/milestones/0014-isempty-milestone-spec.md`, ADR 0014).
 
 ## Source and test map
 
@@ -49,6 +52,7 @@ diagnostics, merged operand errors, recovered result types) → `Coalesce` (PR #
   precedence); 0011 literal diagnostics and merged errors.
 - ADR 0012 `Coalesce` (accepted; `emptyTextAsBlank` coercion flag, fold-time coercions, record/table
   conformance).
+- ADR 0014 `IsEmpty` (Option A accepted, independently reviewed, implemented, and merged in PR #16).
 - Custom numeric backends must implement `fromScanned` (ADR 0010 migration notes).
 - Evaluation-budget accounting is per evaluated node; exact upstream step counts are not required.
 
@@ -57,19 +61,21 @@ diagnostics, merged operand errors, recovered result types) → `Coalesce` (PR #
 - ADR 0013 (merged in PR #13; the ADR's own acceptance is **not recorded**, see its status): keep `emptyTextAsBlank` and enable it explicitly at
   `If` results, table literals and `Table(...)`; `Conform` stays non-universal.
 
-## Current accepted milestone
+## Most recently completed milestone
 
-- `IsEmpty` Option A is owner-accepted and implemented on the current branch. Independent review is pending;
-  the implementation is not merged. See ADR 0014, `docs/milestones/next.md`, and the per-case evidence
-  in `docs/research/isempty-before-after.md`.
+- `IsEmpty` Option A was accepted by the owner, passed independent review, and merged in PR #16.
+  Final PR head: `d600b74806c0b4fd22ef476cf9da2e78f86b9abb`; merge commit/current main:
+  `4a1b2de18ae0fa323f106526b70e6a365225ac7d`. See ADR 0014, its archived spec, and the per-case
+  evidence in `docs/research/isempty-before-after.md`.
 - The implementation adds reusable function-signature argument-type diagnostics after generic arity checks.
   `IsEmpty` accepts Blank/Table, propagates Error, and checks table row emptiness without visiting rows.
-- Verification on the current branch: 18 `IsEmpty.txt` cases transition from unsupported to pass in both
-  profiles; all 16 reviewed exclusions remain unsupported; zero pass-to-non-pass regressions.
+- Verification at final PR head: build, lint, formatting, and all 1,183 tests passed; both profiles have
+  exactly 18 `IsEmpty.txt` unsupported-to-pass transitions, all 16 reviewed exclusions remain unsupported,
+  and there are zero pass-to-non-pass regressions.
 
 ## Known gaps
 
-- Compat on this branch: `v1-float` 2225 pass / 1 fail / 46 skip / 12687 unsupported;
+- Compat at current main (`4a1b2de`): `v1-float` 2225 pass / 1 fail / 46 skip / 12687 unsupported;
   `v1-decimal` 2755 / 1 / 56 / 13361. The one failure in each is
   `Text_ExcelCompat_PowerFxV1Compat.txt:13` (`Text()` formatting). Remaining unsupported cases are mostly
   unimplemented builtins (e.g. `IfError`, math/text/date functions, `Text`); 16 `IsEmpty` cases remain
@@ -91,6 +97,16 @@ run for `f2fa9d8` on `main` reported success when this handoff was prepared
 (`gh run list --branch main`); no durable run URL was recorded, so treat it as previously
 reported evidence without an independently linked run (find it in the repository's Actions tab
 for commit `f2fa9d8`).
+
+`IsEmpty` (PR #16), exact commits: baseline `984a61b`; implementation and final PR head
+`d600b74806c0b4fd22ef476cf9da2e78f86b9abb`; merge commit/current main
+`4a1b2de18ae0fa323f106526b70e6a365225ac7d`. At the final PR head, build, lint, format, and 1,183
+tests passed; both compatibility profiles had exactly 18 `unsupported` → `pass` transitions in
+`IsEmpty.txt`, zero pass-to-non-pass regressions, and no other verdict changes. Profile totals and
+case-by-case transitions are in `docs/research/isempty-before-after.md`. Independent review passed,
+the owner accepted Option A, and the PR was merged. PR CI passed in run
+[39166838346](https://github.com/rezanid/Power-Fx-Ts/actions/runs/39166838346); CI on the merge commit
+passed in run [39167949555](https://github.com/rezanid/Power-Fx-Ts/actions/runs/39167949555).
 
 `Coalesce` (PR #12), exact commits: implementation `e97aed4`; final PR head `d4df60d` (tests and docs
 only versus `e97aed4`); merge commit `f9df8bb` on `main`. At `d4df60d`: build, lint, format and 927
@@ -120,5 +136,5 @@ owner's behalf by documentation PRs; the owner may update the labels separately.
 
 ## Next
 
-Stop for independent review of the `IsEmpty` draft implementation PR. Do not merge or start another
-milestone until the owner accepts the review outcome.
+`docs/milestones/next.md` proposes `IsBlankOrError` as milestone 0015. It is **PROPOSED**, not
+owner-accepted; do not implement it until the proposal is independently reviewed and accepted.
