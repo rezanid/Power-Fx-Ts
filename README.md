@@ -17,6 +17,22 @@ Fx. Not affiliated with Microsoft. See `docs/PowerFx-TypeScript-Plan.md` for the
 | `docs/adr`, `docs/research` | Decisions and upstream research                      |
 | `upstream`                  | Pinned upstream checkout (git-ignored)               |
 
+## Implementation status
+
+At baseline `7825b2a95d767b07b57327f5928fbbb18af55197` (upstream
+`df4ceba5e08220db670c25afead342ce699c50b5`), the inventory covers 145 unique upstream
+Core-registered function names: 11 implemented in the supported slice, 4 partial, 129 missing,
+and 1 deliberately excluded (`Patch`, a host mutation operation). Upstream has additional
+host/runtime-known names outside this count; see the [full inventory](docs/research/powerfx-coverage-inventory.md)
+for scope, overloads, sources and counting rules.
+
+Compatibility corpus results: `v1-float` 2,228 pass / 1 fail / 46 skip / 12,684 unsupported;
+`v1-decimal` 2,758 / 1 / 56 / 13,358. These are outcomes on a finite, profile-dependent corpus,
+not percentages of language completeness or effort completed. The expression runtime is a useful
+but narrow V1 slice; authoring services are scaffolds, and Monaco/React, PCF, LSP, connectors and
+gateway integrations are not implemented. Future milestone PRs should update the function inventory
+and both profile reports together; do not infer an overall completion percentage.
+
 ## Commands
 
 `pnpm install`, `pnpm build`, `pnpm test`, `pnpm lint`, `pnpm format:check`

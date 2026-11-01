@@ -1,15 +1,15 @@
 # Agent handoff: current state
 
-Current `main` at handoff: `78bd2f7452aa6f14302aaa2b64124b7a5a6259aa` (PR #17 merge). The
-IsBlankOrError implementation baseline is this commit. The IsEmpty implementation baseline was
-`984a61b` (after PR #15).
+Current `main` at handoff: `7825b2a95d767b07b57327f5928fbbb18af55197` (PR #18 merge). IsBlankOrError
+was implemented from `78bd2f7452aa6f14302aaa2b64124b7a5a6259aa` (PR #17 merge); IsEmpty's
+implementation baseline was `984a61b` (after PR #15).
 Previous baselines: `5cf1d25` (PR #13, empty-text coercion), `f9df8bb` (PR #12, `Coalesce`),
 `820c9be` (PR #11, docs only), `f2fa9d8` (PR #10).
 Upstream pin: `df4ceba5e08220db670c25afead342ce699c50b5` (`docs/provenance.md`).
 Profiles: `v1-float` (default, PowerFxV1 + NumberIsFloat) and `v1-decimal` (opt-in
 `new Engine({ numberMode: "decimal" })`), culture en-US, UTC.
 
-## Completed milestones (PRs #2–#10, #12–#13, #16, all merged)
+## Completed milestones (PRs #2–#10, #12–#13, #16, #18, all merged)
 
 Vertical slice (lexer/parser/binder/evaluator, compat runner) → parser parity → typed context and
 schema separation → record literals and `With` → tables, row scopes, `Filter`, `ThisRecord`/`As` →
@@ -54,8 +54,7 @@ diagnostics, merged operand errors, recovered result types) → `Coalesce` (PR #
 - ADR 0012 `Coalesce` (accepted; `emptyTextAsBlank` coercion flag, fold-time coercions, record/table
   conformance).
 - ADR 0014 `IsEmpty` (Option A accepted, independently reviewed, implemented, and merged in PR #16).
-- ADR 0015 `IsBlankOrError` (accepted and implemented on the active milestone branch; awaiting CI
-  and independent review, not merged).
+- ADR 0015 `IsBlankOrError` (accepted, implemented, independently reviewed, and merged in PR #18).
 - Custom numeric backends must implement `fromScanned` (ADR 0010 migration notes).
 - Evaluation-budget accounting is per evaluated node; exact upstream step counts are not required.
 
@@ -64,7 +63,7 @@ diagnostics, merged operand errors, recovered result types) → `Coalesce` (PR #
 - ADR 0013 (merged in PR #13; the ADR's own acceptance is **not recorded**, see its status): keep `emptyTextAsBlank` and enable it explicitly at
   `If` results, table literals and `Table(...)`; `Conform` stays non-universal.
 
-## Most recently completed milestone
+## Earlier completed milestone: `IsEmpty`
 
 - `IsEmpty` Option A was accepted by the owner, passed independent review, and merged in PR #16.
   Final PR head: `d600b74806c0b4fd22ef476cf9da2e78f86b9abb`; merge commit/current main:
@@ -76,7 +75,7 @@ diagnostics, merged operand errors, recovered result types) → `Coalesce` (PR #
   exactly 18 `IsEmpty.txt` unsupported-to-pass transitions, all 16 reviewed exclusions remain unsupported,
   and there are zero pass-to-non-pass regressions.
 
-## Current milestone branch: `IsBlankOrError`
+## Most recently completed milestone: `IsBlankOrError`
 
 - Scope and decision: ADR 0015; archived spec `docs/milestones/0015-isblankorerror-milestone-spec.md`.
 - Pinned upstream source and corpus were checked out at
@@ -88,13 +87,26 @@ diagnostics, merged operand errors, recovered result types) → `Coalesce` (PR #
   `78bd2f7` has three `unsupported` → `pass` transitions per profile, all in `IsBlankOrError.txt`, with
   zero pass-to-non-pass regressions. See `docs/research/isblankorerror-before-after.md`.
 - OptionSet, controls, untyped objects, and host-specific values remain unsupported/out of scope.
-- Current branch `rezanid-milestone-isblankorerror` is unmerged. Run required checks, push/open a draft
-  PR, then wait for CI and independent review.
+- PR #18 merged at `7825b2a95d767b07b57327f5928fbbb18af55197`.
+
+## Coverage and remaining work
+
+- Research inventory: `docs/research/powerfx-coverage-inventory.md` (baseline PR #18 merge,
+  upstream pin `df4ceba5e08220db670c25afead342ce699c50b5`).
+- It counts 145 unique Core-registered upstream function names: 11 implemented in the supported
+  slice, 4 partial, 129 missing, and 1 deliberately excluded (`Patch`). Upstream's additional
+  `OtherKnownFunctions`, overload scope, method and uncertainty are itemized separately.
+- Current reports: `v1-float` 2228 / 1 / 46 / 12684 and `v1-decimal` 2758 / 1 / 56 / 13358
+  (pass / fail / skip / unsupported). Do not treat corpus outcomes as language completeness.
+- Language/runtime foundation is a narrow, tested slice; authoring services are scaffolds; Monaco,
+  React, PCF, LSP, connectors and gateway are not implemented. The report proposes five bounded
+  follow-on milestones; none is accepted or started.
 
 ## Known gaps
 
-- Compat at current main (`4a1b2de`): `v1-float` 2225 pass / 1 fail / 46 skip / 12687 unsupported;
-  `v1-decimal` 2755 / 1 / 56 / 13361. The one failure in each is
+- At the IsEmpty baseline (`4a1b2de`): `v1-float` 2225 pass / 1 fail / 46 skip / 12687 unsupported;
+  `v1-decimal` 2755 / 1 / 56 / 13361. At current main after IsBlankOrError (`7825b2a`), counts are
+  recorded above. The one failure in each profile remains
   `Text_ExcelCompat_PowerFxV1Compat.txt:13` (`Text()` formatting). Remaining unsupported cases are mostly
   unimplemented builtins (e.g. `IfError`, math/text/date functions, `Text`); 16 `IsEmpty` cases remain
   excluded by the accepted milestone scope.
@@ -151,8 +163,10 @@ owner's behalf by documentation PRs; the owner may update the labels separately.
 `docs/research/` (`upstream-inventory.md`, `decimal-before-after.md`, `numeric-text-before-after.md`,
 `compat-cleanup-before-after.md`, `coalesce-before-after.md`, `empty-text-before-after.md`,
 `isempty-before-after.md`, `isblankorerror-before-after.md`, `empty-text-probes/`, `isempty-probes/`,
-`isblankorerror-probes/`); `packages/test-suite/reports/`.
+`isblankorerror-probes/`, `powerfx-coverage-inventory.md`); `packages/test-suite/reports/`.
 
 ## Next
 
-No next milestone has been proposed; do not start another milestone without owner approval.
+The inventory proposes follow-on milestone groupings in
+`docs/research/powerfx-coverage-inventory.md`; none has been selected or accepted. Do not start
+another milestone without owner approval.
