@@ -1,0 +1,6 @@
+Table({z:3,a:1,m:2},{z:6,a:4,m:5})	valid	a,m,z	a,m,z;a,m,z	Table({a:Decimal(1),m:Decimal(2),z:Decimal(3)},{a:Decimal(4),m:Decimal(5),z:Decimal(6)})	-	-
+FirstN(Table({z:3,a:1,m:2},{z:6,a:4,m:5}),1)	valid	a,m,z	a,m,z	Table({a:Decimal(1),m:Decimal(2),z:Decimal(3)})	-	-
+Last(Table({z:3,a:1,m:2},{z:6,a:4,m:5}))	valid	a,m,z	a,m,z	{a:Decimal(4),m:Decimal(5),z:Decimal(6)}	-	-
+LastN(Table({z:3,a:1,m:2},{z:6,a:4,m:5}),1)	valid	a,m,z	a,m,z	Table({a:Decimal(4),m:Decimal(5),z:Decimal(6)})	-	-
+LastN(Table({z:3,a:1,m:2},{z:6,a:4,m:5}),2)	valid	a,m,z	a,m,z;a,m,z	Table({a:Decimal(1),m:Decimal(2),z:Decimal(3)},{a:Decimal(4),m:Decimal(5),z:Decimal(6)})	-	-
+FirstN(Table({z:3,a:1,m:2},{z:6,a:4,m:5}),0)	valid	a,m,z		FirstN(Table({a:Decimal("0"),m:Decimal("0"),z:Decimal("0")}),0)	-	-

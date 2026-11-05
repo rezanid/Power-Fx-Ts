@@ -3,8 +3,8 @@
 Approved implementation baseline: `a5be0240fb52dca0a9efdb17a8e507a221bf2f08` (merged AddColumns,
 PR #24). Upstream pin: `df4ceba5e08220db670c25afead342ce699c50b5`.
 
-Status: **boundary research complete; portable count conversion proposed, awaiting approval**.
-No FirstN, Last, or LastN TypeScript implementation has been started.
+Status: **portable count conversion accepted by the owner after boundary review**.
+The probes were generated and committed before TypeScript selection implementation.
 
 ## Reference environment
 
@@ -80,7 +80,7 @@ with `Number(decimalText)`: the existing Decimal backend already implements the 
 algorithm, including the rounding shown above. The existing engine agrees on those conversion
 examples; no Decimal-backend prerequisite was found.
 
-## Proposed TypeScript rule (not yet accepted)
+## Accepted deterministic TypeScript rule
 
 After existing explicit Float coercion and argument-error handling, for a finite count `value`:
 
@@ -95,9 +95,10 @@ host boundary; numeric/coercion Errors propagate rather than being converted to 
 
 This rule matches all measured reference results, but deliberately chooses deterministic,
 saturating overflow behavior rather than reproducing every older runtime's cast behavior.
-**Owner approval is required for that portability decision before implementing it.** If approved,
-record it in the milestone ADR as a compatibility boundary; do not claim parity with older
-x86/x64 overflow behavior or weaken corpus verdicts for it.
+The owner explicitly approved this deterministic compatibility rule after reviewing the boundary
+findings. It is a compatibility boundary, not a claim of universal .NET parity. Do not claim parity
+with older x86/x64 overflow behavior or weaken corpus verdicts for it. NaN and infinities must
+remain invalid or Error values and must never be normalized into valid counts.
 
 LastN traversal will check cancellation and charge the budget for every source row, without
 copying the entire table just to perform the checks. Selection remains separate from source
@@ -115,7 +116,16 @@ dotnet run --no-build --project tools/reference-harness -- probe float packages/
 dotnet run --no-build --project tools/reference-harness -- probe decimal packages/engine/test/fixtures/table-selection-boundary.expressions.txt > packages/engine/test/fixtures/table-selection-boundary.decimal.tsv
 dotnet run --no-build --project tools/reference-harness -- count-cast-probe float packages/engine/test/fixtures/table-selection-counts.expressions.txt > packages/engine/test/fixtures/table-selection-casts.float.tsv
 dotnet run --no-build --project tools/reference-harness -- count-cast-probe decimal packages/engine/test/fixtures/table-selection-counts.expressions.txt > packages/engine/test/fixtures/table-selection-casts.decimal.tsv
+dotnet run --no-build --project tools/reference-harness -- probe float packages/engine/test/fixtures/table-selection-probe.expressions.txt > packages/engine/test/fixtures/table-selection-probe.float.tsv
+dotnet run --no-build --project tools/reference-harness -- probe decimal packages/engine/test/fixtures/table-selection-probe.expressions.txt > packages/engine/test/fixtures/table-selection-probe.decimal.tsv
+dotnet run --no-build --project tools/reference-harness -- renamecolumns-probe float packages/engine/test/fixtures/table-selection-order.expressions.txt > packages/engine/test/fixtures/table-selection-order.float.tsv
+dotnet run --no-build --project tools/reference-harness -- renamecolumns-probe decimal packages/engine/test/fixtures/table-selection-order.expressions.txt > packages/engine/test/fixtures/table-selection-order.decimal.tsv
 ```
 
 Build before redirecting output. Review regenerated overflow results with their runtime provenance;
 do not overwrite these observations as if a runtime change were a Power Fx source change.
+
+The semantic probes additionally cover count typing/coercion, ordered Error combination, source
+and row Blank/Error behavior, schema unions, no row scope for counts, and diagnostics. The ordering
+probes separately observe schema, direct runtime fields, and serialization using deliberately
+nonalphabetical source fields; `renamecolumns-probe` is reused only as an observation tool.

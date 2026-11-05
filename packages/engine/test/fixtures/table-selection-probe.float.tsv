@@ -1,0 +1,96 @@
+Last([1,2,3])	{Value:Number}	{Value:Number(3)}
+FirstN([1,2,3],0)	Table{Value:Number}	Table[]
+LastN([1,2,3],0)	Table{Value:Number}	Table[]
+FirstN([1,2,3],-1)	Table{Value:Number}	Table[]
+LastN([1,2,3],-1)	Table{Value:Number}	Table[]
+FirstN([1,2,3],-0.9)	Table{Value:Number}	Table[]
+LastN([1,2,3],-0.9)	Table{Value:Number}	Table[]
+FirstN([1,2,3],1.9)	Table{Value:Number}	Table[{Value:Number(1)}]
+LastN([1,2,3],1.9)	Table{Value:Number}	Table[{Value:Number(3)}]
+FirstN([1,2,3],4)	Table{Value:Number}	Table[{Value:Number(1)},{Value:Number(2)},{Value:Number(3)}]
+LastN([1,2,3],4)	Table{Value:Number}	Table[{Value:Number(1)},{Value:Number(2)},{Value:Number(3)}]
+FirstN([1,2,3],Blank())	Table{Value:Number}	Table[]
+LastN([1,2,3],Blank())	Table{Value:Number}	Table[]
+FirstN([1,2,3],If(false,1))	Table{Value:Number}	Table[]
+LastN([1,2,3],If(false,1))	Table{Value:Number}	Table[]
+FirstN([1,2,3],true)	Table{Value:Number}	Table[{Value:Number(1)}]
+LastN([1,2,3],false)	Table{Value:Number}	Table[]
+FirstN([1,2,3],"2.9")	Table{Value:Number}	Table[{Value:Number(1)},{Value:Number(2)}]
+LastN([1,2,3],"2.9")	Table{Value:Number}	Table[{Value:Number(2)},{Value:Number(3)}]
+FirstN([1,2,3],"")	Table{Value:Number}	Table[]
+LastN([1,2,3],"")	Table{Value:Number}	Table[]
+FirstN([1,2,3],"bad")	Table{Value:Number}	Error(InvalidArgument)
+LastN([1,2,3],"bad")	Table{Value:Number}	Error(InvalidArgument)
+FirstN([1,2,3]," ")	Table{Value:Number}	Error(InvalidArgument)
+LastN([1,2,3]," ")	Table{Value:Number}	Error(InvalidArgument)
+FirstN([1,2,3],"1,000")	Table{Value:Number}	Table[{Value:Number(1)},{Value:Number(2)},{Value:Number(3)}]
+LastN([1,2,3],"1,000")	Table{Value:Number}	Table[{Value:Number(1)},{Value:Number(2)},{Value:Number(3)}]
+FirstN([1,2,3],"50%")	Table{Value:Number}	Table[]
+LastN([1,2,3],"$2")	Table{Value:Number}	Table[{Value:Number(2)},{Value:Number(3)}]
+FirstN([1,2,3],"NaN")	Table{Value:Number}	Error(InvalidArgument)
+LastN([1,2,3],"Infinity")	Table{Value:Number}	Error(InvalidArgument)
+FirstN([1,2,3],Float("1e309"))	Table{Value:Number}	Error(InvalidArgument)
+LastN([1,2,3],Float("1e309"))	Table{Value:Number}	Error(InvalidArgument)
+FirstN([1,2,3],1/0)	Table{Value:Number}	Error(Div0)
+LastN([1,2,3],1/0)	Table{Value:Number}	Error(Div0)
+FirstN(Blank(),1/0)	Blank	Error(Div0)
+LastN(Blank(),"bad")	Blank	Error(InvalidArgument)
+FirstN(If(false,[1]),1/0)	Table{Value:Number}	Error(Div0)
+LastN(If(false,[1]),1/0)	Table{Value:Number}	Error(Div0)
+FirstN(If(1/0=0,[1]),"bad")	Table{Value:Number}	Error(Div0+InvalidArgument)
+LastN(If(1/0=0,[1]),"bad")	Table{Value:Number}	Error(Div0+InvalidArgument)
+FirstN(If(Float("bad")=0,[1]),1/0)	Table{Value:Number}	Error(InvalidArgument+Div0)
+LastN(If(Float("bad")=0,[1]),1/0)	Table{Value:Number}	Error(InvalidArgument+Div0)
+FirstN(If(1/0=0,[1]),1/0)	Table{Value:Number}	Error(Div0+Div0)
+LastN(If(1/0=0,[1]),1/0)	Table{Value:Number}	Error(Div0+Div0)
+FirstN([],1/0)	Table{}	Error(Div0)
+LastN([],1/0)	Table{}	Error(Div0)
+FirstN(If(1/0=0,[1]),0)	Table{Value:Number}	Error(Div0)
+LastN(If(1/0=0,[1]),0)	Table{Value:Number}	Error(Div0)
+Last(Blank())	{}	Blank
+FirstN(Blank(),2)	Blank	Blank
+LastN(Blank(),2)	Blank	Blank
+Last(If(false,[1]))	{Value:Number}	Blank
+FirstN(If(false,[1]),2)	Table{Value:Number}	Blank
+LastN(If(false,[1]),2)	Table{Value:Number}	Blank
+Last(If(1/0=0,[1]))	{Value:Number}	Error(Div0)
+Last([])	{}	Blank
+FirstN([],2)	Table{}	Table[]
+LastN([],2)	Table{}	Table[]
+Last(Filter([1,2],false))	{Value:Number}	Blank
+FirstN(Filter([1,2],false),2)	Table{Value:Number}	Table[]
+LastN(Filter([1,2],false),2)	Table{Value:Number}	Table[]
+Last(Table({a:1},If(false,{a:2})))	{a:Number}	Blank
+Last(Table({a:1},If(1/0=0,{a:2})))	{a:Number}	Error(Div0)
+Last([1/0,2])	{Value:Number}	{Value:Number(2)}
+Last([1,1/0])	{Value:Number}	{Value:Error(Div0)}
+FirstN(Table({a:1},If(false,{a:2}),If(1/0=0,{a:3}),{a:4}),3)	Table{a:Number}	Table[{a:Number(1)},Blank,Error(Div0)]
+LastN(Table({a:1},If(false,{a:2}),If(1/0=0,{a:3}),{a:4}),3)	Table{a:Number}	Table[Blank,Error(Div0),{a:Number(4)}]
+FirstN(Table({a:1},If(1/0=0,{a:2})),1)	Table{a:Number}	Table[{a:Number(1)}]
+LastN(Table(If(1/0=0,{a:1}),{a:2}),1)	Table{a:Number}	Table[{a:Number(2)}]
+LastN(Table(If(1/0=0,{a:1}),{a:2}),0)	Table{a:Number}	Table[]
+FirstN(AddColumns([1,2],bad,1/0),0)	Table{Value:Number,bad:Number}	Table[]
+LastN(Table({a:1,b:2},{a:3}),1)	Table{a:Number,b:Number}	Table[{a:Number(3),b:Blank}]
+FirstN(Table({a:1},{a:2,b:3}),1)	Table{a:Number,b:Number}	Table[{a:Number(1),b:Blank}]
+Last(If(false,Table({a:1}),Table({b:2})))	{a:Number,b:Number}	{a:Blank,b:Number(2)}
+FirstN(If(false,Table({a:1}),Table({b:2})),1)	Table{a:Number,b:Number}	Table[{a:Blank,b:Number(2)}]
+LastN(If(false,Table({a:1}),Table({b:2})),1)	Table{a:Number,b:Number}	Table[{a:Blank,b:Number(2)}]
+With({n:2},FirstN([1,2,3],n))	Table{Value:Number}	Table[{Value:Number(1)},{Value:Number(2)}]
+With({Value:2},LastN([1,2,3],Value))	Table{Value:Number}	Table[{Value:Number(2)},{Value:Number(3)}]
+FirstN([1,2,3],Value)		ERRORS:Error 15-20: Name isn't valid. 'Value' isn't recognized.|Error 0-6: The function 'FirstN' has some invalid arguments.
+LastN([1,2,3],ThisRecord.Value)		ERRORS:Error 14-24: Name isn't valid. 'ThisRecord' isn't recognized.|Error 24-30: The '.' operator cannot be used on Error values.|Error 0-5: The function 'LastN' has some invalid arguments.
+Last({a:1})		ERRORS:Error 0-4: The function 'Last' has some invalid arguments.|Error 5-10: Invalid argument type (Record). Expecting a Table value instead.
+FirstN({a:1},2)		ERRORS:Error 0-6: The function 'FirstN' has some invalid arguments.|Error 7-12: Invalid argument type (Record). Expecting a Table value instead.
+LastN(1,2)		ERRORS:Error 0-5: The function 'LastN' has some invalid arguments.|Error 6-7: Invalid argument type (Number). Expecting a Table value instead.
+FirstN([1,2],{a:1})		ERRORS:Error 0-6: The function 'FirstN' has some invalid arguments.|Error 13-18: Invalid argument type (Record). Expecting a Number value instead.
+LastN([1,2],[2])		ERRORS:Error 0-5: The function 'LastN' has some invalid arguments.|Error 12-15: Invalid argument type (Table). Expecting a Number value instead.
+FirstN([1,2],missing)		ERRORS:Error 13-20: Name isn't valid. 'missing' isn't recognized.|Error 0-6: The function 'FirstN' has some invalid arguments.
+LastN(missing,2)		ERRORS:Error 6-13: Name isn't valid. 'missing' isn't recognized.|Error 0-5: The function 'LastN' has some invalid arguments.
+Last()		ERRORS:Error 0-6: Invalid number of arguments: received 0, expected 1.
+Last([1],2)		ERRORS:Error 0-11: Invalid number of arguments: received 2, expected 1.
+FirstN()		ERRORS:Error 0-8: Invalid number of arguments: received 0, expected 1-2.
+LastN()		ERRORS:Error 0-7: Invalid number of arguments: received 0, expected 1-2.
+FirstN([1,2])		ERRORS:Error 0-6: The function 'FirstN' has some invalid arguments.|Error 0-13: Invalid number of arguments: received 1, expected 2.
+LastN([1,2])		ERRORS:Error 0-5: The function 'LastN' has some invalid arguments.|Error 0-12: Invalid number of arguments: received 1, expected 2.
+FirstN([1],2,3)		ERRORS:Error 0-15: Invalid number of arguments: received 3, expected 1-2.
+LastN([1],2,3)		ERRORS:Error 0-14: Invalid number of arguments: received 3, expected 1-2.
