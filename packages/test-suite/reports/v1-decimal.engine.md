@@ -4,8 +4,8 @@
 - Runner: engine
 - Setup: `PowerFxV1,disable:NumberIsFloat,DecimalSupport` (number mode: decimal, culture en-US, time zone UTC)
 - Cases: 22047 total, 5874 not applicable to this profile
-- Pass 2934, fail 1, skip 56, unsupported 13182
-- Unsupported by reason: feature 9970, setup 3212, profile 0
+- Pass 3002, fail 1, skip 56, unsupported 13114
+- Unsupported by reason: feature 9902, setup 3212, profile 0
 - Passing compile-error cases whose error set differs from upstream's (strict diagnostic, not a verdict): 38
 - Passing numeric cases accepted only by upstream's float tolerance (diagnostic, not a verdict): 7
 
@@ -14,12 +14,12 @@
 | Abs.txt | 22 | 0 | 0 | 0 | 22 |
 | AbsT.txt | 7 | 0 | 0 | 0 | 7 |
 | Acumatica.txt | 13 | 5 | 0 | 0 | 8 |
-| AddColumns_SupportColumnNamesAsIdentifiers.txt | 32 | 30 | 0 | 0 | 2 |
+| AddColumns_SupportColumnNamesAsIdentifiers.txt | 32 | 31 | 0 | 0 | 1 |
 | AddColumns_SupportColumnNamesAsIdentifiers_NumberIsFloatDisabled.txt | 4 | 4 | 0 | 0 | 0 |
 | AndOrCases.txt | 127 | 28 | 0 | 0 | 99 |
-| ArgCoercion.txt | 17 | 1 | 0 | 0 | 16 |
+| ArgCoercion.txt | 17 | 4 | 0 | 0 | 13 |
 | ArgCoercionT.txt | 5 | 0 | 0 | 0 | 5 |
-| ArgCoercion_V1Compat.txt | 8 | 0 | 0 | 0 | 8 |
+| ArgCoercion_V1Compat.txt | 8 | 1 | 0 | 0 | 7 |
 | AsType_UO.txt | 46 | 0 | 0 | 0 | 46 |
 | AsType_UO_TimeZone_Seattle.txt | 7 | 0 | 0 | 0 | 7 |
 | BasicCoercion.txt | 45 | 19 | 0 | 0 | 26 |
@@ -45,7 +45,7 @@
 | Count.txt | 26 | 0 | 0 | 0 | 26 |
 | CountA.txt | 35 | 0 | 0 | 0 | 35 |
 | CountIf.txt | 18 | 0 | 0 | 0 | 18 |
-| CountRows.txt | 35 | 21 | 0 | 0 | 14 |
+| CountRows.txt | 35 | 22 | 0 | 0 | 13 |
 | Date.txt | 152 | 0 | 0 | 0 | 152 |
 | DateAdd.txt | 115 | 0 | 0 | 0 | 115 |
 | DateAdd_StronglyTypedBuiltinEnums.txt | 7 | 0 | 0 | 0 | 7 |
@@ -80,29 +80,29 @@
 | DecimalOverflow.txt | 65 | 44 | 0 | 0 | 21 |
 | Distinct.txt | 29 | 0 | 0 | 0 | 29 |
 | Distinct_V1Compat.txt | 2 | 0 | 0 | 0 | 2 |
-| DropColumns_SupportColumnNamesAsIdentifiers.txt | 21 | 19 | 0 | 0 | 2 |
+| DropColumns_SupportColumnNamesAsIdentifiers.txt | 21 | 21 | 0 | 0 | 0 |
 | EDateEOMonth.txt | 182 | 0 | 0 | 0 | 182 |
 | EncodeHTML.txt | 13 | 0 | 0 | 0 | 13 |
 | EncodeURL.txt | 20 | 0 | 0 | 0 | 20 |
 | EndsWith.txt | 51 | 0 | 0 | 0 | 51 |
 | Equality.txt | 28 | 20 | 0 | 0 | 8 |
 | Error.txt | 87 | 5 | 0 | 0 | 82 |
-| ErrorKinds.txt | 206 | 15 | 0 | 0 | 191 |
+| ErrorKinds.txt | 206 | 18 | 0 | 0 | 188 |
 | ErrorKinds_ColumnNamesAsIdentifiers.txt | 1 | 1 | 0 | 0 | 0 |
 | Escaping.txt | 4 | 3 | 0 | 0 | 1 |
 | Exp.txt | 26 | 0 | 0 | 0 | 26 |
 | ExpT.txt | 6 | 0 | 0 | 0 | 6 |
-| FilterFunctions.txt | 20 | 14 | 0 | 0 | 6 |
+| FilterFunctions.txt | 20 | 18 | 0 | 0 | 2 |
 | FilterFunctions_V1Compat.txt | 1 | 1 | 0 | 0 | 0 |
 | FilterLookUp_TwoArg_V1Compat.txt | 10 | 10 | 0 | 0 | 0 |
 | Find.txt | 99 | 0 | 0 | 0 | 99 |
 | FindT.txt | 67 | 0 | 0 | 0 | 67 |
 | Find_StronglyTypedBuiltinEnums.txt | 10 | 0 | 0 | 0 | 10 |
-| FirstLast.txt | 28 | 12 | 0 | 0 | 16 |
-| FirstLastN.txt | 24 | 0 | 0 | 0 | 24 |
-| FirstLastN_RequiredSecondArgument.txt | 4 | 0 | 0 | 0 | 4 |
-| FirstLastN_V1Compat.txt | 2 | 0 | 0 | 0 | 2 |
-| FirstLast_V1Compat.txt | 6 | 3 | 0 | 0 | 3 |
+| FirstLast.txt | 28 | 26 | 0 | 0 | 2 |
+| FirstLastN.txt | 24 | 22 | 0 | 0 | 2 |
+| FirstLastN_RequiredSecondArgument.txt | 4 | 4 | 0 | 0 | 0 |
+| FirstLastN_V1Compat.txt | 2 | 2 | 0 | 0 | 0 |
+| FirstLast_V1Compat.txt | 6 | 6 | 0 | 0 | 0 |
 | Float.txt | 254 | 241 | 0 | 0 | 13 |
 | ForAll.txt | 42 | 0 | 0 | 0 | 42 |
 | ForAll_V1Compat.txt | 1 | 0 | 0 | 0 | 1 |
@@ -117,7 +117,7 @@
 | Int.txt | 19 | 0 | 0 | 0 | 19 |
 | IntT.txt | 4 | 0 | 0 | 0 | 4 |
 | IsBlankOrError.txt | 3 | 3 | 0 | 0 | 0 |
-| IsEmpty.txt | 34 | 20 | 0 | 0 | 14 |
+| IsEmpty.txt | 34 | 21 | 0 | 0 | 13 |
 | IsMatch.txt | 52 | 0 | 0 | 0 | 52 |
 | IsMatch_V1Enabled.txt | 16 | 0 | 0 | 0 | 16 |
 | IsNumeric.txt | 16 | 0 | 0 | 0 | 16 |
@@ -191,7 +191,7 @@
 | Record.txt | 10 | 10 | 0 | 0 | 0 |
 | Remove.txt | 33 | 0 | 0 | 0 | 33 |
 | Remove_V1Compact.txt | 4 | 0 | 0 | 0 | 4 |
-| RenameColumns_SupportColumnNamesAsIdentifiers.txt | 29 | 28 | 0 | 0 | 1 |
+| RenameColumns_SupportColumnNamesAsIdentifiers.txt | 29 | 29 | 0 | 0 | 0 |
 | Replace.txt | 66 | 0 | 0 | 0 | 66 |
 | ReservedKeyword.txt | 24 | 24 | 0 | 0 | 0 |
 | ReservedKeyword_Disabled.txt | 12 | 0 | 0 | 0 | 12 |
@@ -209,7 +209,7 @@
 | Sequence.txt | 11 | 0 | 0 | 0 | 11 |
 | Sequence_Decimal.txt | 4 | 0 | 0 | 0 | 4 |
 | Sequence_Decimal_DVDecimal.txt | 2 | 0 | 0 | 0 | 2 |
-| ShowColumns.txt | 24 | 21 | 0 | 0 | 3 |
+| ShowColumns.txt | 24 | 24 | 0 | 0 | 0 |
 | ShowColumns_WithMutationSetup.txt | 2 | 0 | 0 | 0 | 2 |
 | Shuffle.txt | 11 | 0 | 0 | 0 | 11 |
 | SingleColumnTableCoercion.txt | 211 | 0 | 0 | 0 | 211 |
@@ -232,7 +232,7 @@
 | SubstituteT.txt | 28 | 0 | 0 | 0 | 28 |
 | Summarize.txt | 46 | 0 | 0 | 0 | 46 |
 | Table.txt | 35 | 29 | 0 | 0 | 6 |
-| TableCoercion.txt | 27 | 17 | 0 | 0 | 10 |
+| TableCoercion.txt | 27 | 20 | 0 | 0 | 7 |
 | TableCoercion_StronglyTypedEnum.txt | 3 | 0 | 0 | 0 | 3 |
 | TableMathfuncs.txt | 9 | 0 | 0 | 0 | 9 |
 | TableNodes.txt | 20 | 14 | 0 | 0 | 6 |

@@ -19,10 +19,10 @@ Fx. Not affiliated with Microsoft. See `docs/PowerFx-TypeScript-Plan.md` for the
 
 ## Implementation status
 
-This candidate snapshot is based on main baseline `3d26204f5c970141a449cc596cf7969b6a18aaa9`
-(after merged RenameColumns; upstream `df4ceba5e08220db670c25afead342ce699c50b5`). The inventory
-covers 145 unique upstream Core-registered function names: 11 implemented in the supported slice,
-11 partial, 122 missing, and 1 deliberately excluded (`Patch`, a host mutation operation).
+This candidate snapshot is based on main baseline `a5be0240fb52dca0a9efdb17a8e507a221bf2f08`
+(after merged AddColumns; upstream `df4ceba5e08220db670c25afead342ce699c50b5`). The inventory
+covers 145 unique upstream Core-registered function names: 14 implemented in the supported slice,
+11 partial, 119 missing, and 1 deliberately excluded (`Patch`, a host mutation operation).
 `Len`, `Lower`, and `Upper` implement scalar overloads while their table overloads remain unsupported.
 `AddColumns`, `DropColumns`, `ShowColumns`, and `RenameColumns` support statically typed Record/Table
 values; dynamic schemas and host-specific data sources remain outside those slices. Upstream has
@@ -34,9 +34,13 @@ report](docs/research/powerfx-coverage-inventory.md) for sources, counting rules
 and overload limitations.
 The `RenameColumns` slice deliberately rejects repeated old names even after a no-op; pinned
 reference check success and its interpreter exception are recorded separately, not counted as parity.
+`FirstN`, `Last`, and `LastN` support static tables. Counts explicitly coerce to Float, truncate
+toward zero, saturate to Int32, then treat nonpositive values as zero. This deterministic rule was
+verified on .NET 10.0.14/macOS Arm64, not every older runtime; see
+[ADR 0021](docs/adr/0021-table-selection.md) for portability and inherited field-order limits.
 
-Compatibility corpus results: `v1-float` 2,398 pass / 1 fail / 46 skip / 12,514 unsupported;
-`v1-decimal` 2,934 / 1 / 56 / 13,182. These are outcomes on a finite, profile-dependent corpus,
+Compatibility corpus results: `v1-float` 2,466 pass / 1 fail / 46 skip / 12,446 unsupported;
+`v1-decimal` 3,002 / 1 / 56 / 13,114. These are outcomes on a finite, profile-dependent corpus,
 not percentages of language completeness or effort completed. The expression runtime is a useful
 but narrow V1 slice; authoring services are scaffolds, and Monaco/React, PCF, LSP, connectors and
 gateway integrations are not implemented. Future milestone PRs should update the function inventory

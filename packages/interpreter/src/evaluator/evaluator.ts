@@ -149,12 +149,17 @@ class Evaluator implements EvaluationContext {
         return this.addColumns(node);
       case "Filter":
         return this.filter(node);
-      case "First": {
+      case "First":
+      case "Last": {
         const source = this.evaluate(node.source);
         if (source.kind === "Error" || source.kind === "Blank") return source;
-        if (source.kind !== "Table") throw new Error("First source is not a table.");
-        return source.rows[0] ?? blank;
+        if (source.kind !== "Table") throw new Error(`${node.kind} source is not a table.`);
+        if (node.kind === "Last" && source.rows.length > 0) this.tick();
+        return source.rows[node.kind === "First" ? 0 : source.rows.length - 1] ?? blank;
       }
+      case "FirstN":
+      case "LastN":
+        return this.selectRows(node);
       case "CountRows": {
         const source = this.evaluate(node.source);
         if (source.kind === "Error") return source;
@@ -315,6 +320,41 @@ class Evaluator implements EvaluationContext {
     const value = backend.fromNumber(n);
     if (value === undefined) return error("Numeric");
     return decimalResult ? decimal(value) : number(value);
+  }
+
+  private selectRows(node: Extract<BoundNode, { kind: "FirstN" | "LastN" }>): FormulaValue {
+    const source = this.evaluate(node.source);
+    let count = this.evaluate(node.count);
+    if (count.kind === "Blank") count = number(this.numerics.float.zero);
+    if (count.kind === "Number" && !Number.isFinite(this.numerics.float.toNumber(count.value))) {
+      count = error("Numeric");
+    }
+    if (source.kind === "Error" || count.kind === "Error") return combineErrors(source, count);
+    if (source.kind === "Blank") return source;
+    if (source.kind !== "Table" || count.kind !== "Number") {
+      throw new Error(`${node.kind} requires a table and Float count.`);
+    }
+
+    // Deterministic saturating Int32 conversion; see ADR 0021 for runtime-dependent upstream casts.
+    const int32Count = Math.max(
+      -2147483648,
+      Math.min(2147483647, Math.trunc(this.numerics.float.toNumber(count.value))),
+    );
+    const length = Math.min(source.rows.length, Math.max(0, int32Count));
+    const start = node.kind === "FirstN" ? 0 : source.rows.length - length;
+    const rows: TableRow[] = [];
+    if (node.kind === "LastN") {
+      for (let index = 0; index < source.rows.length; index++) {
+        this.tick();
+        if (index >= start) rows.push(source.rows[index]!);
+      }
+    } else {
+      for (let index = 0; index < length; index++) {
+        this.tick();
+        rows.push(source.rows[index]!);
+      }
+    }
+    return table(rows);
   }
 
   /**

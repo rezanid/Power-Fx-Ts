@@ -4,6 +4,7 @@
 //   dotnet run --project tools/reference-harness -- eval <float|decimal> <file>   one expression per line
 //   dotnet run --project tools/reference-harness -- generate <out.json>           differential fixture
 //   dotnet run --project tools/reference-harness -- registry <out.tsv>            pinned Core registry inventory
+//   dotnet run --project tools/reference-harness -- count-cast-probe <float|decimal> <file>   Float counts and runtime Int32 casts
 //
 // "float" = RecalcEngine(numberIsFloat: true) (profile v1-float); "decimal" = default PowerFxV1
 // (profile v1-decimal). Both use Features.PowerFxV1 and en-US.
@@ -563,6 +564,29 @@ static class P
         if (args.Length >= 2 && args[0] == "generate-text") return GenerateText(args[1]);
         if (args.Length >= 2 && args[0] == "registry") return GenerateRegistry(args[1]);
         if (args.Length >= 3 && args[0] == "case-map") return CaseMapCommand(args[1], args[2]);
+        if (args.Length >= 3 && args[0] == "count-cast-probe")
+        {
+            Console.WriteLine($"# Framework: {System.Runtime.InteropServices.RuntimeInformation.FrameworkDescription}");
+            Console.WriteLine($"# Runtime version: {Environment.Version}");
+            Console.WriteLine($"# OS: {System.Runtime.InteropServices.RuntimeInformation.OSDescription}");
+            Console.WriteLine($"# Process architecture: {System.Runtime.InteropServices.RuntimeInformation.ProcessArchitecture}");
+            Console.WriteLine($"# Profile: {args[1]}, Features.PowerFxV1, en-US, UTC");
+            Console.WriteLine("expression\tfloat\tunchecked-int32");
+            var e = Engine(args[1]);
+            var opts = new ParserOptions { Culture = new CultureInfo("en-US"), NumberIsFloat = args[1] == "float" };
+            foreach (var line in File.ReadAllLines(args[2]).Where(l => l.Trim() != ""))
+            {
+                var expression = $"Float({line})";
+                var check = e.Check(expression, opts);
+                if (!check.IsSuccess)
+                    throw new InvalidDataException($"Count-cast probe did not compile: {expression}");
+                var value = e.EvalAsync(expression, System.Threading.CancellationToken.None, opts).GetAwaiter().GetResult();
+                if (value is not NumberValue number)
+                    throw new InvalidDataException($"Count-cast probe did not produce Float: {expression}");
+                Console.WriteLine($"{line}\t{number.Value.ToString("R", Inv)}\t{unchecked((int)number.Value)}");
+            }
+            return 0;
+        }
         if (args.Length >= 3 && args[0] == "check")
         {
             // Full compile-error list, as the corpus `Errors:` expectation prints it.

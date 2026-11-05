@@ -1,0 +1,6 @@
+Table({z:3,a:1,m:2},{z:6,a:4,m:5})
+FirstN(Table({z:3,a:1,m:2},{z:6,a:4,m:5}),1)
+Last(Table({z:3,a:1,m:2},{z:6,a:4,m:5}))
+LastN(Table({z:3,a:1,m:2},{z:6,a:4,m:5}),1)
+LastN(Table({z:3,a:1,m:2},{z:6,a:4,m:5}),2)
+FirstN(Table({z:3,a:1,m:2},{z:6,a:4,m:5}),0)

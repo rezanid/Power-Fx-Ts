@@ -1,0 +1,6 @@
+Table({z:3,a:1,m:2},{z:6,a:4,m:5})	valid	a,m,z	a,m,z;a,m,z	Table({a:Float(1),m:Float(2),z:Float(3)},{a:Float(4),m:Float(5),z:Float(6)})	-	-
+FirstN(Table({z:3,a:1,m:2},{z:6,a:4,m:5}),1)	valid	a,m,z	a,m,z	Table({a:Float(1),m:Float(2),z:Float(3)})	-	-
+Last(Table({z:3,a:1,m:2},{z:6,a:4,m:5}))	valid	a,m,z	a,m,z	{a:Float(4),m:Float(5),z:Float(6)}	-	-
+LastN(Table({z:3,a:1,m:2},{z:6,a:4,m:5}),1)	valid	a,m,z	a,m,z	Table({a:Float(4),m:Float(5),z:Float(6)})	-	-
+LastN(Table({z:3,a:1,m:2},{z:6,a:4,m:5}),2)	valid	a,m,z	a,m,z;a,m,z	Table({a:Float(1),m:Float(2),z:Float(3)},{a:Float(4),m:Float(5),z:Float(6)})	-	-
+FirstN(Table({z:3,a:1,m:2},{z:6,a:4,m:5}),0)	valid	a,m,z		FirstN(Table({a:Float("0"),m:Float("0"),z:Float("0")}),0)	-	-
