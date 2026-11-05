@@ -1,7 +1,9 @@
 # Agent handoff: current state
 
-Current `main` baseline before AddColumns: `3d26204f5c970141a449cc596cf7969b6a18aaa9` (RenameColumns
-merge commit, PR #23). The current AddColumns review branch is based on this commit.
+Current `main` baseline: `a5be0240fb52dca0a9efdb17a8e507a221bf2f08` (AddColumns merge commit,
+PR #24). FirstN/Last/LastN scope is approved subject to count-boundary resolution; implementation
+has not started. See `docs/research/table-selection-probes/README.md` for the pending portability
+decision.
 IsBlankOrError was implemented from `78bd2f7452aa6f14302aaa2b64124b7a5a6259aa` (PR #17 merge); IsEmpty's
 implementation baseline was `984a61b` (after PR #15).
 Previous baselines: `5cf1d25` (PR #13, empty-text coercion), `f9df8bb` (PR #12, `Coalesce`),
@@ -10,7 +12,7 @@ Upstream pin: `df4ceba5e08220db670c25afead342ce699c50b5` (`docs/provenance.md`).
 Profiles: `v1-float` (default, PowerFxV1 + NumberIsFloat) and `v1-decimal` (opt-in
 `new Engine({ numberMode: "decimal" })`), culture en-US, UTC.
 
-## Completed milestones (PRs #2–#10, #12–#13, #16, #18, #20–#23, all merged)
+## Completed milestones (PRs #2–#10, #12–#13, #16, #18, #20–#24, all merged)
 
 Vertical slice (lexer/parser/binder/evaluator, compat runner) → parser parity → typed context and
 schema separation → record literals and `With` → tables, row scopes, `Filter`, `ThisRecord`/`As` →
@@ -23,7 +25,8 @@ diagnostics, merged operand errors, recovered result types) → `Coalesce` (PR #
 `docs/milestones/0014-isempty-milestone-spec.md`, ADR 0014) → scalar `Len`, `Lower`, and `Upper`
 (PR #20; ADR 0016) → `DropColumns` for static Record/Table values (PR #21; ADR 0017) →
 `ShowColumns` for static Record/Table values (PR #22; ADR 0018) → `RenameColumns` for static
-Record/Table values (PR #23; ADR 0019).
+Record/Table values (PR #23; ADR 0019) → `AddColumns` for static Record/Table values
+(PR #24; ADR 0020).
 
 ## Source and test map
 
@@ -231,7 +234,7 @@ owner's behalf by documentation PRs; the owner may update the labels separately.
 - PR #22 merged at `fbbb6c786aba882479806c2e0c36150cf451b156`; its final head is
   `c7ed36da01e1098c4ae41acb333e9bc5aa92d122`.
 
-## Current approved milestone: AddColumns
+## Merged milestone: AddColumns
 
 - Scope and decision: ADR 0020; `docs/milestones/0020-addcolumns-milestone-spec.md`.
 - Baseline: `3d26204f5c970141a449cc596cf7969b6a18aaa9`; upstream pin unchanged.
@@ -244,10 +247,22 @@ owner's behalf by documentation PRs; the owner may update the labels separately.
   per-case compatibility evidence is in `docs/research/addcolumns-before-after.md`.
 - Float has 41 and decimal 45 `unsupported` → `pass` transitions, zero pass-to-non-pass
   regressions, and no other verdict changes. The existing Text failure remains unchanged.
-- Draft PR and final-commit CI remain pending; do not merge or begin another milestone.
+- PR #24 merged at `a5be0240fb52dca0a9efdb17a8e507a221bf2f08`; final head
+  `f3757ad8583ecd0c9d697ce730e7739657116485` passed CI before merge.
+
+## Current approved scope: FirstN / Last / LastN
+
+- Baseline: `a5be0240fb52dca0a9efdb17a8e507a221bf2f08`; upstream pin unchanged.
+- Scope approved subject to resolving count overflow before implementation.
+- Both-profile boundary probes and direct casts were generated on .NET 10.0.14, macOS Arm64.
+  The measured runtime saturates Float-to-Int32 conversion; documented older x86/x64 runtimes
+  differ. A deterministic saturating TypeScript rule is proposed but not yet approved.
+- Evidence, exact runtime and regeneration:
+  `docs/research/table-selection-probes/README.md`. No TypeScript selection implementation
+  has been started. Do not implement the portability choice without owner approval.
 
 ## Next
 
-No subsequent milestone has been selected or accepted. The remaining candidates in
+No milestone after FirstN/Last/LastN has been selected or accepted. The remaining candidates in
 `docs/research/powerfx-coverage-inventory.md` are proposals only; do not start another milestone
 without owner approval.

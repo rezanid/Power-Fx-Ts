@@ -30,6 +30,11 @@ exception deviation.
 pre-implementation `AddColumns` probes, including original-row scope, aliases, outer-variable
 shadowing, left-to-right additions, skipped Blank/Error rows, invalid dotted identifiers and
 independently captured schema/runtime/serialization ordering.
+`docs/research/table-selection-probes/` and
+`packages/engine/test/fixtures/table-selection-{boundary,casts}.*.tsv` contain pre-implementation
+FirstN/LastN count-boundary probes. They separately capture formula results and direct unchecked
+Int32 casts with exact runtime metadata. Overflow observations are runtime-dependent; the proposed
+portable conversion rule is not yet accepted. No upstream implementation code is copied.
 `packages/interpreter/src/functions/text-case-map.ts` is generated from installed .NET
 `CultureInfo("en-US").TextInfo` behavior used by pinned `LibraryText.cs`; the harness verifies every
 Unicode scalar before generation and when validating the committed snapshot. No upstream
