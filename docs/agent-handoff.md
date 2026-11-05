@@ -1,8 +1,8 @@
 # Agent handoff: current state
 
-Current `main` baseline: `a5be0240fb52dca0a9efdb17a8e507a221bf2f08` (AddColumns merge commit,
-PR #24). FirstN/Last/LastN is implemented and awaiting independent review. The owner accepted
-the deterministic saturating count rule after boundary research; see ADR 0021 and
+Current `main` baseline: `3f6d86bf3f597a38f190c94518aed69b4e0b2d92` (FirstN/Last/LastN merge commit,
+PR #25). PR #25 is merged; its final-head CI build passed. The owner accepted the deterministic
+saturating count rule after boundary research; see ADR 0021 and
 `docs/research/table-selection-probes/README.md` for its runtime portability boundary.
 IsBlankOrError was implemented from `78bd2f7452aa6f14302aaa2b64124b7a5a6259aa` (PR #17 merge); IsEmpty's
 implementation baseline was `984a61b` (after PR #15).
@@ -12,7 +12,7 @@ Upstream pin: `df4ceba5e08220db670c25afead342ce699c50b5` (`docs/provenance.md`).
 Profiles: `v1-float` (default, PowerFxV1 + NumberIsFloat) and `v1-decimal` (opt-in
 `new Engine({ numberMode: "decimal" })`), culture en-US, UTC.
 
-## Completed milestones (PRs #2–#10, #12–#13, #16, #18, #20–#24, all merged)
+## Completed milestones (PRs #2–#10, #12–#13, #16, #18, #20–#25, all merged)
 
 Vertical slice (lexer/parser/binder/evaluator, compat runner) → parser parity → typed context and
 schema separation → record literals and `With` → tables, row scopes, `Filter`, `ThisRecord`/`As` →
@@ -258,7 +258,7 @@ owner's behalf by documentation PRs; the owner may update the labels separately.
 - PR #24 merged at `a5be0240fb52dca0a9efdb17a8e507a221bf2f08`; final head
   `f3757ad8583ecd0c9d697ce730e7739657116485` passed CI before merge.
 
-## Implemented milestone, review pending: FirstN / Last / LastN
+## Merged milestone: FirstN / Last / LastN (PR #25)
 
 - Baseline: `a5be0240fb52dca0a9efdb17a8e507a221bf2f08`; upstream pin unchanged.
 - Scope and decision: ADR 0021; `docs/milestones/0021-table-selection-milestone-spec.md`.
@@ -279,7 +279,16 @@ owner's behalf by documentation PRs; the owner may update the labels separately.
   no other verdict changes. See `docs/research/table-selection-before-after.md` and its case TSV.
 - Local build, all 1,877 tests, lint, formatting and both profile runs completed on 2026-11-05 (UTC).
   The checked-in reference harness builds and all ten probe outputs regenerate exactly.
-  Final-head CI and independent review remain delivery gates; do not infer owner acceptance.
+- PR #25 merged at `3f6d86bf3f597a38f190c94518aed69b4e0b2d92`; final head
+  `0ae2895e50c816f8b7dbd6e0c725cb76c34da93b` passed the CI build.
+
+## Localization architecture review
+
+- Research-only review at the PR #25 baseline; no implementation or culture expansion was made.
+  No immediate refactor is required. Additional cultures, localized formatting and configurable
+  defaults remain unimplemented and unapproved.
+- Findings, source references and constraints:
+  [`docs/research/localization-extensibility.md`](research/localization-extensibility.md).
 
 ## Next
 
