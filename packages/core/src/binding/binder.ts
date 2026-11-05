@@ -780,6 +780,99 @@ class Binder {
   }
 
   /**
+   * Added-column expressions all bind against the original source row. New fields affect only the
+   * output type; they do not become visible to later expressions in the same call.
+   */
+  private bindAddColumns(node: CallNode): BoundNode {
+    const sourceArg = node.args[0];
+    if (node.args.length < 3 || sourceArg === undefined) {
+      node.args.forEach((arg) => this.bindExpression(arg));
+      this.report(DiagnosticCodes.BadArityMinimum, node.span, [String(node.args.length), "3"]);
+      return this.invalid(node.span);
+    }
+
+    const { source, alias } = this.bindScopeSource(sourceArg);
+    if (source.type.kind === "Unknown") {
+      this.report(DiagnosticCodes.InvalidFunctionArguments, node.callee.span, ["AddColumns"]);
+      return this.invalid(node.span);
+    }
+    if (source.type.kind !== "Record" && source.type.kind !== "Table") {
+      this.report(DiagnosticCodes.BadType, sourceArg.span);
+      this.report(DiagnosticCodes.InvalidFunctionArguments, node.callee.span, ["AddColumns"]);
+      for (const argument of node.args.slice(1)) this.bindExpression(argument);
+      return this.invalid(node.span);
+    }
+
+    const sourceFields =
+      source.type.kind === "Record" ? source.type.fields : source.type.row.fields;
+    const scopeId = this.nextScopeId++;
+    const hasOddArity = node.args.length % 2 === 1;
+    if (!hasOddArity) {
+      this.report(DiagnosticCodes.BadArity, node.span, [String(node.args.length), "an odd number"]);
+    }
+
+    const additions: { name: string; expression: BoundNode }[] = [];
+    const outputFields = [...sourceFields];
+    const newNames = new Set<string>();
+    let valid = true;
+    let invalidExpression = false;
+
+    for (let index = 1; index < node.args.length; index += 2) {
+      const nameArg = node.args[index];
+      if (nameArg === undefined) continue;
+
+      let name: string | undefined;
+      if (nameArg.kind === "DottedName") {
+        this.bindExpression(nameArg);
+        valid = false;
+      } else if (nameArg.kind !== "Name") {
+        this.report(DiagnosticCodes.ExpectedIdentifierName, nameArg.span);
+        valid = false;
+      } else {
+        name = nameArg.name;
+        if (sourceFields.some((field) => field.name === name)) {
+          this.report(DiagnosticCodes.ColumnAlreadyExists, nameArg.span, [name], "warning");
+          valid = false;
+        } else if (newNames.has(name)) {
+          this.report(DiagnosticCodes.ColumnNameConflict, nameArg.span, [name], "warning");
+          valid = false;
+        } else {
+          newNames.add(name);
+        }
+      }
+
+      const expressionArg = node.args[index + 1];
+      if (expressionArg === undefined) continue;
+      const expression = this.withScope(scopeId, sourceFields, alias, () =>
+        this.bindExpression(expressionArg),
+      );
+      if (expression.type.kind === "Unknown") {
+        valid = false;
+        invalidExpression = true;
+      }
+      if (name !== undefined && expression.type.kind !== "Unknown") {
+        additions.push({ name, expression });
+        outputFields.push({ name, type: expression.type });
+      }
+    }
+
+    if (!valid) {
+      if (!invalidExpression || source.type.kind === "Table") {
+        this.report(DiagnosticCodes.InvalidFunctionArguments, node.callee.span, ["AddColumns"]);
+      }
+      return this.invalid(node.span);
+    }
+    if (!hasOddArity) return this.invalid(node.span);
+
+    outputFields.sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0));
+    const type: FormulaType =
+      source.type.kind === "Record"
+        ? { kind: "Record", fields: outputFields }
+        : { kind: "Table", row: { kind: "Record", fields: outputFields } };
+    return { kind: "AddColumns", scopeId, source, additions, span: node.span, type };
+  }
+
+  /**
    * `LookUp` source that is not a table. Pinned corpus (`Lookup_V1Compat.txt`): an untyped Blank
    * gives `ErrBadType` on the argument plus the invalid-arguments error; other types give only
    * `ErrBadType`. (`Filter` differs, see `bindFilter`.)
@@ -1359,6 +1452,7 @@ class Binder {
       if (name === "DropColumns") return this.bindDropColumns(node);
       if (name === "ShowColumns") return this.bindShowColumns(node);
       if (name === "RenameColumns") return this.bindRenameColumns(node);
+      if (name === "AddColumns") return this.bindAddColumns(node);
       if (name === "Table") return this.bindTableCall(node);
       if (name === "First") return this.bindFirst(node);
       if (name === "CountRows") return this.bindCountRows(node);

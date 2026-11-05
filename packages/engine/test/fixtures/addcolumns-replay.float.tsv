@@ -1,0 +1,32 @@
+{z:3,a:1,m:2}	{a:Number,m:Number,z:Number}	{a:Number(1),m:Number(2),z:Number(3)}
+Table({z:3,a:1,m:2})	Table{a:Number,m:Number,z:Number}	Table[{a:Number(1),m:Number(2),z:Number(3)}]
+AddColumns({z:3,a:1,m:2},c,1,b,2)	{a:Number,b:Number,c:Number,m:Number,z:Number}	{a:Number(1),b:Number(2),c:Number(1),m:Number(2),z:Number(3)}
+AddColumns(Table({z:3,a:1,m:2},{z:6,a:4,m:5}),c,1,b,2)	Table{a:Number,b:Number,c:Number,m:Number,z:Number}	Table[{a:Number(1),b:Number(2),c:Number(1),m:Number(2),z:Number(3)},{a:Number(4),b:Number(2),c:Number(1),m:Number(5),z:Number(6)}]
+AddColumns(Table({a:2}),b,ThisRecord.a)	Table{a:Number,b:Number}	Table[{a:Number(2),b:Number(2)}]
+AddColumns(Table({a:2}) As row,b,row.a)	Table{a:Number,b:Number}	Table[{a:Number(2),b:Number(2)}]
+AddColumns(Table({a:2}) As row,b,ThisRecord.a)		ERRORS:Error 33-43: Name isn't valid. 'ThisRecord' isn't recognized.|Error 43-45: The '.' operator cannot be used on Error values.|Error 0-10: The function 'AddColumns' has some invalid arguments.
+With({a:90},AddColumns(Table({a:2}),b,a))	Table{a:Number,b:Number}	Table[{a:Number(2),b:Number(2)}]
+With({a:90},AddColumns(Table({a:2}) As row,b,row.a,c,a))	Table{a:Number,b:Number,c:Number}	Table[{a:Number(2),b:Number(2),c:Number(90)}]
+With({x:99},AddColumns([{Value:1}],x,Value+1,y,x+Value))	Table{Value:Number,x:Number,y:Number}	Table[{Value:Number(1),x:Number(2),y:Number(100)}]
+AddColumns({a:1},first,1/0,second,42)	{a:Number,first:Number,second:Number}	{a:Number(1),first:Error(Div0),second:Number(42)}
+AddColumns(Table({a:1}),first,1/0,second,42)	Table{a:Number,first:Number,second:Number}	Table[{a:Number(1),first:Error(Div0),second:Number(42)}]
+AddColumns([],skipped,1/0)	Table{skipped:Number}	Table[]
+AddColumns(If(false,Table({a:1})),b,1/0)	Table{a:Number,b:Number}	Blank
+AddColumns(If(1/0=0,Table({a:1})),b,1/0)	Table{a:Number,b:Number}	Error(Div0)
+AddColumns(If(false,{a:1}),b,1/0)	{a:Number,b:Number}	Blank
+AddColumns(If(1/0=0,{a:1}),b,1/0)	{a:Number,b:Number}	Error(Div0)
+AddColumns(Table({a:1},If(false,{a:2})),b,1/0)	Table{a:Number,b:Number}	Table[{a:Number(1),b:Error(Div0)},Blank]
+AddColumns(Table({a:1},If(1/0=0,{a:2})),b,1/0)	Table{a:Number,b:Number}	Table[{a:Number(1),b:Error(Div0)},Error(Div0)]
+AddColumns({a:1},A,2)	{A:Number,a:Number}	{A:Number(2),a:Number(1)}
+AddColumns({a:1},a,2)		ERRORS:Error 0-10: The function 'AddColumns' has some invalid arguments.
+AddColumns({a:1},x,1,y,2,x,3)		ERRORS:Error 0-10: The function 'AddColumns' has some invalid arguments.
+AddColumns({a:1},'b.d',2)	{a:Number,b.d:Number}	{a:Number(1),b.d:Number(2)}
+AddColumns(Table({a:1,b:{c:3}}),b.d,a+1)		ERRORS:Error 32-33: Name isn't valid. 'b' isn't recognized.|Error 33-35: The '.' operator cannot be used on Error values.|Error 0-10: The function 'AddColumns' has some invalid arguments.
+AddColumns({a:1,b:{c:3}},b.d,a+1)		ERRORS:Error 25-26: Name isn't valid. 'b' isn't recognized.|Error 26-28: The '.' operator cannot be used on Error values.|Error 0-10: The function 'AddColumns' has some invalid arguments.
+AddColumns(Table({a:1,b:{c:3}}),'b.d',a+1)	Table{a:Number,b:{c:Number},b.d:Number}	Table[{a:Number(1),b:{c:Number(3)},b.d:Number(2)}]
+AddColumns({a:1,b:{c:3}},'b.d',a+1)	{a:Number,b:{c:Number},b.d:Number}	{a:Number(1),b:{c:Number(3)},b.d:Number(2)}
+AddColumns({a:1},"b",2)		ERRORS:Error 17-20: Expected identifier name|Error 0-10: The function 'AddColumns' has some invalid arguments.
+AddColumns({a:1},3,2)		ERRORS:Error 17-18: Expected identifier name|Error 0-10: The function 'AddColumns' has some invalid arguments.
+AddColumns({a:1})		ERRORS:Error 0-17: Invalid number of arguments: received 1, expected 3 or more.
+AddColumns({a:1},x,1,y)		ERRORS:Error 0-23: Invalid number of arguments: received 4, expected an odd number.
+AddColumns(1,x,1)		ERRORS:Error 11-12: Invalid argument type.|Error 0-10: The function 'AddColumns' has some invalid arguments.|Error 13-14: Name isn't valid. 'x' isn't recognized.

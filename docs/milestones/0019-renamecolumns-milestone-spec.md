@@ -1,6 +1,6 @@
 # Milestone 0019: `RenameColumns` for statically supported Record/Table values
 
-Status: **implemented; independent review pending**. Baseline:
+Status: **implemented, independently reviewed, and merged in PR #23**. Baseline:
 `fbbb6c786aba882479806c2e0c36150cf451b156`. Upstream pin:
 `df4ceba5e08220db670c25afead342ce699c50b5`. See ADR 0019.
 

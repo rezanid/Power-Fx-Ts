@@ -142,6 +142,19 @@ export type BoundNode =
       }[];
     })
   /**
+   * `AddColumns(source, name, expression, ...)`: each expression is bound to the original row
+   * scope. Added fields are output only and are not visible to later expressions in the call.
+   */
+  | (BoundBase & {
+      readonly kind: "AddColumns";
+      readonly scopeId: number;
+      readonly source: BoundNode;
+      readonly additions: readonly {
+        readonly name: string;
+        readonly expression: BoundNode;
+      }[];
+    })
+  /**
    * `Filter(source, predicate)`: evaluates `predicate` once per row with that row bound as the
    * scope `scopeId`. A Blank source gives Blank; an Error predicate yields an error row.
    */

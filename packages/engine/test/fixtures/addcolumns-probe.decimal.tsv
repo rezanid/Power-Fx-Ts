@@ -1,0 +1,32 @@
+{z:3,a:1,m:2}	valid	a,m,z	a,m,z	{a:Decimal(1),m:Decimal(2),z:Decimal(3)}	-	-
+Table({z:3,a:1,m:2})	valid	a,m,z	a,m,z	Table({a:Decimal(1),m:Decimal(2),z:Decimal(3)})	-	-
+AddColumns({z:3,a:1,m:2},c,1,b,2)	valid	a,b,c,m,z	a,b,c,m,z	{a:Decimal(1),b:Decimal(2),c:Decimal(1),m:Decimal(2),z:Decimal(3)}	-	-
+AddColumns(Table({z:3,a:1,m:2},{z:6,a:4,m:5}),c,1,b,2)	valid	a,b,c,m,z	a,b,c,m,z;a,b,c,m,z	Table({a:Decimal(1),b:Decimal(2),c:Decimal(1),m:Decimal(2),z:Decimal(3)},{a:Decimal(4),b:Decimal(2),c:Decimal(1),m:Decimal(5),z:Decimal(6)})	-	-
+AddColumns(Table({a:2}),b,ThisRecord.a)	valid	a,b	a,b	Table({a:Decimal(2),b:Decimal(2)})	-	-
+AddColumns(Table({a:2}) As row,b,row.a)	valid	a,b	a,b	Table({a:Decimal(2),b:Decimal(2)})	-	-
+AddColumns(Table({a:2}) As row,b,ThisRecord.a)	invalid				Critical@33-43:Name isn't valid. 'ThisRecord' isn't recognized.|Critical@43-45:The '.' operator cannot be used on Error values.|Severe@0-10:The function 'AddColumns' has some invalid arguments.	-
+With({a:90},AddColumns(Table({a:2}),b,a))	valid	a,b	a,b	Table({a:Decimal(2),b:Decimal(2)})	-	-
+With({a:90},AddColumns(Table({a:2}) As row,b,row.a,c,a))	valid	a,b,c	a,b,c	Table({a:Decimal(2),b:Decimal(2),c:Decimal(90)})	-	-
+With({x:99},AddColumns([{Value:1}],x,Value+1,y,x+Value))	valid	Value,x,y	Value,x,y	Table({Value:Decimal(1),x:Decimal(2),y:Decimal(100)})	-	-
+AddColumns({a:1},first,1/0,second,42)	valid	a,first,second	a,first,second	{a:Decimal(1),first:Error({Kind:ErrorKind.Div0, Message:"Invalid operation: division by zero."}),second:Decimal(42)}	-	-
+AddColumns(Table({a:1}),first,1/0,second,42)	valid	a,first,second	a,first,second	Table({a:Decimal(1),first:Error({Kind:ErrorKind.Div0, Message:"Invalid operation: division by zero."}),second:Decimal(42)})	-	-
+AddColumns([],skipped,1/0)	valid	skipped		FirstN(Table({skipped:Decimal("0")}),0)	-	-
+AddColumns(If(false,Table({a:1})),b,1/0)	valid	a,b	BlankValue	If(false,Table({a:Decimal("0"),b:Decimal("0")}))	-	-
+AddColumns(If(1/0=0,Table({a:1})),b,1/0)	valid	a,b	ErrorValue	Error({Kind:ErrorKind.Div0, Message:"Invalid operation: division by zero."})	-	-
+AddColumns(If(false,{a:1}),b,1/0)	valid	a,b	BlankValue	If(false,{a:Decimal("0"),b:Decimal("0")})	-	-
+AddColumns(If(1/0=0,{a:1}),b,1/0)	valid	a,b	ErrorValue	Error({Kind:ErrorKind.Div0, Message:"Invalid operation: division by zero."})	-	-
+AddColumns(Table({a:1},If(false,{a:2})),b,1/0)	valid	a,b	a,b;Blank	Table({a:Decimal(1),b:Error({Kind:ErrorKind.Div0, Message:"Invalid operation: division by zero."})},If(false,{a:Decimal("0")}))	-	-
+AddColumns(Table({a:1},If(1/0=0,{a:2})),b,1/0)	valid	a,b	a,b;ErrorValue	Table({a:Decimal(1),b:Error({Kind:ErrorKind.Div0, Message:"Invalid operation: division by zero."})},Error({Kind:ErrorKind.Div0, Message:"Invalid operation: division by zero."}))	-	-
+AddColumns({a:1},A,2)	valid	A,a	A,a	{A:Decimal(2),a:Decimal(1)}	-	-
+AddColumns({a:1},a,2)	invalid				Moderate@17-18:A column named 'a' already exists.|Severe@0-10:The function 'AddColumns' has some invalid arguments.	-
+AddColumns({a:1},x,1,y,2,x,3)	invalid				Moderate@25-26:Column name conflict for 'x'.|Severe@0-10:The function 'AddColumns' has some invalid arguments.	-
+AddColumns({a:1},'b.d',2)	valid	a,b.d	a,b.d	{a:Decimal(1),'b.d':Decimal(2)}	-	-
+AddColumns(Table({a:1,b:{c:3}}),b.d,a+1)	invalid				Critical@32-33:Name isn't valid. 'b' isn't recognized.|Critical@33-35:The '.' operator cannot be used on Error values.|Severe@0-10:The function 'AddColumns' has some invalid arguments.	-
+AddColumns({a:1,b:{c:3}},b.d,a+1)	invalid				Critical@25-26:Name isn't valid. 'b' isn't recognized.|Critical@26-28:The '.' operator cannot be used on Error values.|Severe@0-10:The function 'AddColumns' has some invalid arguments.	-
+AddColumns(Table({a:1,b:{c:3}}),'b.d',a+1)	valid	a,b,b.d	a,b,b.d	Table({a:Decimal(1),b:{c:Decimal(3)},'b.d':Decimal(2)})	-	-
+AddColumns({a:1,b:{c:3}},'b.d',a+1)	valid	a,b,b.d	a,b,b.d	{a:Decimal(1),b:{c:Decimal(3)},'b.d':Decimal(2)}	-	-
+AddColumns({a:1},"b",2)	invalid				Severe@17-20:Expected identifier name|Severe@0-10:The function 'AddColumns' has some invalid arguments.	-
+AddColumns({a:1},3,2)	invalid				Severe@17-18:Expected identifier name|Severe@0-10:The function 'AddColumns' has some invalid arguments.	-
+AddColumns({a:1})	invalid				Critical@0-17:Invalid number of arguments: received 1, expected 3 or more.	-
+AddColumns({a:1},x,1,y)	invalid				Severe@0-23:Invalid number of arguments: received 4, expected an odd number.	-
+AddColumns(1,x,1)	invalid				Severe@11-12:Invalid argument type.|Critical@0-10:The function 'AddColumns' has some invalid arguments.|Critical@13-14:Name isn't valid. 'x' isn't recognized.	-

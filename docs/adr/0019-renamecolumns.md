@@ -1,6 +1,6 @@
 # ADR 0019: `RenameColumns` for static record/table values
 
-Status: **accepted and implemented; independent review pending**. Baseline:
+Status: **accepted, independently reviewed, and merged in PR #23**. Baseline:
 `fbbb6c786aba882479806c2e0c36150cf451b156`. Upstream pin:
 `df4ceba5e08220db670c25afead342ce699c50b5`.
 
