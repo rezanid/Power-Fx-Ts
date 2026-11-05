@@ -1,0 +1,101 @@
+Abs(-2.2)	Number	Number(2.2)
+Int(-2.2)	Number	Number(-3)
+Trunc(-2.2)	Number	Number(-2)
+Trunc(-12.345,2)	Number	Number(-12.34)
+Trunc(-1234.5,-2)	Number	Number(-1200)
+Trunc(14.123456,1.67)	Number	Number(14.1)
+Trunc(14.123456,-1.67)	Number	Number(10)
+Abs(Float("-0"))&""	Text	"0"
+Int(Float("-0"))&""	Text	"-0"
+Trunc(Float("-0"))&""	Text	"0"
+Trunc(Float("-0.1"))&""	Text	"-0"
+Trunc(Float("-0"),16)&""	Text	"-0"
+Trunc(Float("-0"),-16)&""	Text	"-0"
+Int(Float("-4.9406564584124654e-324"))	Number	Number(-1)
+Trunc(Float("-4.9406564584124654e-324"))&""	Text	"-0"
+Abs(Float("-1.7976931348623157e308"))	Number	Number(1.7976931348623157E+308)
+Int(Float("-1.7976931348623157e308"))	Number	Number(-1.7976931348623157E+308)
+Trunc(Float("1.7976931348623157e308"),-1)	Number	Number(1.7976931348623157E+308)
+Trunc(Float("0.29"),2)	Number	Number(0.28)
+Trunc(Decimal("0.29"),2)	Decimal	Decimal(0.29)
+Trunc(Float("1.2345678901234567"),15)	Number	Number(1.234567890123456)
+Trunc(Float("1.2345678901234567"),16)	Number	Number(1.2345678901234567)
+Trunc(Float("12.345"),-15)	Number	Number(0)
+Trunc(Float("12.345"),-16)	Number	Number(12.345)
+Trunc(Float("99999999999999980000"),-15)	Number	Number(9.9999E+19)
+Trunc(Float("1e20"),-15)	Number	Number(1E+20)
+Trunc(Float("100000000000000020000"),-15)	Number	Number(1.0000000000000002E+20)
+Trunc(Float("-99999999999999980000"),-15)	Number	Number(-9.9999E+19)
+Trunc(Float("-1e20"),-15)	Number	Number(-1E+20)
+Trunc(Float("-100000000000000020000"),-15)	Number	Number(-1.0000000000000002E+20)
+Abs(Decimal("-79228162514264337593543950335"))	Decimal	Decimal(79228162514264337593543950335)
+Int(Decimal("-79228162514264337593543950335"))	Decimal	Decimal(-79228162514264337593543950335)
+Trunc(Decimal("-79228162514264337593543950335"))	Decimal	Decimal(-79228162514264337593543950335)
+Trunc(Decimal("79228162514264337593543950335"),-28)	Decimal	Decimal(70000000000000000000000000000)
+Trunc(Decimal("-79228162514264337593543950335"),-28)	Decimal	Decimal(-70000000000000000000000000000)
+Int(Decimal("-7922816251426433759354395033.5"))	Decimal	Decimal(-7922816251426433759354395034)
+Int(Decimal("-0.0000000000000000000000000001"))	Decimal	Decimal(-1)
+Trunc(Decimal("-0.0000000000000000000000000001"))	Decimal	Decimal(0)
+Trunc(Decimal("1.2345678901234567890123456789"),28)	Decimal	Decimal(1.2345678901234567890123456789)
+Trunc(Decimal("1.2345678901234567890123456789"),27)	Decimal	Decimal(1.234567890123456789012345678)
+Trunc(Decimal("12.345"),29)	Decimal	Decimal(12.345)
+Trunc(Decimal("12.345"),-29)	Decimal	Decimal(0)
+Trunc(Decimal("1.9999999999999999999999999999"),-1)	Decimal	Decimal(0)
+Trunc(Float("1.234"),Decimal("1.9999999999999998"))	Number	Number(1.23)
+Trunc(Float("1.234"),Decimal("1.9999999999999997"))	Number	Number(1.2)
+Trunc(Decimal("1.234"),Decimal("1.9999999999999998"))	Decimal	Decimal(1.23)
+Trunc(Decimal("1.234"),Decimal("1.9999999999999997"))	Decimal	Decimal(1.2)
+Trunc(1.234,Float("2147483646.9"))	Number	Number(1.234)
+Trunc(1.234,Float("2147483647"))	Number	Number(1.234)
+Trunc(1.234,Float("2147483647.9"))	Number	Number(1.234)
+Trunc(1.234,Float("2147483648"))	Number	Number(1.234)
+Trunc(1.234,Float("-2147483647.9"))	Number	Number(1.234)
+Trunc(1.234,Float("-2147483648"))	Number	Number(1.234)
+Trunc(1.234,Float("-2147483648.9"))	Number	Number(1.234)
+Trunc(1.234,Float("-2147483649"))	Number	Number(1.234)
+Trunc(1.234,Float("1e308"))	Number	Number(1.234)
+Trunc(1.234,Float("-1e308"))	Number	Number(1.234)
+Trunc(1.234,Decimal("2147483647.9999997"))	Number	Number(1.234)
+Trunc(1.234,Decimal("2147483647.9999998"))	Number	Number(1.234)
+Trunc(1.234,Decimal("-2147483648.0000002"))	Number	Number(1.234)
+Trunc(1.234,Decimal("-2147483648.0000003"))	Number	Number(1.234)
+Abs(Blank())	Number	Number(0)
+Int(Blank())	Number	Number(0)
+Trunc(Blank())	Number	Number(0)
+Trunc(Blank(),Blank())	Number	Number(0)
+Abs(If(false,Float(1)))	Number	Number(0)
+Int(If(false,Decimal(1)))	Decimal	Decimal(0)
+Trunc(If(false,Float(1)),If(false,Float(1)))	Number	Number(0)
+Trunc(If(false,Decimal(1)),Blank())	Decimal	Decimal(0)
+Abs("")	Number	Number(0)
+Int(" ")	Number	Error(InvalidArgument)
+Trunc("-10.5678","2")	Number	Number(-10.56)
+Abs(true)	Number	Number(1)
+Int(false)	Number	Number(0)
+Trunc(true,true)	Number	Number(1)
+Abs("bad")	Number	Error(InvalidArgument)
+Int("true")	Number	Error(InvalidArgument)
+Trunc("true","false")	Number	Error(InvalidArgument+InvalidArgument)
+Abs(1/0)	Number	Error(Div0)
+Int(1/0)	Number	Error(Div0)
+Trunc(1/0)	Number	Error(Div0)
+Trunc(Blank(),1/0)	Number	Error(Div0)
+Trunc(1/0,"bad")	Number	Error(Div0+InvalidArgument)
+Trunc("bad",1/0)	Number	Error(InvalidArgument+Div0)
+Trunc(1/0,1/0)	Number	Error(Div0+Div0)
+Abs(Float("NaN"))	Number	Error(InvalidArgument)
+Int(Float("1e309"))	Number	Error(InvalidArgument)
+Trunc(Decimal("1.23"),Float("Infinity"))	Decimal	Error(InvalidArgument)
+Abs({a:1})		ERRORS:Error 0-3: The function 'Abs' has some invalid arguments.|Error 4-9: Invalid argument type (Record). Expecting a Number value instead.
+Int({a:1})		ERRORS:Error 0-3: The function 'Int' has some invalid arguments.|Error 4-9: Invalid argument type (Record). Expecting a Number value instead.
+Trunc({a:1})		ERRORS:Error 0-5: The function 'Trunc' has some invalid arguments.|Error 6-11: Invalid argument type (Record). Expecting a Number value instead.
+Trunc(1,{a:1})		ERRORS:Error 0-5: The function 'Trunc' has some invalid arguments.|Error 8-13: Invalid argument type (Record). Expecting a Number value instead.
+Abs()		ERRORS:Error 0-5: Invalid number of arguments: received 0, expected 1.
+Int(1,2)		ERRORS:Error 0-8: Invalid number of arguments: received 2, expected 1.
+Trunc()		ERRORS:Error 0-7: Invalid number of arguments: received 0, expected 1-2.
+Trunc(1,2,3)		ERRORS:Error 0-12: Invalid number of arguments: received 3, expected 1-2.
+Abs(1E400)		ERRORS:Error 4-9: Numeric value is too large.|Error 0-3: The function 'Abs' has some invalid arguments.|Error 4-9: Invalid argument type (Error). Expecting a Number value instead.
+Int(1E400)		ERRORS:Error 4-9: Numeric value is too large.|Error 0-3: The function 'Int' has some invalid arguments.|Error 4-9: Invalid argument type (Error). Expecting a Number value instead.
+Trunc(1E400,1E400)		ERRORS:Error 6-11: Numeric value is too large.|Error 12-17: Numeric value is too large.|Error 0-5: The function 'Trunc' has some invalid arguments.|Error 6-11: Invalid argument type (Error). Expecting a Number value instead.|Error 12-17: Invalid argument type (Error). Expecting a Number value instead.
+Abs(missing)		ERRORS:Error 4-11: Name isn't valid. 'missing' isn't recognized.|Error 0-3: The function 'Abs' has some invalid arguments.
+Trunc(1,missing)		ERRORS:Error 8-15: Name isn't valid. 'missing' isn't recognized.|Error 0-5: The function 'Trunc' has some invalid arguments.
