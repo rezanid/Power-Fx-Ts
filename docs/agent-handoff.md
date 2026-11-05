@@ -1,9 +1,9 @@
 # Agent handoff: current state
 
 Current `main` baseline: `a5be0240fb52dca0a9efdb17a8e507a221bf2f08` (AddColumns merge commit,
-PR #24). FirstN/Last/LastN scope is approved subject to count-boundary resolution; implementation
-has not started. See `docs/research/table-selection-probes/README.md` for the pending portability
-decision.
+PR #24). FirstN/Last/LastN is implemented and awaiting independent review. The owner accepted
+the deterministic saturating count rule after boundary research; see ADR 0021 and
+`docs/research/table-selection-probes/README.md` for its runtime portability boundary.
 IsBlankOrError was implemented from `78bd2f7452aa6f14302aaa2b64124b7a5a6259aa` (PR #17 merge); IsEmpty's
 implementation baseline was `984a61b` (after PR #15).
 Previous baselines: `5cf1d25` (PR #13, empty-text coercion), `f9df8bb` (PR #12, `Coalesce`),
@@ -30,25 +30,25 @@ Record/Table values (PR #23; ADR 0019) → `AddColumns` for static Record/Table 
 
 ## Source and test map
 
-| Area                                           | Location                                                                                                                                     |
-| ---------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| Lexer, parser, syntax nodes                    | `packages/core/src/lexer/`, `packages/core/src/parser/`, `packages/core/src/syntax/`                                                         |
-| Binder (types, scopes, coercions, diagnostics) | `packages/core/src/binding/binder.ts`                                                                                                        |
-| Bound tree                                     | `packages/core/src/ir/bound-tree.ts`                                                                                                         |
-| Types, schema, record/table unions             | `packages/core/src/types/{formula-type,schema,union}.ts`                                                                                     |
-| Builtin signatures and known names             | `packages/core/src/functions/{signature,known-names}.ts`                                                                                     |
-| Diagnostics and message templates              | `packages/core/src/diagnostics/diagnostic.ts`                                                                                                |
-| Numeric text scanning (core side) / Decimal    | `packages/core/src/numeric/{text-number,decimal}.ts`                                                                                         |
-| Numeric backends (float/decimal), text parsing | `packages/interpreter/src/numeric/{backend,decimal,text-number}.ts`                                                                          |
-| Values (frozen)                                | `packages/interpreter/src/values/values.ts`                                                                                                  |
-| Evaluator, coercion                            | `packages/interpreter/src/evaluator/{evaluator,coercion}.ts`                                                                                 |
-| Builtin implementations                        | `packages/interpreter/src/functions/builtins.ts`; frozen casing data in `text-case-map.ts`                                                   |
-| Runtime context and host-input validation      | `packages/interpreter/src/runtime/{context,validate}.ts`                                                                                     |
-| Engine facade (`check`, `evaluate`)            | `packages/engine/src/engine.ts` (`dependencies/`, `recalc/` are empty placeholders)                                                          |
-| Compat runner, profiles, reports               | `packages/test-suite/src/*.ts`; committed `packages/test-suite/reports/*.engine.md`                                                          |
-| Behavior tests and reference fixtures          | `packages/engine/test/*.test.ts`, `packages/engine/test/fixtures/*.json`                                                                     |
-| Executable C# reference                        | `tools/reference-harness/Program.cs` (`eval`, `check`, `generate`, `parse`, `probe`, `showcolumns-probe`, `renamecolumns-probe`, `case-map`) |
-| Language service, serialization, test-runner   | `packages/language-service`, `packages/serialization`, `packages/test-runner`: skeletal, not yet in scope                                    |
+| Area                                           | Location                                                                                                                                                         |
+| ---------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Lexer, parser, syntax nodes                    | `packages/core/src/lexer/`, `packages/core/src/parser/`, `packages/core/src/syntax/`                                                                             |
+| Binder (types, scopes, coercions, diagnostics) | `packages/core/src/binding/binder.ts`                                                                                                                            |
+| Bound tree                                     | `packages/core/src/ir/bound-tree.ts`                                                                                                                             |
+| Types, schema, record/table unions             | `packages/core/src/types/{formula-type,schema,union}.ts`                                                                                                         |
+| Builtin signatures and known names             | `packages/core/src/functions/{signature,known-names}.ts`                                                                                                         |
+| Diagnostics and message templates              | `packages/core/src/diagnostics/diagnostic.ts`                                                                                                                    |
+| Numeric text scanning (core side) / Decimal    | `packages/core/src/numeric/{text-number,decimal}.ts`                                                                                                             |
+| Numeric backends (float/decimal), text parsing | `packages/interpreter/src/numeric/{backend,decimal,text-number}.ts`                                                                                              |
+| Values (frozen)                                | `packages/interpreter/src/values/values.ts`                                                                                                                      |
+| Evaluator, coercion                            | `packages/interpreter/src/evaluator/{evaluator,coercion}.ts`                                                                                                     |
+| Builtin implementations                        | `packages/interpreter/src/functions/builtins.ts`; frozen casing data in `text-case-map.ts`                                                                       |
+| Runtime context and host-input validation      | `packages/interpreter/src/runtime/{context,validate}.ts`                                                                                                         |
+| Engine facade (`check`, `evaluate`)            | `packages/engine/src/engine.ts` (`dependencies/`, `recalc/` are empty placeholders)                                                                              |
+| Compat runner, profiles, reports               | `packages/test-suite/src/*.ts`; committed `packages/test-suite/reports/*.engine.md`                                                                              |
+| Behavior tests and reference fixtures          | `packages/engine/test/*.test.ts`, `packages/engine/test/fixtures/*.json`                                                                                         |
+| Executable C# reference                        | `tools/reference-harness/Program.cs` (`eval`, `check`, `generate`, `parse`, `probe`, `showcolumns-probe`, `renamecolumns-probe`, `count-cast-probe`, `case-map`) |
+| Language service, serialization, test-runner   | `packages/language-service`, `packages/serialization`, `packages/test-runner`: skeletal, not yet in scope                                                        |
 
 ## Accepted decisions (details in ADRs)
 
@@ -63,6 +63,10 @@ Record/Table values (PR #23; ADR 0019) → `AddColumns` for static Record/Table 
 - ADR 0014 `IsEmpty` (Option A accepted, independently reviewed, implemented, and merged in PR #16).
 - ADR 0015 `IsBlankOrError` (accepted, implemented, independently reviewed, and merged in PR #18).
 - ADR 0019 `RenameColumns` (accepted, implemented, and merged in PR #23).
+- ADR 0020 `AddColumns` (accepted, implemented, and merged in PR #24).
+- ADR 0021 `FirstN`/`Last`/`LastN` (accepted and implemented; independent review pending).
+  Count overflow deterministically saturates after explicit Float coercion and truncation; this
+  matches the measured .NET 10.0.14/macOS Arm64 runtime, not all older .NET runtimes.
 - Custom numeric backends must implement `fromScanned` (ADR 0010 migration notes).
 - Evaluation-budget accounting is per evaluated node; exact upstream step counts are not required.
 
@@ -100,14 +104,14 @@ Record/Table values (PR #23; ADR 0019) → `AddColumns` for static Record/Table 
 ## Coverage and remaining work
 
 - Research inventory: `docs/research/powerfx-coverage-inventory.md` (source baseline before this
-  milestone is `3d26204f5c970141a449cc596cf7969b6a18aaa9`, upstream pin
+  milestone is `a5be0240fb52dca0a9efdb17a8e507a221bf2f08`, upstream pin
   `df4ceba5e08220db670c25afead342ce699c50b5`).
-- The current candidate inventory counts 145 unique Core-registered upstream function names: 11
-  implemented in the supported slice, 11 partial, 122 missing, and 1 deliberately excluded
+- The current candidate inventory counts 145 unique Core-registered upstream function names: 14
+  implemented in the supported slice, 11 partial, 119 missing, and 1 deliberately excluded
   (`Patch`). Upstream's additional
   `OtherKnownFunctions`, overload scope, method and uncertainty are itemized separately.
-- Candidate reports after AddColumns: `v1-float` 2398 / 1 / 46 / 12514 and `v1-decimal`
-  2934 / 1 / 56 / 13182 (pass / fail / skip / unsupported). Do not treat corpus outcomes as
+- Candidate reports after FirstN/Last/LastN: `v1-float` 2466 / 1 / 46 / 12446 and `v1-decimal`
+  3002 / 1 / 56 / 13114 (pass / fail / skip / unsupported). Do not treat corpus outcomes as
   language completeness.
 - Language/runtime foundation is a narrow, tested slice; authoring services are scaffolds; Monaco,
   React, PCF, LSP, connectors and gateway are not implemented. The remaining bounded candidates are
@@ -127,6 +131,10 @@ Record/Table values (PR #23; ADR 0019) → `AddColumns` for static Record/Table 
 - Float `^` last-ulp differences; `If(1E100, …)` condition diagnostic; aggregate (record/table)
   equality; locales beyond en-US/fr-FR; culture-specific formatting; option sets, untyped objects,
   dates/times, behavior functions, delegation, connectors, editor UI.
+- Existing source Record/Table construction can retain insertion-order runtime fields where the
+  reference enumerates canonically. Table selectors preserve source records; their schemas and
+  compatibility serialization remain canonical. Independent ordering observations are recorded
+  in `docs/research/table-selection-probes/README.md`; no direct field-enumeration parity is claimed.
 
 ## Verification evidence
 
@@ -250,16 +258,28 @@ owner's behalf by documentation PRs; the owner may update the labels separately.
 - PR #24 merged at `a5be0240fb52dca0a9efdb17a8e507a221bf2f08`; final head
   `f3757ad8583ecd0c9d697ce730e7739657116485` passed CI before merge.
 
-## Current approved scope: FirstN / Last / LastN
+## Implemented milestone, review pending: FirstN / Last / LastN
 
 - Baseline: `a5be0240fb52dca0a9efdb17a8e507a221bf2f08`; upstream pin unchanged.
-- Scope approved subject to resolving count overflow before implementation.
-- Both-profile boundary probes and direct casts were generated on .NET 10.0.14, macOS Arm64.
-  The measured runtime saturates Float-to-Int32 conversion; documented older x86/x64 runtimes
-  differ. A deterministic saturating TypeScript rule is proposed but not yet approved.
-- Evidence, exact runtime and regeneration:
-  `docs/research/table-selection-probes/README.md`. No TypeScript selection implementation
-  has been started. Do not implement the portability choice without owner approval.
+- Scope and decision: ADR 0021; `docs/milestones/0021-table-selection-milestone-spec.md`.
+- Supports static tables. PowerFxV1 requires explicit N counts; Float coercion applies in both
+  profiles. Source evaluates before count, errors combine in argument order, and typed Blank
+  sources propagate after count evaluation. Source schemas and selected rows/fields are preserved.
+- The owner approved explicit Float coercion, truncation toward zero, Int32 saturation and
+  nonpositive counts to zero. Both-profile boundary probes and direct casts were generated on
+  .NET 10.0.14/macOS Arm64 before implementation. This matches that runtime; documented older
+  x86/x64 overflow behavior differs and is not claimed as parity.
+- LastN traverses/checks every row including zero count without a full-table temporary copy.
+  FirstN checks selected prefix rows; Last directly accesses the final row. Source construction
+  remains eager, and selected immutable rows are shared without reevaluating row expressions.
+- Reference evidence, exact runtime and regeneration:
+  `docs/research/table-selection-probes/README.md`. TypeScript source runtime field enumeration
+  has an inherited ordering difference, documented separately from schema and serialization.
+- Both profiles have 68 `unsupported` → `pass` transitions, zero pass-to-non-pass regressions, and
+  no other verdict changes. See `docs/research/table-selection-before-after.md` and its case TSV.
+- Local build, all 1,877 tests, lint, formatting and both profile runs completed on 2026-11-05 (UTC).
+  The checked-in reference harness builds and all ten probe outputs regenerate exactly.
+  Final-head CI and independent review remain delivery gates; do not infer owner acceptance.
 
 ## Next
 

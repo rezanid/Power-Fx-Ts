@@ -1,6 +1,7 @@
 # ADR 0020: `AddColumns` for static record/table values
 
-Status: **accepted and implemented; independent review pending**. Baseline:
+Status: **accepted, implemented and merged in PR #24** at
+`a5be0240fb52dca0a9efdb17a8e507a221bf2f08`. Baseline:
 `3d26204f5c970141a449cc596cf7969b6a18aaa9`. Upstream pin:
 `df4ceba5e08220db670c25afead342ce699c50b5`.
 

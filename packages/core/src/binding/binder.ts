@@ -951,12 +951,68 @@ class Binder {
     return { kind: "ConvertNumber", to, operand, locale, span: node.span, type: TARGET_TYPES[to] };
   }
 
-  /** `First(table)`, upstream `FirstLastFunction`: the result is a row of the table's type. */
-  private bindFirst(node: CallNode): BoundNode {
+  /** Upstream `FirstLastFunction`: the result is a row of the table's type. */
+  private bindFirst(node: CallNode, kind: "First" | "Last" = "First"): BoundNode {
     const source = this.bindTableArgument(node);
     if (source === undefined) return this.invalid(node.span);
-    const type: FormulaType = source.type.kind === "Table" ? source.type.row : source.type;
-    return { kind: "First", source, span: node.span, type };
+    const type: FormulaType =
+      source.type.kind === "Table"
+        ? source.type.row
+        : kind === "Last"
+          ? { kind: "Record", fields: [] }
+          : source.type;
+    return { kind, source, span: node.span, type };
+  }
+
+  private bindFirstLastN(node: CallNode, kind: "FirstN" | "LastN"): BoundNode {
+    const args = node.args.map((arg) => this.bindExpression(arg));
+    if (args.length < 1 || args.length > 2) {
+      this.report(DiagnosticCodes.BadArity, node.span, [String(args.length), "1-2"]);
+      return this.invalid(node.span);
+    }
+    const source = args[0]!;
+    const count = args[1];
+    const issues: { span: Span; expected: string; actual: string }[] = [];
+    if (
+      source.type.kind !== "Table" &&
+      source.type.kind !== "Blank" &&
+      (source.type.kind !== "Unknown" || this.isErrorTyped(source))
+    ) {
+      issues.push({
+        span: this.textSpan(node.args[0]!),
+        expected: "Table",
+        actual: this.isErrorTyped(source) ? "Error" : typeName(source.type),
+      });
+    }
+    if (
+      count !== undefined &&
+      (count.type.kind === "Record" || count.type.kind === "Table" || this.isErrorTyped(count))
+    ) {
+      issues.push({
+        span: this.textSpan(node.args[1]!),
+        expected: "Number",
+        actual: this.isErrorTyped(count) ? "Error" : typeName(count.type),
+      });
+    }
+    const type: FormulaType =
+      source.type.kind === "Record" ? tableType(source.type.fields) : source.type;
+    if (
+      issues.length > 0 ||
+      count === undefined ||
+      source.type.kind === "Unknown" ||
+      count.type.kind === "Unknown"
+    ) {
+      this.report(DiagnosticCodes.InvalidFunctionArguments, node.callee.span, [kind]);
+      for (const issue of issues) {
+        this.report(DiagnosticCodes.BadTypeExpected, issue.span, [issue.expected, issue.actual]);
+      }
+      if (count === undefined) {
+        this.report(DiagnosticCodes.BadArity, node.span, ["1", "2"]);
+        return this.invalid(node.span);
+      }
+      return this.recovered(node.span, type);
+    }
+    return { kind, source, count: this.coerce(count, "Number"), span: node.span, type };
   }
 
   /** `CountRows(table)`: Decimal without `NumberIsFloat` (verified against the reference), else Number. */
@@ -1455,6 +1511,8 @@ class Binder {
       if (name === "AddColumns") return this.bindAddColumns(node);
       if (name === "Table") return this.bindTableCall(node);
       if (name === "First") return this.bindFirst(node);
+      if (name === "Last") return this.bindFirst(node, "Last");
+      if (name === "FirstN" || name === "LastN") return this.bindFirstLastN(node, name);
       if (name === "CountRows") return this.bindCountRows(node);
       if (name === "LookUp") return this.bindLookUp(node);
       if (name === "Decimal" || name === "Float" || name === "Value") {

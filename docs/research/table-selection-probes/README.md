@@ -100,7 +100,7 @@ findings. It is a compatibility boundary, not a claim of universal .NET parity. 
 with older x86/x64 overflow behavior or weaken corpus verdicts for it. NaN and infinities must
 remain invalid or Error values and must never be normalized into valid counts.
 
-LastN traversal will check cancellation and charge the budget for every source row, without
+LastN traversal checks cancellation and charges the budget for every source row, without
 copying the entire table just to perform the checks. Selection remains separate from source
 evaluation; no unselected row expression is reevaluated.
 
@@ -118,6 +118,8 @@ dotnet run --no-build --project tools/reference-harness -- count-cast-probe floa
 dotnet run --no-build --project tools/reference-harness -- count-cast-probe decimal packages/engine/test/fixtures/table-selection-counts.expressions.txt > packages/engine/test/fixtures/table-selection-casts.decimal.tsv
 dotnet run --no-build --project tools/reference-harness -- probe float packages/engine/test/fixtures/table-selection-probe.expressions.txt > packages/engine/test/fixtures/table-selection-probe.float.tsv
 dotnet run --no-build --project tools/reference-harness -- probe decimal packages/engine/test/fixtures/table-selection-probe.expressions.txt > packages/engine/test/fixtures/table-selection-probe.decimal.tsv
+dotnet run --no-build --project tools/reference-harness -- probe float packages/engine/test/fixtures/table-selection-diagnostics.expressions.txt > packages/engine/test/fixtures/table-selection-diagnostics.float.tsv
+dotnet run --no-build --project tools/reference-harness -- probe decimal packages/engine/test/fixtures/table-selection-diagnostics.expressions.txt > packages/engine/test/fixtures/table-selection-diagnostics.decimal.tsv
 dotnet run --no-build --project tools/reference-harness -- renamecolumns-probe float packages/engine/test/fixtures/table-selection-order.expressions.txt > packages/engine/test/fixtures/table-selection-order.float.tsv
 dotnet run --no-build --project tools/reference-harness -- renamecolumns-probe decimal packages/engine/test/fixtures/table-selection-order.expressions.txt > packages/engine/test/fixtures/table-selection-order.decimal.tsv
 ```
@@ -129,3 +131,17 @@ The semantic probes additionally cover count typing/coercion, ordered Error comb
 and row Blank/Error behavior, schema unions, no row scope for counts, and diagnostics. The ordering
 probes separately observe schema, direct runtime fields, and serialization using deliberately
 nonalphabetical source fields; `renamecolumns-probe` is reused only as an observation tool.
+Additional diagnostic probes were committed before the binder follow-up: missing N counts retain
+source-type diagnostics as well as invalid-function and expected-two-arguments errors.
+
+## TypeScript ordering observations
+
+The reference source `Table({z:3,a:1,m:2},{z:6,a:4,m:5})` has schema `a,m,z`, direct runtime field
+enumeration `a,m,z;a,m,z`, and canonical serialized field order `a,m,z`. TypeScript's existing source
+constructor instead retains runtime insertion order `z,a,m`; these selectors preserve those same
+source records. TypeScript schemas and compatibility serialization use canonical order.
+The focused tests verify schema order, source runtime field-order preservation, selected row order
+and actual compatibility serialization separately. The serializer omits numeric constructor wrappers
+and prints a typed empty table as `Table()`; its retained schema is checked independently.
+This inherited runtime field-enumeration difference is not presented as parity or changed by this
+milestone. No comparison verdict has been relaxed to accommodate it.

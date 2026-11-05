@@ -164,8 +164,14 @@ export type BoundNode =
       readonly source: BoundNode;
       readonly predicate: BoundNode;
     })
-  /** `First(source)`: the first row, Blank for an empty or Blank table; an error row is returned. */
-  | (BoundBase & { readonly kind: "First"; readonly source: BoundNode })
+  /** `First`/`Last`: a selected row, or Blank for an empty or Blank table. */
+  | (BoundBase & { readonly kind: "First" | "Last"; readonly source: BoundNode })
+  /** Source and Float-coerced count are eager; selection preserves the source table's schema. */
+  | (BoundBase & {
+      readonly kind: "FirstN" | "LastN";
+      readonly source: BoundNode;
+      readonly count: BoundNode;
+    })
   /** `CountRows(source)`: Blank source gives 0; the first error row is returned. */
   | (BoundBase & { readonly kind: "CountRows"; readonly source: BoundNode })
   /**
