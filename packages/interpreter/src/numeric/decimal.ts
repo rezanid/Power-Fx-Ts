@@ -6,7 +6,12 @@ import {
   parseDecimalText,
   type ScaledDecimal,
 } from "@powerfx-ts/core";
-import type { NumericBackend, NumericResult, NumericValue } from "./backend.js";
+import {
+  truncatePrecision,
+  type NumericBackend,
+  type NumericResult,
+  type NumericValue,
+} from "./backend.js";
 
 const wrap = (d: ScaledDecimal): NumericValue => Object.freeze(d) as unknown as NumericValue;
 const unwrap = (v: NumericValue): ScaledDecimal => v as unknown as ScaledDecimal;
@@ -120,6 +125,37 @@ export const decimalBackend: NumericBackend = {
     const n = Math.pow(toNumber(a), toNumber(b));
     const value = decimalBackend.fromNumber(n);
     return value === undefined ? { ok: false, kind: "Numeric" } : { ok: true, value };
+  },
+  abs(a) {
+    const { mantissa, scale } = unwrap(a);
+    return { ok: true, value: wrap({ mantissa: mantissa < 0n ? -mantissa : mantissa, scale }) };
+  },
+  floor(a) {
+    const { mantissa, scale } = unwrap(a);
+    const divisor = pow10(scale);
+    const quotient = mantissa / divisor;
+    return {
+      ok: true,
+      value: wrap({
+        mantissa: quotient - (mantissa < 0n && mantissa % divisor !== 0n ? 1n : 0n),
+        scale: 0,
+      }),
+    };
+  },
+  trunc(a, digits) {
+    const precision = truncatePrecision(digits);
+    if (precision === undefined) return { ok: false, kind: "Numeric" };
+    const { mantissa, scale } = unwrap(a);
+    if (precision < -28) return { ok: true, value: decimalBackend.zero };
+    if (precision >= scale) return { ok: true, value: a };
+    const truncated = mantissa / pow10(scale - precision);
+    return {
+      ok: true,
+      value: wrap({
+        mantissa: precision < 0 ? truncated * pow10(-precision) : truncated,
+        scale: Math.max(0, precision),
+      }),
+    };
   },
   negate(a) {
     const x = unwrap(a);

@@ -243,6 +243,34 @@ const LOWER_UPPER = (name: "Lower" | "Upper"): FunctionSignature => ({
   },
 });
 
+const SCALAR_MATH = (name: "Abs" | "Int" | "Trunc"): FunctionSignature => ({
+  name,
+  minArgs: 1,
+  maxArgs: name === "Trunc" ? 2 : 1,
+  lazy: false,
+  check(argTypes, numberMode) {
+    const first = argTypes[0]!;
+    const kind =
+      first.kind === "Decimal" || (numberMode === "decimal" && first.kind !== "Number")
+        ? "Decimal"
+        : "Number";
+    const result = kind === "Decimal" ? DecimalType : NumberType;
+    const targets = argTypes.map((_, index) => (index === 0 ? result : NumberType));
+    const accepted = (type: FormulaType) =>
+      ["Number", "Decimal", "Text", "Boolean", "Blank"].includes(type.kind);
+    return {
+      returnType: result,
+      coercions: argTypes.map((type, index) =>
+        accepted(type) ? (index === 0 ? kind : "Number") : undefined,
+      ),
+      argumentTypeErrors: argTypes.flatMap((type, index) =>
+        accepted(type) ? [] : [{ index, expected: targets[index]! }],
+      ),
+      reportInvalidFunctionArguments: true,
+    };
+  },
+});
+
 export const BUILTIN_SIGNATURES: readonly FunctionSignature[] = [
   IF,
   COALESCE,
@@ -253,5 +281,8 @@ export const BUILTIN_SIGNATURES: readonly FunctionSignature[] = [
   LEN,
   LOWER_UPPER("Lower"),
   LOWER_UPPER("Upper"),
+  SCALAR_MATH("Abs"),
+  SCALAR_MATH("Int"),
+  SCALAR_MATH("Trunc"),
 ];
 export const BUILTIN_FUNCTIONS: FunctionRegistry = createFunctionRegistry(BUILTIN_SIGNATURES);

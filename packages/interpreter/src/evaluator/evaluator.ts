@@ -16,8 +16,8 @@ import {
 import {
   blank,
   boolean,
+  combineErrors,
   decimal,
-  deepFreeze,
   error,
   number,
   record,
@@ -502,17 +502,6 @@ class Evaluator implements EvaluationContext {
       }
     }
   }
-}
-
-/**
- * Upstream evaluates both operands of an eager operator, then StandardErrorHandling returns
- * `ErrorValue.Combine` of every Error operand, in operand order. Blank/other non-error operands
- * that failed the kind check (a Blank is coerced earlier) never reach here without an error.
- */
-function combineErrors(left: FormulaValue, right: FormulaValue): FormulaValue {
-  const errors = [left, right].flatMap((v) => (v.kind === "Error" ? v.errors : []));
-  if (errors.length <= 1) return left.kind === "Error" ? left : right;
-  return deepFreeze({ kind: "Error", errors });
 }
 
 const wrapNumeric = (kind: "Number" | "Decimal", value: NumericValue): FormulaValue =>

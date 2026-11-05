@@ -1549,7 +1549,12 @@ class Binder {
     if (name === "Coalesce") return this.bindCoalesce(node, args);
 
     if (
-      (name === "Len" || name === "Lower" || name === "Upper") &&
+      (name === "Len" ||
+        name === "Lower" ||
+        name === "Upper" ||
+        name === "Abs" ||
+        name === "Int" ||
+        name === "Trunc") &&
       args.some((argument) => argument.type.kind === "Table")
     ) {
       return this.notSupported(`${name} table overload`, node.callee.span, "function");
@@ -1557,6 +1562,23 @@ class Binder {
 
     if (args.some((a) => a.type.kind === "Unknown")) {
       this.report(DiagnosticCodes.InvalidFunctionArguments, node.callee.span, [name]);
+      if (name === "Abs" || name === "Int" || name === "Trunc") {
+        args.forEach((arg, index) => {
+          if (this.isErrorTyped(arg) || arg.type.kind === "Record") {
+            this.report(DiagnosticCodes.BadTypeExpected, this.textSpan(node.args[index]!), [
+              "Number",
+              this.isErrorTyped(arg) ? "Error" : "Record",
+            ]);
+          }
+        });
+        return this.recovered(
+          node.span,
+          signature.check(
+            args.map((arg) => arg.type),
+            this.numberMode,
+          ).returnType,
+        );
+      }
       return this.invalid(node.span);
     }
 

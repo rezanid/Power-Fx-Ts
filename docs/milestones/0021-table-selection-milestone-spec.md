@@ -1,6 +1,7 @@
 # Milestone 0021: FirstN, Last and LastN for statically supported tables
 
-Status: **implemented; independent review pending**. Baseline:
+Status: **implemented and merged in PR #25** at
+`3f6d86bf3f597a38f190c94518aed69b4e0b2d92`. Baseline:
 `a5be0240fb52dca0a9efdb17a8e507a221bf2f08`. Upstream pin:
 `df4ceba5e08220db670c25afead342ce699c50b5`. See ADR 0021.
 
