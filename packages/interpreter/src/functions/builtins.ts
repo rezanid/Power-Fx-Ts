@@ -4,6 +4,7 @@ import { LOWER_EN_US, UPPER_EN_US } from "./text-case-map.js";
 import {
   blank,
   boolean,
+  combineErrors,
   decimal,
   error,
   number,
@@ -64,6 +65,42 @@ const upperFunction: FunctionImplementation = (args, context) => {
   return text(mapSimpleCase(value.value, UPPER_EN_US));
 };
 
+const scalarMath =
+  (name: "Abs" | "Int" | "Trunc"): FunctionImplementation =>
+  (args, context, returnType) => {
+    if (returnType.kind !== "Number" && returnType.kind !== "Decimal") {
+      throw new Error(`${name} requires a numeric result type.`);
+    }
+    const operand = coerceValue(context.evaluate(args[0]!), returnType.kind, context.numerics);
+    const precision =
+      args[1] === undefined
+        ? undefined
+        : coerceValue(context.evaluate(args[1]), "Number", context.numerics);
+    if (operand.kind === "Error" || precision?.kind === "Error") {
+      return precision === undefined ? operand : combineErrors(operand, precision);
+    }
+    if (
+      (operand.kind !== "Number" && operand.kind !== "Decimal") ||
+      (precision !== undefined && precision.kind !== "Number")
+    ) {
+      throw new Error(`${name} arguments were not coerced to numeric values.`);
+    }
+    const backend = operand.kind === "Decimal" ? context.numerics.decimal : context.numerics.float;
+    const digits = precision === undefined ? 0 : context.numerics.float.toNumber(precision.value);
+    if (!Number.isFinite(digits)) return error("Numeric");
+    const result =
+      name === "Abs"
+        ? backend.abs(operand.value)
+        : name === "Int"
+          ? backend.floor(operand.value)
+          : backend.trunc(operand.value, digits);
+    return result.ok
+      ? operand.kind === "Decimal"
+        ? decimal(result.value)
+        : number(result.value)
+      : error(result.kind);
+  };
+
 /** `If(cond, then [, cond2, then2, ...] [, else])`; evaluates only the branches it needs. */
 const ifFunction: FunctionImplementation = (args, context) => {
   const count = args.length;
@@ -110,6 +147,9 @@ export const BUILTIN_IMPLEMENTATIONS: ReadonlyMap<string, FunctionImplementation
   ["Len", lenFunction],
   ["Lower", lowerFunction],
   ["Upper", upperFunction],
+  ["Abs", scalarMath("Abs")],
+  ["Int", scalarMath("Int")],
+  ["Trunc", scalarMath("Trunc")],
   [
     "IsBlank",
     (args, context) => {

@@ -36,6 +36,10 @@ export interface NumericBackend {
   mul(a: NumericValue, b: NumericValue): NumericResult;
   div(a: NumericValue, b: NumericValue): NumericResult;
   pow(a: NumericValue, b: NumericValue): NumericResult;
+  abs(a: NumericValue): NumericResult;
+  floor(a: NumericValue): NumericResult;
+  /** Truncate toward zero at a Float precision; preserve this backend's numeric semantics. */
+  trunc(a: NumericValue, digits: number): NumericResult;
   negate(a: NumericValue): NumericValue;
   /** Negative, zero or positive, like a comparator. */
   compare(a: NumericValue, b: NumericValue): number;
@@ -58,6 +62,13 @@ const wrap = (n: number): NumericValue => n as unknown as NumericValue;
 
 function checked(n: number): NumericResult {
   return Number.isFinite(n) ? { ok: true, value: wrap(n) } : { ok: false, kind: "Numeric" };
+}
+
+/** Upstream rounding functions explicitly saturate the Float precision before the Int32 cast. */
+export function truncatePrecision(digits: number): number | undefined {
+  return Number.isFinite(digits)
+    ? Math.max(-2147483648, Math.min(2147483647, Math.trunc(digits)))
+    : undefined;
 }
 
 /**
@@ -105,6 +116,17 @@ export const floatBackend: NumericBackend = {
     asNumber(a) === 0 && asNumber(b) < 0
       ? { ok: false, kind: "Div0" }
       : checked(Math.pow(asNumber(a), asNumber(b))),
+  abs: (a) => checked(Math.abs(asNumber(a))),
+  floor: (a) => checked(Math.floor(asNumber(a))),
+  trunc(a, digits) {
+    const precision = truncatePrecision(digits);
+    const value = asNumber(a);
+    if (precision === undefined || !Number.isFinite(value)) return { ok: false, kind: "Numeric" };
+    if (precision < -15 || precision > 15 || Math.abs(value) > 1e20) return checked(value);
+    // Decimal exponent constants match the reference powers; JS exponentiation can differ by an ulp.
+    const factor = Number(`1e${precision}`);
+    return checked(((value < 0 ? -1 : 1) * Math.floor(Math.abs(value) * factor)) / factor);
+  },
   negate: (a) => wrap(-asNumber(a)),
   compare: (a, b) => (asNumber(a) < asNumber(b) ? -1 : asNumber(a) > asNumber(b) ? 1 : 0),
   isZero: (a) => asNumber(a) === 0,

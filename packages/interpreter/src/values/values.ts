@@ -106,3 +106,10 @@ const MESSAGES: Readonly<Record<ErrorKind, string>> = {
 
 export const error = (kind: ErrorKind, message: string = MESSAGES[kind]): ErrorValue =>
   deepFreeze({ kind: "Error", errors: [{ kind, message }] });
+
+/** Combine reached eager-argument Errors in argument order, retaining duplicates. */
+export function combineErrors(left: FormulaValue, right: FormulaValue): FormulaValue {
+  const errors = [left, right].flatMap((v) => (v.kind === "Error" ? v.errors : []));
+  if (errors.length <= 1) return left.kind === "Error" ? left : right;
+  return deepFreeze({ kind: "Error", errors });
+}

@@ -1,11 +1,12 @@
 # Next milestone
 
-`AddColumns` is merged in PR #24. The FirstN / Last / LastN static-table scope is approved from
-`a5be0240fb52dca0a9efdb17a8e507a221bf2f08` and implemented; independent review is pending.
-The owner accepted the deterministic saturating conversion after reviewing boundary probes.
-It matches the measured .NET 10.0.14/macOS Arm64 runtime, not every older runtime.
-See [ADR 0021](../adr/0021-table-selection.md), the
-[milestone spec](0021-table-selection-milestone-spec.md) and
-[`table-selection-probes`](../research/table-selection-probes/README.md).
+FirstN / Last / LastN is merged in PR #25; the localization review is merged in PR #26.
+The approved scalar Abs / Int / Trunc milestone is implemented from
+`14f9f31ef03c2bf2c80948a8a7fc889a43be2c94`; independent review is pending.
+This includes Trunc's complete scalar signature with optional precision, exact Decimal operands
+and explicit precision saturation. Table/untyped overloads and localization changes remain excluded.
+See [ADR 0022](../adr/0022-scalar-math.md), the
+[milestone spec](0022-scalar-math-milestone-spec.md) and
+[`scalar-math-probes`](../research/scalar-math-probes/README.md).
 No subsequent milestone is selected. The other bounded candidates in
 `docs/research/powerfx-coverage-inventory.md` remain proposals, not authorization to begin work.

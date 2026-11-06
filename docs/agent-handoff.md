@@ -1,9 +1,9 @@
 # Agent handoff: current state
 
-Current `main` baseline: `3f6d86bf3f597a38f190c94518aed69b4e0b2d92` (FirstN/Last/LastN merge commit,
-PR #25). PR #25 is merged; its final-head CI build passed. The owner accepted the deterministic
-saturating count rule after boundary research; see ADR 0021 and
-`docs/research/table-selection-probes/README.md` for its runtime portability boundary.
+Current `main` baseline: `14f9f31ef03c2bf2c80948a8a7fc889a43be2c94` (localization review, PR #26).
+Scalar Abs/Int/Trunc is implemented and awaiting independent review (ADR 0022).
+FirstN/Last/LastN merged in PR #25; its final-head CI passed. The accepted table-selection count
+saturation rule and its runtime portability boundary remain documented in ADR 0021.
 IsBlankOrError was implemented from `78bd2f7452aa6f14302aaa2b64124b7a5a6259aa` (PR #17 merge); IsEmpty's
 implementation baseline was `984a61b` (after PR #15).
 Previous baselines: `5cf1d25` (PR #13, empty-text coercion), `f9df8bb` (PR #12, `Coalesce`),
@@ -26,7 +26,7 @@ diagnostics, merged operand errors, recovered result types) → `Coalesce` (PR #
 (PR #20; ADR 0016) → `DropColumns` for static Record/Table values (PR #21; ADR 0017) →
 `ShowColumns` for static Record/Table values (PR #22; ADR 0018) → `RenameColumns` for static
 Record/Table values (PR #23; ADR 0019) → `AddColumns` for static Record/Table values
-(PR #24; ADR 0020).
+(PR #24; ADR 0020) → `FirstN`, `Last`, `LastN` for static tables (PR #25; ADR 0021).
 
 ## Source and test map
 
@@ -64,10 +64,14 @@ Record/Table values (PR #23; ADR 0019) → `AddColumns` for static Record/Table 
 - ADR 0015 `IsBlankOrError` (accepted, implemented, independently reviewed, and merged in PR #18).
 - ADR 0019 `RenameColumns` (accepted, implemented, and merged in PR #23).
 - ADR 0020 `AddColumns` (accepted, implemented, and merged in PR #24).
-- ADR 0021 `FirstN`/`Last`/`LastN` (accepted and implemented; independent review pending).
+- ADR 0021 `FirstN`/`Last`/`LastN` (accepted, implemented and merged in PR #25).
   Count overflow deterministically saturates after explicit Float coercion and truncation; this
   matches the measured .NET 10.0.14/macOS Arm64 runtime, not all older .NET runtimes.
 - Custom numeric backends must implement `fromScanned` (ADR 0010 migration notes).
+- ADR 0022 scalar `Abs`/`Int`/`Trunc` (accepted and implemented; independent review pending).
+  Custom numeric backends must now implement `abs`, `floor`, and `trunc` (migration in ADR 0022).
+  Decimal operands remain exact. Trunc precision explicitly clamps before the upstream Int32 cast,
+  unlike table selection's unchecked cast; no universal .NET parity is implied.
 - Evaluation-budget accounting is per evaluated node; exact upstream step counts are not required.
 
 ## Merged, acceptance not recorded
@@ -104,14 +108,14 @@ Record/Table values (PR #23; ADR 0019) → `AddColumns` for static Record/Table 
 ## Coverage and remaining work
 
 - Research inventory: `docs/research/powerfx-coverage-inventory.md` (source baseline before this
-  milestone is `a5be0240fb52dca0a9efdb17a8e507a221bf2f08`, upstream pin
+  milestone is `14f9f31ef03c2bf2c80948a8a7fc889a43be2c94`, upstream pin
   `df4ceba5e08220db670c25afead342ce699c50b5`).
 - The current candidate inventory counts 145 unique Core-registered upstream function names: 14
-  implemented in the supported slice, 11 partial, 119 missing, and 1 deliberately excluded
+  implemented in the supported slice, 14 partial, 116 missing, and 1 deliberately excluded
   (`Patch`). Upstream's additional
   `OtherKnownFunctions`, overload scope, method and uncertainty are itemized separately.
-- Candidate reports after FirstN/Last/LastN: `v1-float` 2466 / 1 / 46 / 12446 and `v1-decimal`
-  3002 / 1 / 56 / 13114 (pass / fail / skip / unsupported). Do not treat corpus outcomes as
+- Candidate reports after scalar math: `v1-float` 2617 / 1 / 46 / 12295 and `v1-decimal`
+  3167 / 1 / 56 / 12949 (pass / fail / skip / unsupported). Do not treat corpus outcomes as
   language completeness.
 - Language/runtime foundation is a narrow, tested slice; authoring services are scaffolds; Monaco,
   React, PCF, LSP, connectors and gateway are not implemented. The remaining bounded candidates are
@@ -292,6 +296,29 @@ owner's behalf by documentation PRs; the owner may update the labels separately.
 
 ## Next
 
-No milestone after FirstN/Last/LastN has been selected or accepted. The remaining candidates in
+No milestone after scalar Abs/Int/Trunc has been selected or accepted. The remaining candidates in
 `docs/research/powerfx-coverage-inventory.md` are proposals only; do not start another milestone
 without owner approval.
+
+## Implemented milestone, review pending: scalar Abs / Int / Trunc
+
+- Baseline: `14f9f31ef03c2bf2c80948a8a7fc889a43be2c94` (PR #26 merged); upstream pin unchanged.
+- Scope: ADR 0022 and `docs/milestones/0022-scalar-math-milestone-spec.md`.
+  Includes complete scalar Trunc with optional precision, native Float/Decimal result kinds,
+  explicit coercions, typed Blank-to-zero, ordered eager errors, signed zero and numeric boundaries.
+- Decimal operations use backend BigInt mantissa/scale, never an operand conversion through Number.
+  Custom backends require abs/floor/trunc operations; opaque-value, failure and exact-Decimal
+  regression tests cover routing. Results and Error graphs stay frozen.
+- Trunc's upstream implementation explicitly clamps precision before casting, unlike table
+  selection's unchecked cast. Both-profile Int32/large finite precision probes confirm saturation;
+  results are verified on .NET 10.0.14/macOS Arm64, not universally across runtimes.
+- Pre-implementation probes committed in `bb8b4fb`; commands and source references:
+  `docs/research/scalar-math-probes/README.md`.
+- Per-case comparison: 151 float and 165 decimal unsupported-to-pass gains, zero regressions or
+  other transitions. The sole existing Text failure remains; see
+  `docs/research/scalar-math-before-after.md` and its case TSV.
+- Local build, all 2,105 tests (228 scalar-math tests), lint, formatting and both profile runs passed
+  their required checks on 2026-11-05 (UTC), retaining the known compatibility failure. Both
+  reference outputs regenerate exactly.
+- Table/untyped overloads, other math functions, localization and unrelated refactoring remain
+  excluded. Final-head CI and independent review remain delivery gates.

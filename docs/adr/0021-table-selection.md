@@ -1,6 +1,7 @@
 # ADR 0021: FirstN, Last and LastN for static tables
 
-Status: **accepted and implemented; independent review pending**. Baseline:
+Status: **accepted, implemented and merged in PR #25** at
+`3f6d86bf3f597a38f190c94518aed69b4e0b2d92`. Baseline:
 `a5be0240fb52dca0a9efdb17a8e507a221bf2f08` (merged AddColumns, PR #24). Upstream:
 `df4ceba5e08220db670c25afead342ce699c50b5`.
 

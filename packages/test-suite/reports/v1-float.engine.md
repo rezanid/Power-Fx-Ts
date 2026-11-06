@@ -4,16 +4,16 @@
 - Runner: engine
 - Setup: `PowerFxV1,NumberIsFloat,DecimalSupport` (number mode: float, culture en-US, time zone UTC)
 - Cases: 22047 total, 7088 not applicable to this profile
-- Pass 2466, fail 1, skip 46, unsupported 12446
-- Unsupported by reason: feature 9283, setup 3163, profile 0
+- Pass 2617, fail 1, skip 46, unsupported 12295
+- Unsupported by reason: feature 9132, setup 3163, profile 0
 - Passing compile-error cases whose error set differs from upstream's (strict diagnostic, not a verdict): 36
-- Passing numeric cases accepted only by upstream's float tolerance (diagnostic, not a verdict): 12
+- Passing numeric cases accepted only by upstream's float tolerance (diagnostic, not a verdict): 18
 
 | File | Total | Pass | Fail | Skip | Unsupported |
 | ---- | ----: | ---: | ---: | ---: | ----------: |
-| Abs.txt | 22 | 0 | 0 | 0 | 22 |
+| Abs.txt | 22 | 19 | 0 | 0 | 3 |
 | AbsT.txt | 7 | 0 | 0 | 0 | 7 |
-| Acumatica.txt | 13 | 5 | 0 | 0 | 8 |
+| Acumatica.txt | 13 | 6 | 0 | 0 | 7 |
 | AddColumns_SupportColumnNamesAsIdentifiers.txt | 32 | 31 | 0 | 0 | 1 |
 | AndOrCases.txt | 127 | 28 | 0 | 0 | 99 |
 | ArgCoercion.txt | 17 | 4 | 0 | 0 | 13 |
@@ -22,7 +22,7 @@
 | AsType_UO.txt | 46 | 0 | 0 | 0 | 46 |
 | AsType_UO_TimeZone_Seattle.txt | 7 | 0 | 0 | 0 | 7 |
 | BasicCoercion.txt | 45 | 19 | 0 | 0 | 26 |
-| Blank.txt | 43 | 38 | 0 | 0 | 5 |
+| Blank.txt | 43 | 40 | 0 | 0 | 3 |
 | Blob.txt | 19 | 0 | 0 | 0 | 19 |
 | Boolean.txt | 21 | 0 | 0 | 0 | 21 |
 | BooleanT.txt | 13 | 0 | 0 | 0 | 13 |
@@ -69,8 +69,8 @@
 | Dec2Hex.txt | 74 | 0 | 0 | 0 | 74 |
 | Decimal.txt | 254 | 241 | 0 | 0 | 13 |
 | DecimalBoot.txt | 14 | 0 | 0 | 0 | 14 |
-| DecimalMathFuncs_NumberIsFloat.txt | 120 | 5 | 0 | 0 | 115 |
-| DecimalMathFuncs_NumberIsFloat_Constructors.txt | 86 | 5 | 0 | 0 | 81 |
+| DecimalMathFuncs_NumberIsFloat.txt | 120 | 10 | 0 | 0 | 110 |
+| DecimalMathFuncs_NumberIsFloat_Constructors.txt | 86 | 10 | 0 | 0 | 76 |
 | DecimalMathFuncs_NumberIsFloat_Constructors_DecimalSupport.txt | 41 | 4 | 0 | 0 | 37 |
 | DecimalMathFuncs_NumberIsFloat_Constructors_DecimalSupport_PowerFxV1.txt | 8 | 4 | 0 | 0 | 4 |
 | Distinct.txt | 29 | 0 | 0 | 0 | 29 |
@@ -82,7 +82,7 @@
 | EndsWith.txt | 51 | 0 | 0 | 0 | 51 |
 | Equality.txt | 28 | 20 | 0 | 0 | 8 |
 | Error.txt | 87 | 5 | 0 | 0 | 82 |
-| ErrorKinds.txt | 206 | 18 | 0 | 0 | 188 |
+| ErrorKinds.txt | 206 | 20 | 0 | 0 | 186 |
 | ErrorKinds_ColumnNamesAsIdentifiers.txt | 1 | 1 | 0 | 0 | 0 |
 | Escaping.txt | 4 | 3 | 0 | 0 | 1 |
 | Exp.txt | 26 | 0 | 0 | 0 | 26 |
@@ -99,7 +99,7 @@
 | FirstLastN_V1Compat.txt | 2 | 2 | 0 | 0 | 0 |
 | FirstLast_V1Compat.txt | 6 | 6 | 0 | 0 | 0 |
 | Float.txt | 254 | 241 | 0 | 0 | 13 |
-| FloatLarge.txt | 35 | 4 | 0 | 0 | 31 |
+| FloatLarge.txt | 35 | 10 | 0 | 0 | 25 |
 | ForAll.txt | 42 | 0 | 0 | 0 | 42 |
 | ForAll_V1Compat.txt | 1 | 0 | 0 | 0 | 1 |
 | GUID.txt | 13 | 0 | 0 | 0 | 13 |
@@ -110,7 +110,7 @@
 | If_AllowsSideEffects.txt | 25 | 0 | 0 | 0 | 25 |
 | If_V1Compat.txt | 4 | 4 | 0 | 0 | 0 |
 | Index.txt | 22 | 0 | 0 | 0 | 22 |
-| Int.txt | 19 | 0 | 0 | 0 | 19 |
+| Int.txt | 19 | 19 | 0 | 0 | 0 |
 | IntT.txt | 4 | 0 | 0 | 0 | 4 |
 | IsBlankOrError.txt | 3 | 3 | 0 | 0 | 0 |
 | IsEmpty.txt | 34 | 21 | 0 | 0 | 13 |
@@ -270,13 +270,13 @@
 | TrigTableFunctions.txt | 31 | 0 | 0 | 0 | 31 |
 | Trim.txt | 22 | 0 | 0 | 0 | 22 |
 | TrimEnds.txt | 22 | 0 | 0 | 0 | 22 |
-| Trunc.txt | 78 | 0 | 0 | 0 | 78 |
+| Trunc.txt | 78 | 78 | 0 | 0 | 0 |
 | TruncT.txt | 19 | 0 | 0 | 0 | 19 |
 | TypedParseJSON.txt | 47 | 0 | 0 | 0 | 47 |
 | TypedParseJSON_TimeZone_Seattle.txt | 5 | 0 | 0 | 0 | 5 |
 | UniChar.txt | 29 | 0 | 0 | 0 | 29 |
 | UniCharT.txt | 5 | 0 | 0 | 0 | 5 |
-| UntypedBlankAsTable.txt | 30 | 1 | 0 | 0 | 29 |
+| UntypedBlankAsTable.txt | 30 | 2 | 0 | 0 | 28 |
 | UntypedBlankAsTable_V1Compat.txt | 6 | 0 | 0 | 0 | 6 |
 | Upper.txt | 23 | 19 | 0 | 0 | 4 |
 | Value.txt | 253 | 241 | 0 | 0 | 12 |
@@ -296,7 +296,7 @@
 | inTable.txt | 25 | 0 | 0 | 0 | 25 |
 | inTable_V1Compat.txt | 2 | 0 | 0 | 0 | 2 |
 | literals.txt | 5 | 5 | 0 | 0 | 0 |
-| mathfuncs.txt | 70 | 2 | 0 | 0 | 68 |
+| mathfuncs.txt | 70 | 15 | 0 | 0 | 55 |
 | string.txt | 109 | 11 | 0 | 0 | 98 |
 | switch.txt | 81 | 0 | 0 | 0 | 81 |
 | switch_V1Compat.txt | 6 | 0 | 0 | 0 | 6 |
