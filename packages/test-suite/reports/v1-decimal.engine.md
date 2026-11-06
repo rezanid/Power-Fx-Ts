@@ -4,8 +4,8 @@
 - Runner: engine
 - Setup: `PowerFxV1,disable:NumberIsFloat,DecimalSupport` (number mode: decimal, culture en-US, time zone UTC)
 - Cases: 22047 total, 5874 not applicable to this profile
-- Pass 3167, fail 1, skip 56, unsupported 12949
-- Unsupported by reason: feature 9737, setup 3212, profile 0
+- Pass 3468, fail 1, skip 56, unsupported 12648
+- Unsupported by reason: feature 9436, setup 3212, profile 0
 - Passing compile-error cases whose error set differs from upstream's (strict diagnostic, not a verdict): 38
 - Passing numeric cases accepted only by upstream's float tolerance (diagnostic, not a verdict): 7
 
@@ -68,11 +68,11 @@
 | Date_TimeZone_UTC.txt | 17 | 0 | 0 | 0 | 17 |
 | Dec2Hex.txt | 74 | 0 | 0 | 0 | 74 |
 | Decimal.txt | 254 | 241 | 0 | 0 | 13 |
-| DecimalDotnetRuntime.txt | 385 | 284 | 0 | 0 | 101 |
+| DecimalDotnetRuntime.txt | 385 | 311 | 0 | 0 | 74 |
 | DecimalIntReturn.txt | 23 | 2 | 0 | 0 | 21 |
 | DecimalIntReturn_DVDecimal.txt | 24 | 2 | 0 | 1 | 21 |
-| DecimalMathFuncs_NumberIsFloatDisabled.txt | 147 | 17 | 0 | 0 | 130 |
-| DecimalMathFuncs_NumberIsFloatDisabled_DVDecimal.txt | 159 | 21 | 0 | 0 | 138 |
+| DecimalMathFuncs_NumberIsFloatDisabled.txt | 147 | 35 | 0 | 0 | 112 |
+| DecimalMathFuncs_NumberIsFloatDisabled_DVDecimal.txt | 159 | 39 | 0 | 0 | 120 |
 | DecimalNonMathFuncs.txt | 84 | 31 | 0 | 5 | 48 |
 | DecimalNonMathFuncs_DVDecimal.txt | 90 | 31 | 0 | 4 | 55 |
 | DecimalOps.txt | 226 | 83 | 0 | 0 | 143 |
@@ -197,11 +197,11 @@
 | ReservedKeyword_Disabled.txt | 12 | 0 | 0 | 0 | 12 |
 | ReservedKeyword_Enabled.txt | 12 | 11 | 0 | 0 | 1 |
 | Right.txt | 35 | 0 | 0 | 0 | 35 |
-| Round.txt | 72 | 0 | 0 | 0 | 72 |
-| RoundDown.txt | 71 | 0 | 0 | 0 | 71 |
+| Round.txt | 72 | 72 | 0 | 0 | 0 |
+| RoundDown.txt | 71 | 71 | 0 | 0 | 0 |
 | RoundDownT.txt | 16 | 0 | 0 | 0 | 16 |
 | RoundT.txt | 16 | 0 | 0 | 0 | 16 |
-| RoundUp.txt | 68 | 0 | 0 | 0 | 68 |
+| RoundUp.txt | 68 | 68 | 0 | 0 | 0 |
 | RoundUpT.txt | 16 | 0 | 0 | 0 | 16 |
 | RoundingOps.txt | 26 | 0 | 0 | 0 | 26 |
 | SQLCompiler.txt | 20 | 2 | 0 | 0 | 18 |
@@ -281,7 +281,7 @@
 | inTable.txt | 25 | 0 | 0 | 0 | 25 |
 | inTable_V1Compat.txt | 2 | 0 | 0 | 0 | 2 |
 | literals.txt | 5 | 5 | 0 | 0 | 0 |
-| mathfuncs.txt | 70 | 15 | 0 | 0 | 55 |
+| mathfuncs.txt | 70 | 42 | 0 | 0 | 28 |
 | string.txt | 109 | 11 | 0 | 0 | 98 |
 | switch.txt | 81 | 0 | 0 | 0 | 81 |
 | switch_V1Compat.txt | 6 | 0 | 0 | 0 | 6 |

@@ -66,7 +66,7 @@ const upperFunction: FunctionImplementation = (args, context) => {
 };
 
 const scalarMath =
-  (name: "Abs" | "Int" | "Trunc"): FunctionImplementation =>
+  (name: "Abs" | "Int" | "Trunc" | "Round" | "RoundDown" | "RoundUp"): FunctionImplementation =>
   (args, context, returnType) => {
     if (returnType.kind !== "Number" && returnType.kind !== "Decimal") {
       throw new Error(`${name} requires a numeric result type.`);
@@ -93,7 +93,11 @@ const scalarMath =
         ? backend.abs(operand.value)
         : name === "Int"
           ? backend.floor(operand.value)
-          : backend.trunc(operand.value, digits);
+          : name === "Round"
+            ? backend.round(operand.value, digits)
+            : name === "RoundUp"
+              ? backend.roundUp(operand.value, digits)
+              : backend.trunc(operand.value, digits);
     return result.ok
       ? operand.kind === "Decimal"
         ? decimal(result.value)
@@ -150,6 +154,9 @@ export const BUILTIN_IMPLEMENTATIONS: ReadonlyMap<string, FunctionImplementation
   ["Abs", scalarMath("Abs")],
   ["Int", scalarMath("Int")],
   ["Trunc", scalarMath("Trunc")],
+  ["Round", scalarMath("Round")],
+  ["RoundDown", scalarMath("RoundDown")],
+  ["RoundUp", scalarMath("RoundUp")],
   [
     "IsBlank",
     (args, context) => {

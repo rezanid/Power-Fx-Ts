@@ -1,6 +1,6 @@
 # ADR 0022: Scalar Abs, Int and Trunc
 
-Status: **accepted and implemented; independent review pending**.
+Status: **accepted, implemented and merged in PR #27**.
 Baseline: `14f9f31ef03c2bf2c80948a8a7fc889a43be2c94` (merged PR #26).
 Upstream: `df4ceba5e08220db670c25afead342ce699c50b5`.
 
