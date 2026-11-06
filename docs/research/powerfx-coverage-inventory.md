@@ -1,11 +1,11 @@
 # Power Fx TypeScript coverage and remaining-work inventory
 
-**Baseline for scalar Abs / Int / Trunc:** `14f9f31ef03c2bf2c80948a8a7fc889a43be2c94` (main after merged
-localization review, PR #26). Counts below describe the candidate source state after the
-approved scalar math slice. **Upstream:** Microsoft Power Fx
+**Baseline for scalar Round / RoundDown / RoundUp:** `c32a6ebe56369867f89eb7613fb72b542289af92` (main after merged
+Abs/Int/Trunc, PR #27). Counts below describe the candidate source state after the
+approved scalar rounding slice. **Upstream:** Microsoft Power Fx
 `df4ceba5e08220db670c25afead342ce699c50b5`, `Features.PowerFxV1`. Profiles are `v1-float`
 (`NumberIsFloat`) and `v1-decimal` (Power Fx 1.0 numeric default), en-US, UTC.
-Both candidate reports were generated on **2026-11-05 (UTC)**.
+Both candidate reports were generated on **2026-11-06 (UTC)**.
 
 This is a source- and corpus-based inventory, not a feature-completeness audit or a promise of
 upstream parity. Function labels describe the current TypeScript slice and are not percentages of
@@ -16,8 +16,8 @@ Power Fx implemented.
 | Area                 | Current status                                                                                                                                                                                                                                                    |
 | -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Expression runtime   | A real, tested TypeScript lexer/parser/binder/IR/evaluator supports a useful but narrow V1 slice. It is not a general Power Fx implementation.                                                                                                                    |
-| Function names       | 145 distinct names registered by upstream Core plus feature-gated Core; 14 implemented in the supported slice, 14 partial, 116 missing, 1 deliberately excluded (`Patch`, a host mutation operation). Registration-object and overload counts are separate below. |
-| Compatibility corpus | `v1-float`: 2,617 pass, 1 fail, 46 skip, 12,295 unsupported. `v1-decimal`: 3,167 pass, 1 fail, 56 skip, 12,949 unsupported.                                                                                                                                       |
+| Function names       | 145 distinct names registered by upstream Core plus feature-gated Core; 14 implemented in the supported slice, 17 partial, 113 missing, 1 deliberately excluded (`Patch`, a host mutation operation). Registration-object and overload counts are separate below. |
+| Compatibility corpus | `v1-float`: 2,869 pass, 1 fail, 46 skip, 12,043 unsupported. `v1-decimal`: 3,468 pass, 1 fail, 56 skip, 12,648 unsupported.                                                                                                                                       |
 | Authoring            | Editor-neutral language-service, serialization and test-runner packages are scaffolds only. There is no completion, signature help, hover, semantic information, formatting, or test-session implementation.                                                      |
 | Integrations         | No Monaco/React editor, PCF control, LSP adapter, connector runtime, transport or gateway is implemented. These remain roadmap work.                                                                                                                              |
 
@@ -77,13 +77,13 @@ or overall language completeness. Do not report a single completion percentage.
 
 ### Unique registered Core function names
 
-| Status                         |   Count | Names                                                                                                                                              |
-| ------------------------------ | ------: | -------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Implemented in supported slice |      14 | `Blank`, `Coalesce`, `CountRows`, `Filter`, `First`, `FirstN`, `If`, `IsBlank`, `IsBlankOrError`, `IsEmpty`, `Last`, `LastN`, `Table`, `With`      |
-| Partial                        |      14 | `Abs`, `AddColumns`, `Decimal`, `DropColumns`, `Float`, `Int`, `Len`, `LookUp`, `Lower`, `RenameColumns`, `ShowColumns`, `Trunc`, `Upper`, `Value` |
-| Missing                        |     116 | Listed in the function inventory below.                                                                                                            |
-| Deliberately excluded          |       1 | `Patch` — registered by Core, but mutating data-source behavior belongs to an explicitly granted host capability, not the language-only engine.    |
-| **Total**                      | **145** | **Unique names**, not overload signatures.                                                                                                         |
+| Status                         |   Count | Names                                                                                                                                                                               |
+| ------------------------------ | ------: | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Implemented in supported slice |      14 | `Blank`, `Coalesce`, `CountRows`, `Filter`, `First`, `FirstN`, `If`, `IsBlank`, `IsBlankOrError`, `IsEmpty`, `Last`, `LastN`, `Table`, `With`                                       |
+| Partial                        |      17 | `Abs`, `AddColumns`, `Decimal`, `DropColumns`, `Float`, `Int`, `Len`, `LookUp`, `Lower`, `RenameColumns`, `Round`, `RoundDown`, `RoundUp`, `ShowColumns`, `Trunc`, `Upper`, `Value` |
+| Missing                        |     113 | Listed in the function inventory below.                                                                                                                                             |
+| Deliberately excluded          |       1 | `Patch` — registered by Core, but mutating data-source behavior belongs to an explicitly granted host capability, not the language-only engine.                                     |
+| **Total**                      | **145** | **Unique names**, not overload signatures.                                                                                                                                          |
 
 `LookUp` is partial because its supported table/row-scope path exists, but some upstream error-row
 and projection edge behavior is known to differ. `AddColumns`, `DropColumns`, `ShowColumns`, and `RenameColumns`
@@ -101,6 +101,10 @@ precision, profile-aware result kinds, exact Decimal operands, signed zero, Blan
 ordered eager Errors. Their table overloads remain unsupported, so these names are partial using
 the same counting rule as scalar text. Trunc explicitly saturates precision before casting, unlike
 table selection's unchecked upstream cast. See [ADR 0022](../adr/0022-scalar-math.md).
+`Round`, `RoundDown`, and `RoundUp` implement complete scalar two-argument signatures, Float epsilon
+and scaling behavior, exact Decimal intermediate rounding/underflow and Numeric overflow. RoundDown
+uses the unchanged Trunc backend operation. Table overloads remain unsupported, making these names
+partial by the same rule. See [ADR 0023](../adr/0023-scalar-rounding.md).
 `Decimal`, `Float`, and `Value` parse
 and convert supported numeric/text inputs; locales are limited to en-US and fr-FR and formatting
 parity is incomplete. `FirstN`, `Last`, and `LastN` implement static-table selection, including
@@ -124,7 +128,7 @@ they do not assert full upstream parity (e.g. values of unsupported types cannot
 `Left`, `Ln`, `Log`, `Max`, `Mid`, `Min`, `Minute`, `Mod`,
 `Month`, `MonthsLong`, `MonthsShort`, `Not`, `Now`, `Or`, `ParseJSON`, `Pi`, `PlainText`, `Power`,
 `Proper`, `Radians`, `Rand`, `RandBetween`, `Refresh`, `Replace`, `RGBA`, `Right`,
-`Round`, `RoundDown`, `RoundUp`, `Search`, `Second`, `Sequence`, `Shuffle`, `Sin`,
+`Search`, `Second`, `Sequence`, `Shuffle`, `Sin`,
 `Sort`, `SortByColumns`, `Split`, `Sqrt`, `StartsWith`, `StdevP`, `Substitute`, `Sum`, `Summarize`,
 `Switch`, `Tan`, `Text`, `Time`, `TimeValue`, `TimeZoneOffset`, `Today`, `Trace`, `Trim`,
 `TrimEnds`, `UniChar`, `UTCNow`, `UTCToday`, `VarP`, `Weekday`, `WeekdaysLong`,
@@ -149,7 +153,7 @@ Upstream provides 220 shared-Core and 10 feature-gated registration objects; tho
 139 and 7 unique names respectively (145 unique across both). Core contains distinct table
 (`...T`), untyped-object (`..._UO`), and specialized signatures, e.g. `Abs`/`AbsT`,
 `IsBlank`/`IsBlankOptionSetValue`, `IsEmpty`/`IsEmpty_UO`, and `Text`/`Text_UO`. The TypeScript
-registry has twelve general signatures; binder/evaluator special cases add `With`, `Filter`, `Table`,
+registry has fifteen general signatures; binder/evaluator special cases add `With`, `Filter`, `Table`,
 `First`/`Last`/`FirstN`/`LastN`, `CountRows`, `LookUp`, column operations and the three numeric conversions. It does not model upstream's
 general overload/constraint system.
 
@@ -162,13 +166,13 @@ upstream exposes them as a distinct `Name`.
 
 ## Expression language, types and runtime
 
-| Layer             | Implemented                                                                                                                                                                                                                                                                                                                                                                                                                                                       | Incomplete / absent                                                                                                                                                                                                                                                                                                                                                                                     |
-| ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Lexing and syntax | Arithmetic/comparison/logical operators, identifiers, calls, literals, records, tables, comments, spans, selected malformed/incomplete recovery. `As` row aliases and optional expression chaining are represented.                                                                                                                                                                                                                                               | Interpolation and `Type(...)` are marked unsupported; semicolon-separated expression chaining requires an option and binder reports it unsupported; broader Power Fx syntax (including lambdas, behavioral formulas, declarations, named formulas and user-defined functions) is absent. Parser recovery and token/diagnostic parity are not comprehensive.                                             |
-| Binding and types | Primitive Number/Decimal/Text/Boolean/Blank, structural records/tables, schema variables, row scopes, selected type unions/conformance, coercion nodes and diagnostics.                                                                                                                                                                                                                                                                                           | No Date, Time, DateTime, GUID, Color, OptionSet/enum, Dynamic/untyped object, control, view/entity/file/media, polymorphic or named types. Overload constraints, full coercion matrix, enums/options and aggregate equality are absent. Record/table comparisons are explicitly unsupported; all-Blank table literals are unsupported.                                                                  |
-| Evaluation        | Frozen values; arithmetic and selected operators; lazy `If`/`Coalesce`; scalar `Len`, `Lower`, `Upper`, `Abs`, `Int`, `Trunc`; records, tables, `AddColumns`, `DropColumns`, `ShowColumns`, `RenameColumns`, `With`, `Filter`, `First`, `FirstN`, `Last`, `LastN`, `CountRows`, `LookUp`; numeric backends; cancellation signal and per-node budget. Column operations and table selection also charge row traversal; AddColumns charges each evaluated addition. | No general function implementation registry for hosts or async external operations; no mutation/behavior functions. Dates/time zones, broader string/regex/JSON, most builtins, option sets, UDFs, delegation, dependency calculation and recalculation remain absent. Evaluation is synchronous internally despite async public engine methods; actual cooperative worker yielding is not implemented. |
-| Host boundary     | Typed schemas separated from values; strict validation; recursively frozen values; backend identity checks; engine API returns distinct `value`/`invalid`/`unsupported`.                                                                                                                                                                                                                                                                                          | Schema providers, lazy/paged metadata, versioned semantic snapshots, serialized worker messages, worker RPC, external capability authorization, operation effect descriptors, and host transport APIs are not implemented.                                                                                                                                                                              |
-| Compatibility     | Pinned text corpus reader and float/decimal reports; unit/reference fixtures and distinct pass/fail/skip/unsupported outcomes.                                                                                                                                                                                                                                                                                                                                    | Some C# runner setup handlers, `#OVERRIDE` merging, `#NoValue`, date-tick tolerance, and host-specific `Error*` re-runs are missing; not every upstream unit/API suite is ported.                                                                                                                                                                                                                       |
+| Layer             | Implemented                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        | Incomplete / absent                                                                                                                                                                                                                                                                                                                                                                                     |
+| ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Lexing and syntax | Arithmetic/comparison/logical operators, identifiers, calls, literals, records, tables, comments, spans, selected malformed/incomplete recovery. `As` row aliases and optional expression chaining are represented.                                                                                                                                                                                                                                                                                | Interpolation and `Type(...)` are marked unsupported; semicolon-separated expression chaining requires an option and binder reports it unsupported; broader Power Fx syntax (including lambdas, behavioral formulas, declarations, named formulas and user-defined functions) is absent. Parser recovery and token/diagnostic parity are not comprehensive.                                             |
+| Binding and types | Primitive Number/Decimal/Text/Boolean/Blank, structural records/tables, schema variables, row scopes, selected type unions/conformance, coercion nodes and diagnostics.                                                                                                                                                                                                                                                                                                                            | No Date, Time, DateTime, GUID, Color, OptionSet/enum, Dynamic/untyped object, control, view/entity/file/media, polymorphic or named types. Overload constraints, full coercion matrix, enums/options and aggregate equality are absent. Record/table comparisons are explicitly unsupported; all-Blank table literals are unsupported.                                                                  |
+| Evaluation        | Frozen values; arithmetic and selected operators; lazy `If`/`Coalesce`; scalar `Len`, `Lower`, `Upper`, `Abs`, `Int`, `Trunc`, `Round`, `RoundDown`, `RoundUp`; records, tables, `AddColumns`, `DropColumns`, `ShowColumns`, `RenameColumns`, `With`, `Filter`, `First`, `FirstN`, `Last`, `LastN`, `CountRows`, `LookUp`; numeric backends; cancellation signal and per-node budget. Column operations and table selection also charge row traversal; AddColumns charges each evaluated addition. | No general function implementation registry for hosts or async external operations; no mutation/behavior functions. Dates/time zones, broader string/regex/JSON, most builtins, option sets, UDFs, delegation, dependency calculation and recalculation remain absent. Evaluation is synchronous internally despite async public engine methods; actual cooperative worker yielding is not implemented. |
+| Host boundary     | Typed schemas separated from values; strict validation; recursively frozen values; backend identity checks; engine API returns distinct `value`/`invalid`/`unsupported`.                                                                                                                                                                                                                                                                                                                           | Schema providers, lazy/paged metadata, versioned semantic snapshots, serialized worker messages, worker RPC, external capability authorization, operation effect descriptors, and host transport APIs are not implemented.                                                                                                                                                                              |
+| Compatibility     | Pinned text corpus reader and float/decimal reports; unit/reference fixtures and distinct pass/fail/skip/unsupported outcomes.                                                                                                                                                                                                                                                                                                                                                                     | Some C# runner setup handlers, `#OVERRIDE` merging, `#NoValue`, date-tick tolerance, and host-specific `Error*` re-runs are missing; not every upstream unit/API suite is ported.                                                                                                                                                                                                                       |
 
 These are not interchangeable statuses: a construct can parse but fail binding, bind to an
 unsupported node, or be absent altogether. Invalid formulas are not the same as unsupported
@@ -177,14 +181,14 @@ semantics.
 ## Current compatibility evidence
 
 Profiles use `PowerFxV1`, en-US, UTC, with Decimal support enabled. These candidate reports follow
-the approved scalar `Abs` / `Int` / `Trunc` slice and compare every applicable case in the pinned 22,047-case corpus;
+the approved scalar `Round` / `RoundDown` / `RoundUp` slice and compare every applicable case in the pinned 22,047-case corpus;
 profile applicability differs. Baseline-to-candidate transitions are recorded in
-[`scalar-math-before-after.md`](scalar-math-before-after.md).
+[`scalar-rounding-before-after.md`](scalar-rounding-before-after.md).
 
 | Profile      | Applicable | Not applicable |  Pass | Fail | Skip | Unsupported (feature) | Unsupported (setup) |
 | ------------ | ---------: | -------------: | ----: | ---: | ---: | --------------------: | ------------------: |
-| `v1-float`   |     14,959 |          7,088 | 2,617 |    1 |   46 |                 9,132 |               3,163 |
-| `v1-decimal` |     16,173 |          5,874 | 3,167 |    1 |   56 |                 9,737 |               3,212 |
+| `v1-float`   |     14,959 |          7,088 | 2,869 |    1 |   46 |                 8,880 |               3,163 |
+| `v1-decimal` |     16,173 |          5,874 | 3,468 |    1 |   56 |                 9,436 |               3,212 |
 
 The one fail in each profile is `Text_ExcelCompat_PowerFxV1Compat.txt:13`; its diagnostics depend
 on the unimplemented `Text` function. Many setup-unsupported cases need upstream-specific test
@@ -203,7 +207,7 @@ Large unsupported corpus clusters (counts are per file, not disjoint feature tot
 | Tables and collections | `SingleColumnTableCoercion.txt` 211; `TabularOverloadsBlanksAndErrors.txt` 84                                               | Same                                                                                                               | General table lifting/column overloads, Blank/Error row semantics and scalar/table coercion.                            |
 | Dates and time         | `EDateEOMonth.txt` 182; `Date.txt` 152; `Time.txt` 142; `DateAdd.txt` 115                                                   | Same leading files                                                                                                 | Date/Time/DateTime types, constructors, operations, timezone, parsing and formatting.                                   |
 | JSON / untyped object  | `ParseJson.txt` 171; `ParseJson_Arithmetic.txt` 108; `ParseJson_Coercions.txt` 102                                          | Same leading files                                                                                                 | JSON parsing plus Dynamic/untyped-object value/type and coercion design.                                                |
-| Numeric behavior       | No Decimal backend corpus gap dominates the float profile; math families remain unsupported                                 | Decimal-specific files include `DecimalMathFuncs_NumberIsFloatDisabled_DVDecimal.txt` 145 and `DecimalOps.txt` 143 | Missing numeric builtins and precise decimal edge behavior; not just backend arithmetic.                                |
+| Numeric behavior       | No Decimal backend corpus gap dominates the float profile; remaining math families are unsupported                          | Decimal-specific files include `DecimalMathFuncs_NumberIsFloatDisabled_DVDecimal.txt` 127 and `DecimalOps.txt` 143 | Missing numeric builtins and precise decimal edge behavior; not just backend arithmetic.                                |
 
 Counts are examples, not additions: a file may exercise multiple functions, setup requirements,
 types and operators, and counts differ by profile.
@@ -237,7 +241,7 @@ These are high-leverage blockers; resolving one can unlock groups rather than a 
    Needed by dates, text formatting/parsing, enums, JSON and many operator/function overloads.
 2. **Generalize signatures and overload binding:** move from a small hand-built registry plus
    binder name switches to reusable signatures/constraints, parameter metadata, overload resolution,
-   lazy/table-lifted forms and consistent diagnostics. Needed by most of the 116 missing registered
+   lazy/table-lifted forms and consistent diagnostics. Needed by most of the 113 missing registered
    names, overload parity and editor signature help.
 3. **Function/effect host capabilities:** typed host-provided function symbols, async invocation,
    explicit pure/read/write/action effects, capability checks at runtime, mocks, cancellation and
@@ -266,7 +270,8 @@ remaining work; each spans multiple functions, dependencies and independent revi
 These are possible **next implementation slices** within those workstreams. They are intentionally
 narrower than a feature family; all remaining proposals are unaccepted and unstarted. `DropColumns`,
 `ShowColumns`, `RenameColumns`, `AddColumns`, `FirstN`, `Last`, and `LastN` are merged.
-Scalar `Abs`, `Int`, and `Trunc` are implemented in the current candidate slice. Effort is relative
+Scalar `Abs`, `Int`, and `Trunc` are merged in PR #27; scalar `Round`, `RoundDown`, and `RoundUp`
+are implemented in the current candidate slice. Effort is relative
 engineering scope (S/M/L), not a calendar estimate. Compatibility gains are qualitative and not
 additive because corpus files overlap and include setup dependencies.
 

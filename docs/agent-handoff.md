@@ -1,7 +1,7 @@
 # Agent handoff: current state
 
-Current `main` baseline: `14f9f31ef03c2bf2c80948a8a7fc889a43be2c94` (localization review, PR #26).
-Scalar Abs/Int/Trunc is implemented and awaiting independent review (ADR 0022).
+Current `main` baseline: `c32a6ebe56369867f89eb7613fb72b542289af92` (Abs/Int/Trunc, PR #27).
+Scalar Round/RoundDown/RoundUp is implemented and awaiting independent review (ADR 0023).
 FirstN/Last/LastN merged in PR #25; its final-head CI passed. The accepted table-selection count
 saturation rule and its runtime portability boundary remain documented in ADR 0021.
 IsBlankOrError was implemented from `78bd2f7452aa6f14302aaa2b64124b7a5a6259aa` (PR #17 merge); IsEmpty's
@@ -12,7 +12,7 @@ Upstream pin: `df4ceba5e08220db670c25afead342ce699c50b5` (`docs/provenance.md`).
 Profiles: `v1-float` (default, PowerFxV1 + NumberIsFloat) and `v1-decimal` (opt-in
 `new Engine({ numberMode: "decimal" })`), culture en-US, UTC.
 
-## Completed milestones (PRs #2–#10, #12–#13, #16, #18, #20–#25, all merged)
+## Completed milestones (PRs #2–#10, #12–#13, #16, #18, #20–#27, all merged)
 
 Vertical slice (lexer/parser/binder/evaluator, compat runner) → parser parity → typed context and
 schema separation → record literals and `With` → tables, row scopes, `Filter`, `ThisRecord`/`As` →
@@ -26,7 +26,8 @@ diagnostics, merged operand errors, recovered result types) → `Coalesce` (PR #
 (PR #20; ADR 0016) → `DropColumns` for static Record/Table values (PR #21; ADR 0017) →
 `ShowColumns` for static Record/Table values (PR #22; ADR 0018) → `RenameColumns` for static
 Record/Table values (PR #23; ADR 0019) → `AddColumns` for static Record/Table values
-(PR #24; ADR 0020) → `FirstN`, `Last`, `LastN` for static tables (PR #25; ADR 0021).
+(PR #24; ADR 0020) → `FirstN`, `Last`, `LastN` for static tables (PR #25; ADR 0021) →
+localization extensibility review (PR #26) → scalar `Abs`, `Int`, `Trunc` (PR #27; ADR 0022).
 
 ## Source and test map
 
@@ -68,10 +69,14 @@ Record/Table values (PR #23; ADR 0019) → `AddColumns` for static Record/Table 
   Count overflow deterministically saturates after explicit Float coercion and truncation; this
   matches the measured .NET 10.0.14/macOS Arm64 runtime, not all older .NET runtimes.
 - Custom numeric backends must implement `fromScanned` (ADR 0010 migration notes).
-- ADR 0022 scalar `Abs`/`Int`/`Trunc` (accepted and implemented; independent review pending).
+- ADR 0022 scalar `Abs`/`Int`/`Trunc` (accepted, implemented and merged in PR #27).
   Custom numeric backends must now implement `abs`, `floor`, and `trunc` (migration in ADR 0022).
   Decimal operands remain exact. Trunc precision explicitly clamps before the upstream Int32 cast,
   unlike table selection's unchecked cast; no universal .NET parity is implied.
+- ADR 0023 scalar `Round`/`RoundDown`/`RoundUp` (accepted and implemented; review pending).
+  Custom numeric backends additionally require `round` and `roundUp`. RoundDown reuses unchanged
+  `trunc`; exact Decimal operations preserve intermediate rounding/underflow and Numeric overflow.
+  Float Round preserves upstream epsilon and operation order, not an idealized rounding rule.
 - Evaluation-budget accounting is per evaluated node; exact upstream step counts are not required.
 
 ## Merged, acceptance not recorded
@@ -108,14 +113,14 @@ Record/Table values (PR #23; ADR 0019) → `AddColumns` for static Record/Table 
 ## Coverage and remaining work
 
 - Research inventory: `docs/research/powerfx-coverage-inventory.md` (source baseline before this
-  milestone is `14f9f31ef03c2bf2c80948a8a7fc889a43be2c94`, upstream pin
+  milestone is `c32a6ebe56369867f89eb7613fb72b542289af92`, upstream pin
   `df4ceba5e08220db670c25afead342ce699c50b5`).
 - The current candidate inventory counts 145 unique Core-registered upstream function names: 14
-  implemented in the supported slice, 14 partial, 116 missing, and 1 deliberately excluded
+  implemented in the supported slice, 17 partial, 113 missing, and 1 deliberately excluded
   (`Patch`). Upstream's additional
   `OtherKnownFunctions`, overload scope, method and uncertainty are itemized separately.
-- Candidate reports after scalar math: `v1-float` 2617 / 1 / 46 / 12295 and `v1-decimal`
-  3167 / 1 / 56 / 12949 (pass / fail / skip / unsupported). Do not treat corpus outcomes as
+- Candidate reports after scalar rounding: `v1-float` 2869 / 1 / 46 / 12043 and `v1-decimal`
+  3468 / 1 / 56 / 12648 (pass / fail / skip / unsupported). Do not treat corpus outcomes as
   language completeness.
 - Language/runtime foundation is a narrow, tested slice; authoring services are scaffolds; Monaco,
   React, PCF, LSP, connectors and gateway are not implemented. The remaining bounded candidates are
@@ -296,11 +301,11 @@ owner's behalf by documentation PRs; the owner may update the labels separately.
 
 ## Next
 
-No milestone after scalar Abs/Int/Trunc has been selected or accepted. The remaining candidates in
+No milestone after scalar Round/RoundDown/RoundUp has been selected or accepted. The remaining candidates in
 `docs/research/powerfx-coverage-inventory.md` are proposals only; do not start another milestone
 without owner approval.
 
-## Implemented milestone, review pending: scalar Abs / Int / Trunc
+## Merged milestone: scalar Abs / Int / Trunc (PR #27)
 
 - Baseline: `14f9f31ef03c2bf2c80948a8a7fc889a43be2c94` (PR #26 merged); upstream pin unchanged.
 - Scope: ADR 0022 and `docs/milestones/0022-scalar-math-milestone-spec.md`.
@@ -320,5 +325,29 @@ without owner approval.
 - Local build, all 2,105 tests (228 scalar-math tests), lint, formatting and both profile runs passed
   their required checks on 2026-11-05 (UTC), retaining the known compatibility failure. Both
   reference outputs regenerate exactly.
+- Table/untyped overloads, other math functions, localization and unrelated refactoring remained
+  excluded. PR #27 merged at `c32a6ebe56369867f89eb7613fb72b542289af92`; its final head
+  `cd516e75b894f8614a83a5f9fac07b1422d738ae` passed CI before independent review and merge.
+
+## Implemented milestone, review pending: scalar Round / RoundDown / RoundUp
+
+- Baseline: `c32a6ebe56369867f89eb7613fb72b542289af92` (PR #27 merged); upstream pin unchanged.
+- ADR 0023 and `docs/milestones/0023-scalar-rounding-milestone-spec.md` record the accepted scope.
+  Full scalar two-argument signatures, native result-kind selection, explicit Float precision,
+  typed Blank-to-zero, eager operand-then-precision and ordered combined Errors.
+- RoundDown reuses unchanged backend.trunc. New round/roundUp methods keep opaque values in
+  backends; custom migration and exact-Decimal/opaque-value regressions are recorded in ADR 0023.
+- Decimal intermediate division rounding/underflow is observable and preserved, without any
+  Decimal operand conversion through Number; representability overflow returns Numeric.
+  Float epsilon/scaling order, signed zero, magnitude/precision shortcuts and explicit pre-cast
+  Int32 clamping follow the pinned reference, not universal .NET/runtime parity.
+- Reference probes committed before implementation in `a7d6a28`; both profiles replay 131 rows,
+  including paired RoundDown/Trunc boundaries. The focused suite has 276 tests.
+- Both-profile per-case comparisons have identical case sets, 252 float / 301 decimal
+  unsupported-to-pass gains, zero regressions and no other verdict changes. See
+  `docs/research/scalar-rounding-before-after.md` and its exact 553-row transition TSV.
+- Build, all 2,381 tests (276 focused), lint, formatting and both profile runs passed on
+  2026-11-06 (UTC), retaining the known compatibility failure. Both 131-row reference outputs
+  regenerate exactly; registry counts and relative documentation links reconcile.
 - Table/untyped overloads, other math functions, localization and unrelated refactoring remain
   excluded. Final-head CI and independent review remain delivery gates.
