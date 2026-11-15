@@ -19,14 +19,18 @@ Fx. Not affiliated with Microsoft. See `docs/PowerFx-TypeScript-Plan.md` for the
 
 ## Implementation status
 
-This candidate snapshot is based on main baseline `14f9f31ef03c2bf2c80948a8a7fc889a43be2c94`
-(after merged localization review, PR #26; upstream `df4ceba5e08220db670c25afead342ce699c50b5`). The inventory
+This candidate snapshot is based on main baseline `c32a6ebe56369867f89eb7613fb72b542289af92`
+(after merged Abs/Int/Trunc, PR #27; upstream `df4ceba5e08220db670c25afead342ce699c50b5`). The inventory
 covers 145 unique upstream Core-registered function names: 14 implemented in the supported slice,
-14 partial, 116 missing, and 1 deliberately excluded (`Patch`, a host mutation operation).
+17 partial, 113 missing, and 1 deliberately excluded (`Patch`, a host mutation operation).
 `Len`, `Lower`, and `Upper` implement scalar overloads while their table overloads remain unsupported.
 `Abs`, `Int`, and `Trunc` also support scalar overloads, including Trunc's optional precision and
 exact Decimal operands; table overloads remain unsupported. Custom numeric backends must implement
 `abs`, `floor`, and `trunc`; see [ADR 0022](docs/adr/0022-scalar-math.md) for migration and numeric boundaries.
+`Round`, `RoundDown`, and `RoundUp` support full scalar signatures with explicit Float precision,
+Float epsilon/scaling rules and exact Decimal intermediate rounding/underflow. RoundDown reuses
+the unchanged `trunc` method. Custom numeric backends additionally require `round` and `roundUp`;
+see [ADR 0023](docs/adr/0023-scalar-rounding.md). Table overloads remain unsupported.
 `AddColumns`, `DropColumns`, `ShowColumns`, and `RenameColumns` support statically typed Record/Table
 values; dynamic schemas and host-specific data sources remain outside those slices. Upstream has
 additional host/runtime-known names outside this count. The reproducible evidence lists
@@ -42,8 +46,8 @@ toward zero, saturate to Int32, then treat nonpositive values as zero. This dete
 verified on .NET 10.0.14/macOS Arm64, not every older runtime; see
 [ADR 0021](docs/adr/0021-table-selection.md) for portability and inherited field-order limits.
 
-Compatibility corpus results: `v1-float` 2,617 pass / 1 fail / 46 skip / 12,295 unsupported;
-`v1-decimal` 3,167 / 1 / 56 / 12,949. These are outcomes on a finite, profile-dependent corpus,
+Compatibility corpus results: `v1-float` 2,869 pass / 1 fail / 46 skip / 12,043 unsupported;
+`v1-decimal` 3,468 / 1 / 56 / 12,648. These are outcomes on a finite, profile-dependent corpus,
 not percentages of language completeness or effort completed. The expression runtime is a useful
 but narrow V1 slice; authoring services are scaffolds, and Monaco/React, PCF, LSP, connectors and
 gateway integrations are not implemented. Future milestone PRs should update the function inventory

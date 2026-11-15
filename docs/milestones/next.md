@@ -1,12 +1,14 @@
 # Next milestone
 
 FirstN / Last / LastN is merged in PR #25; the localization review is merged in PR #26.
-The approved scalar Abs / Int / Trunc milestone is implemented from
-`14f9f31ef03c2bf2c80948a8a7fc889a43be2c94`; independent review is pending.
-This includes Trunc's complete scalar signature with optional precision, exact Decimal operands
-and explicit precision saturation. Table/untyped overloads and localization changes remain excluded.
-See [ADR 0022](../adr/0022-scalar-math.md), the
-[milestone spec](0022-scalar-math-milestone-spec.md) and
-[`scalar-math-probes`](../research/scalar-math-probes/README.md).
+Scalar Abs / Int / Trunc merged in PR #27 at `c32a6ebe56369867f89eb7613fb72b542289af92`.
+The approved scalar Round / RoundDown / RoundUp milestone is implemented from that baseline;
+independent review is pending. All require two arguments. Float epsilon/operation order and
+exact Decimal intermediate rounding/underflow are preserved; RoundDown uses unchanged backend.trunc.
+New custom-backend methods are round and roundUp. Table/untyped overloads, other math functions,
+localization and unrelated refactoring remain excluded.
+See [ADR 0023](../adr/0023-scalar-rounding.md), the
+[milestone spec](0023-scalar-rounding-milestone-spec.md) and
+[`scalar-rounding-probes`](../research/scalar-rounding-probes/README.md).
 No subsequent milestone is selected. The other bounded candidates in
 `docs/research/powerfx-coverage-inventory.md` remain proposals, not authorization to begin work.

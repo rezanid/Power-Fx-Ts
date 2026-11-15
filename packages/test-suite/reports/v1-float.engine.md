@@ -4,10 +4,10 @@
 - Runner: engine
 - Setup: `PowerFxV1,NumberIsFloat,DecimalSupport` (number mode: float, culture en-US, time zone UTC)
 - Cases: 22047 total, 7088 not applicable to this profile
-- Pass 2617, fail 1, skip 46, unsupported 12295
-- Unsupported by reason: feature 9132, setup 3163, profile 0
+- Pass 2869, fail 1, skip 46, unsupported 12043
+- Unsupported by reason: feature 8880, setup 3163, profile 0
 - Passing compile-error cases whose error set differs from upstream's (strict diagnostic, not a verdict): 36
-- Passing numeric cases accepted only by upstream's float tolerance (diagnostic, not a verdict): 18
+- Passing numeric cases accepted only by upstream's float tolerance (diagnostic, not a verdict): 20
 
 | File | Total | Pass | Fail | Skip | Unsupported |
 | ---- | ----: | ---: | ---: | ---: | ----------: |
@@ -69,9 +69,9 @@
 | Dec2Hex.txt | 74 | 0 | 0 | 0 | 74 |
 | Decimal.txt | 254 | 241 | 0 | 0 | 13 |
 | DecimalBoot.txt | 14 | 0 | 0 | 0 | 14 |
-| DecimalMathFuncs_NumberIsFloat.txt | 120 | 10 | 0 | 0 | 110 |
-| DecimalMathFuncs_NumberIsFloat_Constructors.txt | 86 | 10 | 0 | 0 | 76 |
-| DecimalMathFuncs_NumberIsFloat_Constructors_DecimalSupport.txt | 41 | 4 | 0 | 0 | 37 |
+| DecimalMathFuncs_NumberIsFloat.txt | 120 | 16 | 0 | 0 | 104 |
+| DecimalMathFuncs_NumberIsFloat_Constructors.txt | 86 | 13 | 0 | 0 | 73 |
+| DecimalMathFuncs_NumberIsFloat_Constructors_DecimalSupport.txt | 41 | 7 | 0 | 0 | 34 |
 | DecimalMathFuncs_NumberIsFloat_Constructors_DecimalSupport_PowerFxV1.txt | 8 | 4 | 0 | 0 | 4 |
 | Distinct.txt | 29 | 0 | 0 | 0 | 29 |
 | Distinct_V1Compat.txt | 2 | 0 | 0 | 0 | 2 |
@@ -99,7 +99,7 @@
 | FirstLastN_V1Compat.txt | 2 | 2 | 0 | 0 | 0 |
 | FirstLast_V1Compat.txt | 6 | 6 | 0 | 0 | 0 |
 | Float.txt | 254 | 241 | 0 | 0 | 13 |
-| FloatLarge.txt | 35 | 10 | 0 | 0 | 25 |
+| FloatLarge.txt | 35 | 12 | 0 | 0 | 23 |
 | ForAll.txt | 42 | 0 | 0 | 0 | 42 |
 | ForAll_V1Compat.txt | 1 | 0 | 0 | 0 | 1 |
 | GUID.txt | 13 | 0 | 0 | 0 | 13 |
@@ -211,11 +211,11 @@
 | ReservedKeyword_Disabled.txt | 12 | 0 | 0 | 0 | 12 |
 | ReservedKeyword_Enabled.txt | 12 | 11 | 0 | 0 | 1 |
 | Right.txt | 35 | 0 | 0 | 0 | 35 |
-| Round.txt | 72 | 0 | 0 | 0 | 72 |
-| RoundDown.txt | 71 | 0 | 0 | 0 | 71 |
+| Round.txt | 72 | 72 | 0 | 0 | 0 |
+| RoundDown.txt | 71 | 71 | 0 | 0 | 0 |
 | RoundDownT.txt | 16 | 0 | 0 | 0 | 16 |
 | RoundT.txt | 16 | 0 | 0 | 0 | 16 |
-| RoundUp.txt | 68 | 0 | 0 | 0 | 68 |
+| RoundUp.txt | 68 | 68 | 0 | 0 | 0 |
 | RoundUpT.txt | 16 | 0 | 0 | 0 | 16 |
 | RoundingOps.txt | 26 | 0 | 0 | 0 | 26 |
 | SQLCompiler.txt | 20 | 2 | 0 | 0 | 18 |
@@ -296,7 +296,7 @@
 | inTable.txt | 25 | 0 | 0 | 0 | 25 |
 | inTable_V1Compat.txt | 2 | 0 | 0 | 0 | 2 |
 | literals.txt | 5 | 5 | 0 | 0 | 0 |
-| mathfuncs.txt | 70 | 15 | 0 | 0 | 55 |
+| mathfuncs.txt | 70 | 42 | 0 | 0 | 28 |
 | string.txt | 109 | 11 | 0 | 0 | 98 |
 | switch.txt | 81 | 0 | 0 | 0 | 81 |
 | switch_V1Compat.txt | 6 | 0 | 0 | 0 | 6 |

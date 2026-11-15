@@ -157,6 +157,54 @@ export const decimalBackend: NumericBackend = {
       }),
     };
   },
+  round(a, digits) {
+    const precision = truncatePrecision(digits);
+    if (precision === undefined) return { ok: false, kind: "Numeric" };
+    if (precision < -28) return { ok: true, value: decimalBackend.zero };
+    if (precision > 28) return { ok: true, value: a };
+    if (precision < 0) {
+      const factor = wrap({ mantissa: pow10(-precision), scale: 0 });
+      // Decimal division rounds to representable scale before midpoint rounding.
+      const divided = decimalBackend.div(a, factor);
+      if (!divided.ok) return divided;
+      const rounded = decimalBackend.round(divided.value, 0);
+      return rounded.ok ? decimalBackend.mul(rounded.value, factor) : rounded;
+    }
+    const { mantissa, scale } = unwrap(a);
+    if (precision >= scale) return { ok: true, value: a };
+    const divisor = pow10(scale - precision);
+    const magnitude = mantissa < 0n ? -mantissa : mantissa;
+    const rounded = magnitude / divisor + ((magnitude % divisor) * 2n >= divisor ? 1n : 0n);
+    return fitted(mantissa < 0n ? -rounded : rounded, precision);
+  },
+  roundUp(a, digits) {
+    const precision = truncatePrecision(digits);
+    if (precision === undefined) return { ok: false, kind: "Numeric" };
+    if (precision < -28) return { ok: true, value: decimalBackend.zero };
+    if (precision > 28) return { ok: true, value: a };
+    const { mantissa, scale } = unwrap(a);
+    const magnitude = wrap({ mantissa: mantissa < 0n ? -mantissa : mantissa, scale });
+    if (precision < 0) {
+      const factor = wrap({ mantissa: pow10(-precision), scale: 0 });
+      const divided = decimalBackend.div(magnitude, factor);
+      if (!divided.ok) return divided;
+      const rounded = decimalBackend.roundUp(divided.value, 0);
+      if (!rounded.ok) return rounded;
+      const result = decimalBackend.mul(rounded.value, factor);
+      return result.ok && mantissa < 0n
+        ? { ok: true, value: decimalBackend.negate(result.value) }
+        : result;
+    }
+    const rounded = decimalBackend.round(magnitude, precision);
+    if (!rounded.ok) return rounded;
+    const result =
+      decimalBackend.compare(rounded.value, magnitude) < 0
+        ? decimalBackend.add(rounded.value, wrap({ mantissa: 1n, scale: precision }))
+        : rounded;
+    return result.ok && mantissa < 0n
+      ? { ok: true, value: decimalBackend.negate(result.value) }
+      : result;
+  },
   negate(a) {
     const x = unwrap(a);
     return wrap({ mantissa: -x.mantissa, scale: x.scale });

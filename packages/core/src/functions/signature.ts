@@ -243,10 +243,12 @@ const LOWER_UPPER = (name: "Lower" | "Upper"): FunctionSignature => ({
   },
 });
 
-const SCALAR_MATH = (name: "Abs" | "Int" | "Trunc"): FunctionSignature => ({
+const SCALAR_MATH = (
+  name: "Abs" | "Int" | "Trunc" | "Round" | "RoundDown" | "RoundUp",
+): FunctionSignature => ({
   name,
-  minArgs: 1,
-  maxArgs: name === "Trunc" ? 2 : 1,
+  minArgs: name === "Abs" || name === "Int" || name === "Trunc" ? 1 : 2,
+  maxArgs: name === "Abs" || name === "Int" ? 1 : 2,
   lazy: false,
   check(argTypes, numberMode) {
     const first = argTypes[0]!;
@@ -284,5 +286,8 @@ export const BUILTIN_SIGNATURES: readonly FunctionSignature[] = [
   SCALAR_MATH("Abs"),
   SCALAR_MATH("Int"),
   SCALAR_MATH("Trunc"),
+  SCALAR_MATH("Round"),
+  SCALAR_MATH("RoundDown"),
+  SCALAR_MATH("RoundUp"),
 ];
 export const BUILTIN_FUNCTIONS: FunctionRegistry = createFunctionRegistry(BUILTIN_SIGNATURES);

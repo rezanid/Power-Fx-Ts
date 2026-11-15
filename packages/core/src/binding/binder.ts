@@ -1554,7 +1554,10 @@ class Binder {
         name === "Upper" ||
         name === "Abs" ||
         name === "Int" ||
-        name === "Trunc") &&
+        name === "Trunc" ||
+        name === "Round" ||
+        name === "RoundDown" ||
+        name === "RoundUp") &&
       args.some((argument) => argument.type.kind === "Table")
     ) {
       return this.notSupported(`${name} table overload`, node.callee.span, "function");
@@ -1562,7 +1565,14 @@ class Binder {
 
     if (args.some((a) => a.type.kind === "Unknown")) {
       this.report(DiagnosticCodes.InvalidFunctionArguments, node.callee.span, [name]);
-      if (name === "Abs" || name === "Int" || name === "Trunc") {
+      if (
+        name === "Abs" ||
+        name === "Int" ||
+        name === "Trunc" ||
+        name === "Round" ||
+        name === "RoundDown" ||
+        name === "RoundUp"
+      ) {
         args.forEach((arg, index) => {
           if (this.isErrorTyped(arg) || arg.type.kind === "Record") {
             this.report(DiagnosticCodes.BadTypeExpected, this.textSpan(node.args[index]!), [
